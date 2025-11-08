@@ -1,0 +1,16 @@
+@font-face {
+  font-family: 'Barlow';
+  src: url('@/assets/Schriftarten/Barlow-Regular.ttf') format('truetype'); /* fallback */
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Barlow';
+  src:
+    url('@/assets/Schriftarten/Barlow-Bold.ttf') format('truetype'); /* fallback */
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
