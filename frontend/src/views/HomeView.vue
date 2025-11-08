@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import TheWelcome from '../components/TheWelcome.vue'
+import Projektliste from '@/components/Projektliste.vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function gotToProjekt_erstellen(){
+  router.push({ name: 'Projekt_erstellen' })
+}
 </script>
 
 <template>
-  <main>
-    <TheWelcome />
-  </main>
+  <Projektliste />
+<button
+  class="btn btn-primary"
+  type="button"
+  @click ="gotToProjekt_erstellen">
+  Neues Projekt erstellen
+  </button>
 </template>
