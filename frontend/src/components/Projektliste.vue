@@ -2,6 +2,8 @@
 import {onMounted} from "vue";
 import {ref} from "vue";
 import {useRouter} from "vue-router";
+import api from "@/api";
+
 
 const projects = ref([])
 const router = useRouter()
