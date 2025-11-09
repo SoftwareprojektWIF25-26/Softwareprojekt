@@ -1,4 +1,5 @@
-// Prisma Schema für DS-Projektplanungstool
+// Prisma Schema für DS-Projektplanungstool (überarbeitet)
+// Basierend auf "Template for Describing DS-Projects" (32 Felder)
 // Datenbank: PostgreSQL (Cloud SQL)
 
 generator client {
@@ -11,131 +12,56 @@ datasource db {
 }
 
 // ========================================
-// 1. USER & AUTHENTICATION
+// 1. LOCAL WORKSPACE (Arbeitsbereich)
 // ========================================
 
-model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String?
-  passwordHash String // Für Auth (bcrypt)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model LocalWorkspace {
+  id        String   @id @default(cuid())
+  name      String   @default("Default Workspace")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relationen
-  workspaces      WorkspaceMember[]
-  ownedProjects   Project[]         @relation("ProjectOwner")
-  assignedTasks   Task[]            @relation("TaskAssignee")
-  artifactReviews ArtifactReview[]
-  TeamMember      TeamMember[]
-
-  @@map("users")
-}
-
-// ========================================
-// 2. WORKSPACE (Arbeitsbereiche)
-// ========================================
-
-model Workspace {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relationen
-  members  WorkspaceMember[]
   projects Project[]
 
-  @@map("workspaces")
-}
-
-model WorkspaceMember {
-  id   String @id @default(cuid())
-  role Role   @default(VIEWER)
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@unique([workspaceId, userId])
-  @@map("workspace_members")
-}
-
-enum Role {
-  OWNER
-  VIEWER
+  @@map("local_workspaces")
 }
 
 // ========================================
-// 3. Team Management
-// ========================================
-model TeamMember {
-  id String @id @default(cuid())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  role     TeamRole
-  isActive Boolean  @default(true)
-
-  assignedAt DateTime  @default(now())
-  removedAt  DateTime?
-
-  @@unique([projectId, userId])
-  @@index([projectId, role])
-  @@map("team_members")
-}
-
-enum TeamRole {
-  PROJECT_MANAGER // Projektkoordination [file:169]
-  DATA_SCIENTIST // Modellierung, Analyse [file:169][file:170]
-  DATA_ENGINEER // Dateninfrastruktur [file:169][file:170]
-  BUSINESS_USER // Domänenexpertise [file:169][file:171]
-  DOMAIN_EXPERT // Fachliche Anforderungen [file:169]
-  IT_INFRASTRUCTURE // Deployment, Operations [file:169]
-}
-
-// ========================================
-// 4. PROJECT (Projekte)
+// 2. PROJECT (Hauptentität)
 // ========================================
 
 model Project {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  status      ProjectStatus @default(PLANNING)
+  id          String         @id @default(cuid())
+  workspaceId String
+  workspace   LocalWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  // Template 0.x - General
+  title  String
+  domain String?
+
+  // Wizard Tracking
+  wizardStep      Int     @default(0) // 0=Start, 1=Business, 2=Data, 3=Analysis, 4=Deployment, 5=Utilization, 6=Complete
+  wizardCompleted Boolean @default(false)
+
+  // Status
+  status    ProjectStatus @default(PLANNING)
   startDate DateTime?
   endDate   DateTime?
-
-  workspaceId String
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  ownerId String
-  owner   User   @relation("ProjectOwner", fields: [ownerId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relationen
-  profile    ProjectProfile?
-  phases     Phase[]
-  tasks      Task[]
-  milestones Milestone[]
-  risks      Risk[]
-  TeamMember TeamMember[]
-  Iteration  Iteration[]
+  businessUnderstanding BusinessUnderstanding?
+  dataCharacteristics   DataCharacteristics?
+  analysisConfig        AnalysisConfig?
+  deploymentConfig      DeploymentConfig?
+  utilizationConfig     UtilizationConfig?
+  projectPlan           ProjectPlan?
+  evaluations           ProjectEvaluation[]
 
   @@index([workspaceId, status])
-  @@index([ownerId])
   @@map("projects")
 }
 
@@ -148,177 +74,415 @@ enum ProjectStatus {
 }
 
 // ========================================
-// 4. PROJECT PROFILE (Projekt-Steckbrief)
+// 3. BUSINESS UNDERSTANDING (Template 1.x)
 // ========================================
 
-model ProjectProfile {
-  id String @id @default(cuid())
-
+model BusinessUnderstanding {
+  id        String  @id @default(cuid())
   projectId String  @unique
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  // Wizard-Ergebnis (8-12 Fragen)
-  analyticsType String? // "Classification", "Regression", "Clustering", etc.
-  dataVolume    DataScale? // SMALL, MEDIUM, LARGE, VERY_LARGE
-  dataVariety   DataScale? // Struktur/Vielfalt
-  dataVelocity  DataScale? // Geschwindigkeit
-  dataVeracity  DataScale? // Qualität/Zuverlässigkeit
+  // 1.1 Business Goal
+  businessGoal String?
 
-  // Projekt-Charakteristika
-  targetMetrics  String? // Ziel-Metriken (JSON Array)
-  teamSize       Int?
-  hasDeadline    Boolean @default(false)
-  iterationCount Int     @default(1)
+  // 1.2 Form of Final Product
+  formOfFinalProduct FormOfFinalProduct?
 
-  // Plan-Engine Ergebnisse
-  phasingWeights   Json? // Gewichtung der Phasen (JSON Object)
-  bufferPercentage Int   @default(15) // 10-20% Puffer
+  // 1.3 Project Team Roles
+  projectTeamRoles TeamRole[]
 
-  createdAt DateTime @default(now())
+  // 1.4 Team Size
+  teamSize Int?
+
+  // 1.5 Timeline (in Monaten/Wochen)
+  timelineValue Int?
+  timelineUnit  TimelineUnit @default(WEEKS)
+
+  // 1.6 Cost
+  estimatedCost Float?
+
+  // 1.7 Tools - Business Understanding
+  toolsBusinessUnderstanding String?
+
+  // Phase Status
+  status      TemplatePhaseStatus @default(DRAFT)
+  completedAt DateTime?
+
+  @@map("business_understanding")
+}
+
+enum FormOfFinalProduct {
+  REPORT // Bericht/Dashboard
+  APPLICATION_SOFTWARE // ML-Anwendung
+  AUTOMATED_DECISION_SYSTEM // Automatisiertes System
+  INSIGHT_DOCUMENT // Insights/Erkenntnisse
+  OTHER
+}
+
+enum TimelineUnit {
+  DAYS
+  WEEKS
+  MONTHS
+}
+
+enum TeamRole {
+  DATA_SCIENTIST
+  DATA_ENGINEER
+  PROJECT_MANAGER
+  DOMAIN_EXPERT
+  BUSINESS_ANALYST
+  IT_INFRASTRUCTURE
+  ML_ENGINEER
+}
+
+// ========================================
+// 4. DATA CHARACTERISTICS (Template 2.x)
+// ========================================
+
+model DataCharacteristics {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 2.1 Data Access
+  dataAccess DataAccessType[]
+
+  // 2.2 Data Availability
+  dataAvailability Boolean?
+
+  // 2.3 Data Sources
+  dataSources String[] // z.B. ["Sensors", "Web", "Database"]
+
+  // 2.4 Data Security and Privacy Constraints
+  dataSecurityConstraints String?
+
+  // 2.5 Velocity
+  velocity DataVelocity?
+
+  // 2.6 Veracity (Data Quality)
+  veracity DataVeracity? // Rating
+
+  // 2.7 Variety
+  variety DataVariety?
+
+  // 2.8 Volume
+  volumeValue Float?
+  volumeUnit  VolumeUnit @default(RECORDS) // Records, GB, TB, etc.
+
+  // 2.9 Variability
+  variability DataVariability // z.B. "Never", "Weekly", "Daily"
+
+  // 2.10 Data Preparation Steps
+  dataPreparationSteps DataPreparationStep // z.B. ["Joins", "Deduplication", "Outlier Detection"]
+
+  // 2.11 Tools - Data
+  toolsData String?
+
+  // Phase Status
+  status      TemplatePhaseStatus @default(BLOCKED)
+  completedAt DateTime?
+
   updatedAt DateTime @updatedAt
 
-  // === Team Context  ===
-  teamVirtuality    TeamVirtuality?
-  managerExperience ManagerExperience?
-
-  // === Computational Context  ===
-  computeIntensity ComputeIntensity?
-  timelinessLevel  TimelinessLevel?
-
-  // === Discovery Level  ===
-  discoveryType DiscoveryType?
-  roiFocused    Boolean        @default(false)
-
-  // === Organizational Context ===
-  orgSize            OrgSize?
-  orgCultureStrength CultureStrength?
-
-  @@map("project_profiles")
+  @@map("data_characteristics")
 }
 
-enum DataScale {
-  LOW
+enum DataVariability {
+  NEVER
+  YEARLY
+  MONTHLY
+  WEEKLY
+  DAILY
+  HOURLY
+}
+
+enum DataVeracity {
+  POOR
   MEDIUM
-  HIGH
-  VERY_HIGH
+  GOOD
+  EXCELLENT
 }
 
-enum TeamVirtuality {
-  COLOCATED
-  PARTIALLY_DISTRIBUTED
-  FULLY_DISTRIBUTED
+enum DataAccessType {
+  INTERNAL
+  EXTERNAL
+  HYBRID
 }
 
-enum ManagerExperience {
-  NOVICE
-  INTERMEDIATE
-  EXPERIENCED
+enum DataVelocity {
+  BATCH // Keine Echtzeit
+  DAILY
+  HOURLY
+  CONTINUOUS // Echtzeit/Streaming
 }
 
-enum ComputeIntensity {
-  MINIMAL
-  PREPROCESSING_HEAVY
-  MODELING_HEAVY
-  BOTH_HEAVY
+enum DataVariety {
+  LOW // Nur eine Datentyp
+  MEDIUM // Zwei Datentypen
+  HIGH // Alle Datentypen (strukturiert, unstrukturiert, semi-strukturiert)
+}
+
+enum VolumeUnit {
+  RECORDS
+  GB
+  TB
+  PB
+}
+
+enum DataPreparationStep {
+  JOINS
+  DEDUPLICATION
+  OUTLIER_DETECTION
+  NORMALIZATION
+  MISSING_VALUE_IMPUTATION
+  FEATURE_ENGINEERING
+  ONE_HOT_ENCODING
+  DATA_CLEANING
+  TRANSFORMATION
+}
+
+// ========================================
+// 5. ANALYSIS CONFIG (Template 3.x)
+// ========================================
+
+model AnalysisConfig {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 3.1 Data Science Goals
+  dataScienceGoals String?
+
+  // 3.2 Type of Analytics
+  typeOfAnalytics AnalyticsType?
+
+  // 3.3 Evaluation Metrics
+  evaluationMetrics String[]
+
+  // 3.4 Tools - Analysis
+  toolsAnalysis String?
+
+  updatedAt   DateTime            @updatedAt
+  // Phase Status
+  status      TemplatePhaseStatus @default(BLOCKED)
+  completedAt DateTime?
+
+  @@map("analysis_config")
+}
+
+enum AnalyticsType {
+  CLASSIFICATION
+  REGRESSION
+  CLUSTERING
+  ANOMALY_DETECTION
+  TIME_SERIES_FORECASTING
+  RECOMMENDATION
+  RANKING
+  OTHER
+}
+
+// ========================================
+// 6. DEPLOYMENT CONFIG (Template 4.x)
+// ========================================
+
+model DeploymentConfig {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 4.1 Timeliness of Analytics
+  timelinessOfAnalytics TimelinessLevel?
+
+  // 4.2 Addressed Users
+  addressedUsers String? // Beschreibung der Nutzer
+
+  // 4.3 Tests
+  tests String? // Beschreibung durchgeführter Tests
+
+  // 4.4 Project Issues
+  projectIssues ProjectIssueType[]
+
+  // 4.5 Tools - Deployment
+  toolsDeployment String?
+
+  // Phase Status
+  status      TemplatePhaseStatus @default(BLOCKED)
+  completedAt DateTime?
+
+  @@map("deployment_config")
 }
 
 enum TimelinessLevel {
   BATCH // Keine Echtzeit
-  DAILY // Tägliche Updates
+  DAILY
   NEARREALTIME // Minuten
   REALTIME // Sekunden
 }
 
-enum DiscoveryType {
-  HYPOTHESIS_TESTING // Klar definierte Fragen [file:171]
-  HYPOTHESIS_GENERATION // Exploration [file:171]
-  EXPLORATORY // Unstrukturierte Suche
-}
-
-enum OrgSize {
-  SMALL
-  MEDIUM
-  LARGE
-}
-
-enum CultureStrength {
-  WEAK
-  MEDIUM
-  STRONG
+enum ProjectIssueType {
+  DATA_ACCESS
+  DATA_QUALITY
+  INSUFFICIENT_RESOURCES
+  UNCLEAR_REQUIREMENTS
+  TECHNICAL_COMPLEXITY
+  TIMELINE_CONSTRAINTS
+  TEAM_COORDINATION
 }
 
 // ========================================
-// 5. PHASE (DS-Lifecycle Phasen)
+// 7. UTILIZATION CONFIG (Template 5.x)
 // ========================================
 
-model Phase {
-  id         String    @id @default(cuid())
-  name       String
-  type       PhaseType
-  orderIndex Int // Reihenfolge (1-6)
+model UtilizationConfig {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  startDate DateTime?
-  endDate   DateTime?
-  duration  Int? // Tage
+  // 5.1 Monitoring
+  monitoring String?
 
+  // 5.2 Maintenance
+  maintenance String?
+
+  // 5.3 Tools - Utilization
+  toolsUtilization String?
+
+  // Phase Status
+  status      TemplatePhaseStatus @default(BLOCKED)
+  completedAt DateTime?
+
+  @@map("utilization_config")
+}
+
+// ========================================
+// 8. PROJECT EVALUATION (Bewertungen)
+// ========================================
+
+model ProjectEvaluation {
+  id        String  @id @default(cuid())
   projectId String
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Kategorien von Planning Engine verwendet
+  category String // z.B. "Complexity", "Data Quality", "Team Experience", "Timeliness"
+  rating   Int // 1-5 Skala
+  notes    String?
+
+  createdAt DateTime @default(now())
+
+  @@map("project_evaluations")
+}
+
+// ========================================
+// 9. PROJECT PLAN (Planning Engine Output)
+// ========================================
+
+model ProjectPlan {
+  id        String  @id @default(cuid())
+  projectId String  @unique
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Planning Engine Berechnungen
+  estimatedDuration    Int? // Gesamtdauer in Tagen
+  estimatedEffort      Float? // Gesamtaufwand in Person-Tagen
+  calculatedComplexity Float? // 0-100 Komplexitätsscore
+  bufferPercentage     Int    @default(15)
+
+  // Phasengewichtung
+  phaseWeights Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relationen
-  tasks      Task[]
-  artifacts  Artifact[]
-  milestones Milestone[]
+  phases       ProjectPhase[]
+  tasks        Task[]
+  dependencies TaskDependency[]
 
-  @@unique([projectId, orderIndex])
-  @@map("phases")
+  @@map("project_plans")
+}
+
+// ========================================
+// 10. PROJECT PHASES (CRISP-DM/DSLC)
+// ========================================
+
+model ProjectPhase {
+  id            String      @id @default(cuid())
+  projectPlanId String
+  projectPlan   ProjectPlan @relation(fields: [projectPlanId], references: [id], onDelete: Cascade)
+
+  name        String
+  phaseType   PhaseType
+  description String?
+  orderIndex  Int // 1=Business Understanding, 2=Data Collection, etc.
+
+  estimatedDuration Int? // in Tagen
+  estimatedEffort   Float? // in Person-Tagen
+  startDate         DateTime?
+  endDate           DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Relationen
+  tasks Task[]
+
+  @@unique([projectPlanId, orderIndex])
+  @@map("project_phases")
+}
+
+enum TemplatePhaseStatus {
+  BLOCKED // Kann nicht bearbeitet werden (abhängig von vorherigen)
+  READY // Kann bearbeitet werden
+  DRAFT // Wurde gestartet
+  COMPLETED // Vollständig abgeschlossen
 }
 
 enum PhaseType {
   BUSINESS_UNDERSTANDING
-  DATA_COLLECTION
-  DATA_EXPLORATION
-  DATA_PREPARATION
+  DATA_COLLECTION_EXPLORATION_PREPARATION
   ANALYSIS_MODELING
   EVALUATION
-  DEPLOYMENT_UTILIZATION
+  DEPLOYMENT
+  UTILIZATION
 }
 
 // ========================================
-// 6. TASK (Aufgaben)
+// 11. TASKS (0.1 .. - 5.3 aus Paper)
 // ========================================
 
 model Task {
-  id          String     @id @default(cuid())
-  title       String
+  id            String      @id @default(cuid())
+  projectPlanId String
+  projectPlan   ProjectPlan @relation(fields: [projectPlanId], references: [id], onDelete: Cascade)
+
+  phaseId String?
+  phase   ProjectPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+
+  // Standard Task Type aus Template ODER Custom Task
+  taskType StandardTaskType
+
+  // Nur bei Custom Tasks gefüllt
+  customTitle String?
+
+  // Derived Title (automatisch generiert aus Enum)
+  title       String? // z.B. "Define Business Goal"
   description String?
   status      TaskStatus @default(TODO)
 
-  startDate DateTime?
-  endDate   DateTime?
-  duration  Int? // Tage
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  phaseId String
-  phase   Phase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
-
-  assigneeId String?
-  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  estimatedDuration Int? // in Tagen
+  estimatedEffort   Float? // in Person-Tagen
+  startDate         DateTime?
+  endDate           DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relationen
-  dependencies Dependency[] @relation("DependentTask")
-  dependents   Dependency[] @relation("PredecessorTask")
+  dependenciesFrom TaskDependency[] @relation("FromTask")
+  dependenciesTo   TaskDependency[] @relation("ToTask")
 
-  @@index([projectId, status])
+  @@index([projectPlanId, taskType])
   @@index([phaseId])
-  @@index([assigneeId])
   @@map("tasks")
 }
 
@@ -329,219 +493,79 @@ enum TaskStatus {
   DONE
 }
 
-// ========================================
-// 7. DEPENDENCY (Abhängigkeiten)
-// ========================================
+// Task Enum - basierend auf DS-Template (32 Felder)
+enum StandardTaskType {
+  // 0.x - General (Phase-unabhängig)
+  DEFINE_TITLE // 0.1
+  DEFINE_DOMAIN // 0.2
 
-model Dependency {
-  id   String         @id @default(cuid())
-  type DependencyType @default(FINISH_TO_START)
+  // 1.x - Business Understanding
+  DEFINE_BUSINESS_GOAL // 1.1
+  DEFINE_FINAL_PRODUCT_FORM // 1.2
+  IDENTIFY_PROJECT_TEAM_ROLES // 1.3
+  DETERMINE_TEAM_SIZE // 1.4
+  PLAN_TIMELINE // 1.5
+  ESTIMATE_COST // 1.6
+  SELECT_TOOLS_BUSINESS_UNDERSTANDING // 1.7
 
-  predecessorId String
-  predecessor   Task   @relation("PredecessorTask", fields: [predecessorId], references: [id], onDelete: Cascade)
+  // 2.x - Data Collection, Exploration, Preparation
+  DETERMINE_DATA_ACCESS // 2.1
+  VERIFY_DATA_AVAILABILITY // 2.2
+  IDENTIFY_DATA_SOURCES // 2.3
+  ASSESS_DATA_SECURITY_PRIVACY // 2.4
+  EVALUATE_DATA_VELOCITY // 2.5
+  ASSESS_DATA_VERACITY // 2.6
+  DETERMINE_DATA_VARIETY // 2.7
+  ESTIMATE_DATA_VOLUME // 2.8
+  ASSESS_DATA_VARIABILITY // 2.9
+  DEFINE_DATA_PREPARATION_STEPS // 2.10
+  SELECT_DATA_TOOLS // 2.11
 
-  dependentId String
-  dependent   Task   @relation("DependentTask", fields: [dependentId], references: [id], onDelete: Cascade)
+  // 3.x - Analysis
+  DEFINE_DATA_SCIENCE_GOALS // 3.1
+  DETERMINE_ANALYTICS_TYPE // 3.2
+  SELECT_EVALUATION_METRICS // 3.3
+  SELECT_ANALYSIS_TOOLS // 3.4
 
-  lag Int @default(0) // Verzögerung in Tagen
+  // 4.x - Deployment
+  DEFINE_TIMELINESS_REQUIREMENTS // 4.1
+  IDENTIFY_ADDRESSED_USERS // 4.2
+  PLAN_TESTING_STRATEGY // 4.3
+  DOCUMENT_PROJECT_ISSUES // 4.4
+  SELECT_DEPLOYMENT_TOOLS // 4.5
+
+  // 5.x - Utilization
+  PLAN_MONITORING_ACTIVITIES // 5.1
+  PLAN_MAINTENANCE_STRATEGY // 5.2
+  SELECT_UTILIZATION_TOOLS // 5.3
+
+  // Custom Tasks (nicht aus Template)
+  CUSTOM
+}
+
+model TaskDependency {
+  id            String      @id @default(cuid())
+  projectPlanId String
+  projectPlan   ProjectPlan @relation(fields: [projectPlanId], references: [id], onDelete: Cascade)
+
+  fromTaskId String
+  fromTask   Task   @relation("FromTask", fields: [fromTaskId], references: [id], onDelete: Cascade)
+
+  toTaskId String
+  toTask   Task   @relation("ToTask", fields: [toTaskId], references: [id], onDelete: Cascade)
+
+  dependencyType DependencyType @default(FINISH_TO_START)
+  lag            Int            @default(0)
 
   createdAt DateTime @default(now())
 
-  @@unique([predecessorId, dependentId])
-  @@map("dependencies")
+  @@unique([fromTaskId, toTaskId])
+  @@map("task_dependencies")
 }
 
 enum DependencyType {
   FINISH_TO_START
   START_TO_START
   FINISH_TO_FINISH
-}
-
-// ========================================
-// 8. MILESTONE (Gates)
-// ========================================
-
-model Milestone {
-  id   String        @id @default(cuid())
-  name String
-  type MilestoneType
-
-  dueDate DateTime?
-  status  MilestoneStatus @default(PENDING)
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  phaseId String
-  phase   Phase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([projectId, phaseId, status])
-  @@map("milestones")
-}
-
-enum MilestoneType {
-  PHASE_GATE
-  ITERATION_REVIEW
-  FINAL_DELIVERY
-}
-
-enum MilestoneStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  ON_HOLD
-}
-
-// ========================================
-// 9. ARTIFACT (Artefakte/Dokumente)
-// ========================================
-
-model Artifact {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  type        ArtifactType
-  isMandatory Boolean      @default(false)
-
-  fileUrl  String? // Cloud Storage URL
-  fileName String?
-  fileSize Int? // Bytes
-
-  status ArtifactStatus @default(DRAFT)
-
-  phaseId String
-  phase   Phase  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relationen
-  reviews ArtifactReview[]
-
-  @@index([phaseId, status])
-  @@map("artifacts")
-}
-
-enum ArtifactType {
-  PROBLEM_STATEMENT
-  DATA_PROFILE
-  DATA_SOURCES_CATALOGUE
-  DATA_QUALITY_REPORT
-  FEATURE_SPECIFICATION
-  MODEL_DOCUMENTATION
-  EVALUATION_REPORT
-  DEPLOYMENT_PLAN
-  MONITORING_PLAN
-  PROJECT_CHARTER // Business Understanding
-  COST_BENEFIT_ANALYSIS // Business Understanding
-  TEST_PLAN // Deployment
-  DATA_PIPELINE_DESIGN // Data Preparation
-  HYPOTHESIS_DOCUMENT // Analysis
-  OTHER
-}
-
-enum ArtifactStatus {
-  DRAFT
-  SUBMITTED
-  APPROVED
-  REJECTED
-}
-
-// ========================================
-// 10. ARTIFACT REVIEW (Freigabe)
-// ========================================
-
-model ArtifactReview {
-  id       String         @id @default(cuid())
-  decision ReviewDecision
-  comment  String?
-
-  artifactId String
-  artifact   Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
-
-  reviewerId String
-  reviewer   User   @relation(fields: [reviewerId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@map("artifact_reviews")
-}
-
-enum ReviewDecision {
-  APPROVED
-  REJECTED
-  NEEDS_REVISION
-}
-
-// ========================================
-// 11. RISK (Risiko-Hinweise)
-// ========================================
-
-model Risk {
-  id          String       @id @default(cuid())
-  title       String
-  description String
-  category    RiskCategory
-  severity    RiskSeverity
-  status      RiskStatus   @default(OPEN)
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([projectId, category, severity, status])
-  @@map("risks")
-}
-
-enum RiskCategory {
-  DATA_QUALITY
-  DATA_AVAILABILITY
-  TECHNICAL_COMPLEXITY
-  RESOURCE_CONSTRAINT
-  TIMELINE
-  OTHER
-}
-
-enum RiskSeverity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum RiskStatus {
-  OPEN
-  MITIGATED
-  ACCEPTED
-  RESOLVED
-}
-
-// ========================================
-// 12. Iterationen
-// ========================================
-model Iteration {
-  id String @id @default(cuid())
-
-  number     Int
-  goal       String?
-  hypothesis String? // Für Hypothesis-Testing [file:171]
-  outcome    String?
-  learnings  String? // Was wurde gelernt?
-
-  startDate DateTime?
-  endDate   DateTime?
-
-  projectId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([projectId, number])
-  @@map("iterations")
+  START_TO_FINISH
 }
