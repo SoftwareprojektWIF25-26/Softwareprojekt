@@ -1,18 +1,13 @@
-function getProjektListe(): Promise<{
-  projekte: Projekte[];
-}> {
-  return request({
-    url: '/api/projektliste',
-    method: 'get',
-  })
+import axios from 'axios'
+
+function getProjektListe(){
+  return axios.get('/api/projektliste').then(res => res.data)
+
 }
 
 
-function getProjektById(id: number): Promise<{ projekt: Projekt }> {
-  return request({
-    url: `/api/projekte/${id}`,
-    method: 'get',
-  })
+function getProjektById(id: number) {
+  return axios.get(`/api/projekte/${id}`).then(res => res.data)
 }
 
 export default {
