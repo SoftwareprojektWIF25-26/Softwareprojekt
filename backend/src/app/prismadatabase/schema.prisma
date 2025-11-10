@@ -396,8 +396,8 @@ model ProjectPlan {
 
   // Relationen
   phases       ProjectPhase[]
-  tasks        Task[]
-  dependencies TaskDependency[]
+  tasks        PhaseSteps[]
+  dependencies PhaseTaskDependency[]
 
   @@map("project_plans")
 }
@@ -424,7 +424,7 @@ model ProjectPhase {
   createdAt DateTime @default(now())
 
   // Relationen
-  tasks Task[]
+  tasks PhaseSteps[]
 
   @@unique([projectPlanId, orderIndex])
   @@map("project_phases")
@@ -450,7 +450,7 @@ enum PhaseType {
 // 11. TASKS (0.1 .. - 5.3 aus Paper)
 // ========================================
 
-model Task {
+model PhaseSteps {
   id            String      @id @default(cuid())
   projectPlanId String
   projectPlan   ProjectPlan @relation(fields: [projectPlanId], references: [id], onDelete: Cascade)
@@ -478,8 +478,8 @@ model Task {
   updatedAt DateTime @updatedAt
 
   // Relationen
-  dependenciesFrom TaskDependency[] @relation("FromTask")
-  dependenciesTo   TaskDependency[] @relation("ToTask")
+  dependenciesFrom PhaseTaskDependency[] @relation("FromTask")
+  dependenciesTo   PhaseTaskDependency[] @relation("ToTask")
 
   @@index([projectPlanId, taskType])
   @@index([phaseId])
@@ -543,16 +543,16 @@ enum StandardTaskType {
   CUSTOM
 }
 
-model TaskDependency {
+model PhaseTaskDependency {
   id            String      @id @default(cuid())
   projectPlanId String
   projectPlan   ProjectPlan @relation(fields: [projectPlanId], references: [id], onDelete: Cascade)
 
   fromTaskId String
-  fromTask   Task   @relation("FromTask", fields: [fromTaskId], references: [id], onDelete: Cascade)
+  fromTask   PhaseSteps @relation("FromTask", fields: [fromTaskId], references: [id], onDelete: Cascade)
 
   toTaskId String
-  toTask   Task   @relation("ToTask", fields: [toTaskId], references: [id], onDelete: Cascade)
+  toTask   PhaseSteps @relation("ToTask", fields: [toTaskId], references: [id], onDelete: Cascade)
 
   dependencyType DependencyType @default(FINISH_TO_START)
   lag            Int            @default(0)
