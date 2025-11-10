@@ -1,6 +1,6 @@
 # Datenbankschema: DS-Projektplanungstool (PostgreSQL)
 
-# 1. LocalWorkspace (Arbeitsbereich)
+#  LocalWorkspace (Arbeitsbereich)
 | Feld      | Typ      | Beschreibung                                            | Schlüssel   |
 | --------- | -------- | ------------------------------------------------------- | ----------- |
 | id        | String   | Eindeutiger Identifikator (CUID)                        | Primary Key |
@@ -11,35 +11,7 @@
 # Relationen:
 projects → Project[] (1:n)
 
-## 2. LocalWorkspace (Arbeitsbereich)
 
-### Workspace
-| Feld         | Typ         | Beschreibung/Relation                     |
-|--------------|-------------|-------------------------------------------|
-| id           | String      | @id @default(cuid())                       |
-| name         | String      |                                           |
-| description  | String?     |                                           |
-| createdAt    | DateTime    | @default(now())                            |
-| updatedAt    | DateTime    | @updatedAt                                 |
-| members      | WorkspaceMember[] | Relation zu Mitgliedern               |
-| projects     | Project[]   | Relation zu Projekten                     |
-
-### 
-| Feld         | Typ         | Beschreibung/Relation                     |
-|--------------|-------------|-------------------------------------------|
-| id           | String      | @id @default(cuid())                       |
-| role         | Role        | @default(VIEWER)                           |
-| workspaceId  | String      | Relation zu Workspace                      |
-| workspace    | Workspace   | Relation zu Workspace                      |
-| userId       | String      | Relation zu User                           |
-| user         | User        | Relation zu User                           |
-| createdAt    | DateTime    | @default(now())                            |
-
-
-
----
-
-## 3. Project (Projekte)
 
 ### Project
 | Feld            | Typ           | Beschreibung                 | Schlüssel   |
@@ -88,7 +60,7 @@ CANCELLED
 
 ---
 
-## 4. ProjectPhasen incoming:
+##  ProjectPhasen incoming:
 
 ### 1. BusinessUnderstanding  (Template 1.x)
 | Feld                       | Typ                 | Beschreibung               | Schlüssel           |
@@ -219,7 +191,7 @@ OTHER
 
 
 
-### 3. DeploymentConfig (Template 4.x)
+### 4. DeploymentConfig (Template 4.x)
 | Feld                  | Typ                 | Beschreibung                | Schlüssel           |
 | --------------------- | ------------------- | --------------------------- | ------------------- |
 | id                    | String              | Eindeutiger Identifikator   | Primary Key         |
@@ -260,7 +232,7 @@ TEAM_COORDINATION
 
 
 
-### UtilizationConfig (Template 5.x)
+### 5. UtilizationConfig (Template 5.x)
 | Feld             | Typ                 | Beschreibung               | Schlüssel           |
 | ---------------- | ------------------- | -------------------------- | ------------------- |
 | id               | String              | Eindeutiger Identifikator  | Primary Key         |
