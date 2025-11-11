@@ -20,6 +20,7 @@ export interface Projekt{
   Datengeschwindigkeit?: string;
   Datenumfang?: number;
   Datenvielfalt?: string;
+  Datenvariabilitaet?: string;
   Datenvorbereitungsschritte: string;
   Datentools?: string;
 
