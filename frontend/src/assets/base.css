@@ -104,7 +104,36 @@ body {
   border: none;
   padding: 20px 40px;
 }
-.text-primary{
+
+@layer components {
+  .grauer-kasten {
+    @apply border-gray-300 bg-gray-50 text-gray-800 p-4 rounded-lg;
+  }
+}
+h1{
+  font-size: 3rem;
+  font-weight: bold;
   color: var(--color-primary);
+  margin-bottom: 1.5rem;
+;
+}
+h2{
+  font-size: 2rem;
+  color: var(--color-primary);
+  font-weight: 750;
+  margin-bottom: 1rem;
+}
+h3{
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+}
+.grauer-kasten {
+  border: 1px solid dimgrey;
+  background-color: gray;
+  color: var(--color-border);
+  padding: 1rem;
+  border-radius: 0.5rem;
 }
 
