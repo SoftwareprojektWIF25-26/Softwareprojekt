@@ -96,20 +96,16 @@ body {
   font-size: 20px;
 }
 
-.btn-secondary{
-  background: gray;
-  color: black;
+.btn-secondary {
+  background: lightgrey;
+  color: var(--color-text);
   border-radius: 12px;
   cursor: pointer;
   border: none;
-  padding: 20px 40px;
+  padding: 15px 30px;
+  font-size: 20px;
 }
 
-@layer components {
-  .grauer-kasten {
-    @apply border-gray-300 bg-gray-50 text-gray-800 p-4 rounded-lg;
-  }
-}
 h1{
   font-size: 3rem;
   font-weight: bold;
@@ -131,8 +127,8 @@ h3{
 }
 .grauer-kasten {
   border: 1px solid dimgrey;
-  background-color: gray;
-  color: var(--color-border);
+  background-color: lightgrey;
+  color: var(--color-text);
   padding: 1rem;
   border-radius: 0.5rem;
 }
