@@ -21,17 +21,17 @@ onMounted(async () => {
 <template>
   <section class="w-full max-w-6xl p-8 mx-auto">
     <!-- Grauer Kasten um Überschrift + Projektliste -->
-    <div class="bg-gray-200 rounded-3xl p-8 shadow-lg border border-gray-300">
+    <div class="grauer-kasten">
 
       <!-- Überschrift -->
-      <h1 class="text-2xl font-bold mb-6 text-center text-primary">
+      <h1>
         Meine Projekte
       </h1>
 
       <!-- Projektliste -->
       <div v-if="projects.length === 0"
            class="flex items-center justify-center min-h-[200px]">
-        <span class="bg-gray-400 text-white text-lg font-semibold px-8 py-6 rounded-3xl shadow-lg border border-gray-500">
+        <span >
           Noch keine Projekte vorhanden
         </span>
       </div>

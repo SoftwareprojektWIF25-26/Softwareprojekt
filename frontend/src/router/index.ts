@@ -20,7 +20,7 @@ const router = createRouter({
       path: '/Projekt_erstellen',
       name: 'Projekt_erstellen',
       component: Projekt_erstellen,
-    }
+    },
   ],
 })
 
