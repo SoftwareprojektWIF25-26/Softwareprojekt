@@ -1,104 +1,176 @@
 // src/app/routes/dashboardRoutes.ts
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+// src/app/routes/dashboardRoutes.ts
+import { DashboardService } from '../services/dashboard.js';
 
 const router = Router();
+const dashboardService = new DashboardService();
 
-// TODO: DB anbinden, wie in startpage
-const demoProjects = [
-    {
-        id: 1,
-        name: 'Demo Projekt Reporting',
-        type: 'REPORTING',
-        status: 'in_progress',
-        lastModified: new Date().toISOString(),
-    },
-    {
-        id: 2,
-        name: 'ML Use Case',
-        type: 'CLASSIC_ML',
-        status: 'planned',
-        lastModified: new Date().toISOString(),
-    },
-];
+/**
+ * Hilfsfunktion:
+ * Mapped das „fette“ Dashboard-Objekt aus dem Service
+ * auf ein einfaches Projekt-Objekt so wie die ursprünglichen Demo-Daten.
+ *
+ * Damit bleibt getProjektById(id): Promise<Projekt> kompatibel.
+ */
+function mapDashboardToProjekt(dashboard: Awaited<ReturnType<DashboardService['getProjectDashboard']>>) {
+    return {
+        id: dashboard.project.id,
+        name: dashboard.project.title,
+        type: dashboard.project.domain,
+        status: dashboard.project.status,
+        lastModified: dashboard.project.updatedAt,
+        description: `Projekt: ${dashboard.project.title}`,
+    };
+}
 
-// GET /api/dashboard/:id
-router.get('/:id', (req, res) => {
-    const id = Number(req.params.id);
-    const projekt = demoProjects.find((p) => p.id === id);
+/**
+ * GET /api/dashboard/:id
+ * Frontend: getProjektById(id)
+ */
+router.get('/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
 
-    if (!projekt) {
-        return res.status(404).json({ error: 'Projekt nicht gefunden' });
+        const dashboard = await dashboardService.getProjectDashboard(id);
+
+        const projekt = mapDashboardToProjekt(dashboard);
+
+        res.json(projekt); // Wichtig: direkt Projekt-Objekt, kein Wrapper
+    } catch (error) {
+        console.error('Error in GET /api/dashboard/:id', error);
+        next(error);
     }
-
-    res.json({
-        ...projekt,
-        description: 'Dies ist ein Demo-Projekt vom Backend.',
-    });
 });
 
-// GET /api/dashboard/:id/timeline
-router.get('/:id/timeline', (req, res) => {
-    const id = Number(req.params.id);
+/**
+ * GET /api/dashboard/:id/timeline
+ * Frontend: getTimeline(id)
+ */
+router.get('/:id/timeline', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+    try {
+        const { id } = req.params;
 
-    res.json([
-        {
-            id: 1,
-            projectId: id,
-            label: 'Projekt angelegt',
-            date: new Date().toISOString(),
-        },
-        {
-            id: 2,
-            projectId: id,
-            label: 'Initiales Scoping',
-            date: new Date().toISOString(),
-        },
-    ]);
+        const timeline = await dashboardService.getProjectTimeline(id);
+
+        res.json(timeline);
+    } catch (error) {
+        console.error('Error in GET /api/dashboard/:id/timeline', error);
+        next(error);
+    }
 });
 
-// POST /api/dashboard/:id/evaluations
-router.post('/:id/evaluations', (req, res) => {
-    const { id } = req.params;
-    const data = req.body;
-    // TODO: speichern
-    res.json({
-        success: true,
-        message: `Evaluation für Projekt ${id} gespeichert`,
-        data,
-    });
-});
+/**
+ * PATCH /api/dashboard/tasks/:id/status
+ * Frontend: patchTaskStatus(id, status)
+ */
+router.patch(
+    '/tasks/:id/status',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const { status } = req.body as { status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE' };
 
-// PATCH /api/dashboard/:id/status
-router.patch('/:id/status', (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
+            const task = await dashboardService.updateTaskStatus(id, status);
 
-    res.json({
-        success: true,
-        message: `Status für Projekt ${id} auf ${status} geändert`,
-    });
-});
+            res.json({
+                success: true,
+                data: task,
+                message: 'Task-Status erfolgreich aktualisiert',
+            });
+        } catch (error) {
+            console.error('Error in PATCH /api/dashboard/tasks/:id/status', error);
+            next(error);
+        }
+    }
+);
 
-// PATCH /api/dashboard/tasks/:id/status
-router.patch('/tasks/:id/status', (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
+/**
+ * PATCH /api/dashboard/:id/status
+ * Frontend: patchProjektStatus(id, status)
+ */
+router.patch(
+    '/:id/status',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const { status } = req.body as { status: any }; // Typ kannst du bei Bedarf schärfen
 
-    res.json({
-        success: true,
-        message: `Task ${id} Status auf ${status} geändert`,
-    });
-});
+            const project = await dashboardService.updateProjectStatus(id, status);
 
-// PATCH /api/dashboard/:id/template-phase/:phase/status
-router.patch('/:id/template-phase/:phase/status', (req, res) => {
-    const { id, phase } = req.params;
-    const { status } = req.body;
+            res.json({
+                success: true,
+                data: project,
+                message: 'Projektstatus erfolgreich aktualisiert',
+            });
+        } catch (error) {
+            console.error('Error in PATCH /api/dashboard/:id/status', error);
+            next(error);
+        }
+    }
+);
 
-    res.json({
-        success: true,
-        message: `Phase ${phase} für Projekt ${id} auf ${status} geändert`,
-    });
-});
+/**
+ * PATCH /api/dashboard/:id/template-phase/:phase/status
+ * Frontend: patchTemplatePhase(id, phase)
+ */
+router.patch(
+    '/:id/template-phase/:phase/status',
+    async (req: Request<{ id: string; phase: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id, phase } = req.params;
+            const { status } = req.body as { status: any };
+
+            const result = await dashboardService.updateTemplatePhaseStatus(
+                id,
+                phase as
+                    | 'businessUnderstanding'
+                    | 'dataCharacteristics'
+                    | 'analysisConfig'
+                    | 'deploymentConfig'
+                    | 'utilizationConfig',
+                status
+            );
+
+            res.json({
+                success: true,
+                data: result,
+                message: 'Template-Phase-Status erfolgreich aktualisiert',
+            });
+        } catch (error) {
+            console.error('Error in PATCH /api/dashboard/:id/template-phase/:phase/status', error);
+            next(error);
+        }
+    }
+);
+
+/**
+ * POST /api/dashboard/:id/evaluations
+ * Frontend: postEvaluation(id)
+ */
+router.post(
+    '/:id/evaluations',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const { category, rating, notes } = req.body as {
+                category: string;
+                rating: number;
+                notes?: string;
+            };
+
+            const evaluation = await dashboardService.addProjectEvaluation(id, category, rating, notes);
+
+            res.status(201).json({
+                success: true,
+                data: evaluation,
+                message: 'Evaluierung erfolgreich hinzugefügt',
+            });
+        } catch (error) {
+            console.error('Error in POST /api/dashboard/:id/evaluations', error);
+            next(error);
+        }
+    }
+);
 
 export default router;

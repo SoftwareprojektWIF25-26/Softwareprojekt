@@ -1,4 +1,3 @@
-// src/services/dashboard.ts
 import { PrismaClient, Prisma, LocalWorkspace, ProjectStatus, TemplatePhaseStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();

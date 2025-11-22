@@ -1,4 +1,4 @@
-// src/services/startpage.ts
+
 import { PrismaClient, Prisma, LocalWorkspace, ProjectStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
