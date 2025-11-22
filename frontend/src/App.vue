@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
 </script>
 
 <template>
   <header>
     <img alt=" logo" class="logo" src="@/assets/Signet_FIN_1.jpeg" width="300" height="125" />
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-
-    </div>
   </header>
 
   <RouterView />
@@ -18,9 +13,10 @@ import HelloWorld from './components/HelloWorld.vue'
 
 <style scoped>
 header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;}
 
 .logo {
   display: block;
@@ -55,8 +51,10 @@ nav a:first-of-type {
 @media (min-width: 1024px) {
   header {
     display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+    align-items: flex-start;
+    justify-content: flex-start;
+    padding: 1rem;
+    height: auto;
   }
 
   .logo {
