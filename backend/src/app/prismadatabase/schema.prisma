@@ -455,7 +455,7 @@ model PhaseSteps {
   projectPlanId Int
   projectPlan   ProjectPlan @relation(fields: [projectPlanId], references: [id], onDelete: Cascade)
 
-  phaseId Int           @default(autoincrement())
+  phaseId Int
   phase   ProjectPhase? @relation(fields: [phaseId], references: [id], onDelete: Restrict)
 
   // Standard Task Type aus Template ODER Custom Task

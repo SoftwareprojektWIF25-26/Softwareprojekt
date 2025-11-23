@@ -7,6 +7,7 @@ import startpageRoutes from './app/routes/startpageRoutes.js';
 import dashboardRoutes from './app/routes/dashboardRoutes.js';
 import estimationRoutes from './app/routes/calcRoutes.js';
 import configRoutes from './app/routes/configRoutes.js';
+import CreateProject from './app/routes/CreaProjRoutes.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,6 +42,7 @@ app.use('/api/startpage', startpageRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/estimation', estimationRoutes);
 app.use('/api/estimation', configRoutes);
+app.use('/api/projects', CreateProject);
 
 // Static Frontend für Production
 if (process.env.NODE_ENV === 'production') {
@@ -53,6 +55,6 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.listen(port, () => {
-    console.log(`🚀 Server running on port ${port}`);
-    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(` Server running on port ${port}`);
+    console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
 });
