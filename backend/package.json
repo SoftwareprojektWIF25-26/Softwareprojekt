@@ -3,12 +3,21 @@
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
+  "prisma": {
+    "schema": "src/app/prismadatabase/schema.prisma",
+    "seed": "node --loader ts-node/esm src/app/prismadatabase/prisma/seed.ts"
+  },
   "scripts": {
     "clean": "rimraf dist",
     "build": "tsc",
     "gcp-build": "npm run build",
     "start": "node dist/index.js",
-    "dev": "node --loader ts-node/esm src/index.ts"
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "test:db:up": "docker-compose -f docker-compose.test.yml up -d --wait",
+    "test:db:down": "docker-compose -f docker-compose.test.yml down",
+    "test:setup": "npm run test:db:up && dotenv -e .env.test -- npx prisma migrate deploy && dotenv -e .env.test -- npx prisma db seed",
+    "test:e2e": "npm run test:setup && dotenv -e .env.test -- vitest run",
+    "test:cleanup": "npm run test:db:down"
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
@@ -18,10 +27,16 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.9.0",
+    "@types/supertest": "^6.0.3",
+    "dotenv-cli": "^11.0.0",
+    "install": "^0.13.0",
     "nodemon": "^3.1.10",
+    "npm": "^11.6.3",
     "prisma": "^6.18.0",
     "rimraf": "^6.0.1",
+    "supertest": "^7.1.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.13"
   }
 }
