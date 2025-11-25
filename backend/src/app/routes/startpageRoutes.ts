@@ -1,27 +1,30 @@
-// src/routes/startpage.ts
-import {NextFunction, Request, Response, Router} from 'express';
+// src/app/routes/startpageRoutes.ts
+import { Router, Request, Response, NextFunction } from 'express';
 import { query, validationResult } from 'express-validator';
-import { StartPageService } from '../services/startpage.ts';
+import { StartPageService } from '../services/startpage.js'; // Pfad passt, weil routes & services unter app liegen
 
 const router = Router();
 const startPageService = new StartPageService();
 
 /**
  * GET /api/startpage
+ * Frontend: getProjektListe()
  */
 router.get(
     '/',
     [
         query('workspaceId').optional().isString(),
         query('search').optional().isString(),
-        query('status').optional().isIn(['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED']),
+        query('status')
+            .optional()
+            .isIn(['PLANNING', 'IN_PROGRESS', 'COMPLETED', 'ON_HOLD', 'CANCELLED']),
         query('sortBy').optional().isIn(['updatedAt', 'createdAt', 'title']),
-        query('sortOrder').optional().isIn(['asc', 'desc'])
+        query('sortOrder').optional().isIn(['asc', 'desc']),
     ],
-
     async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            // Fehlerfall darf ruhig Wrapper haben, Frontend nutzt das aktuell eh nicht explizit
             return res.status(400).json({ success: false, errors: errors.array() });
         }
 
@@ -33,10 +36,12 @@ router.get(
                 search,
                 status,
                 sortBy: sortBy || 'updatedAt',
-                sortOrder: sortOrder || 'desc'
+                sortOrder: sortOrder || 'desc',
             });
 
-            res.json({ success: true, data });
+            // WICHTIG: direkt Daten zurückgeben, damit getProjektListe().then(res => res.data)
+            // weiter funktioniert (res.data = Array<Projekt>)
+            res.json(data);
         } catch (error) {
             next(error);
         }
@@ -45,12 +50,12 @@ router.get(
 
 /**
  * GET /api/startpage/statistics
+ * Frontend: getStatistiken()
  */
 router.get(
     '/statistics',
     query('workspaceId').optional().isString(),
-
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ success: false, errors: errors.array() });
@@ -60,7 +65,8 @@ router.get(
             const { workspaceId } = req.query as any;
             const statistics = await startPageService.getStatistics(workspaceId);
 
-            res.json({ success: true, data: statistics });
+            // Frontend erwartet direkt das Statistics-Objekt
+            res.json(statistics);
         } catch (error) {
             next(error);
         }
@@ -69,12 +75,12 @@ router.get(
 
 /**
  * GET /api/startpage/recent-projects
+ * Frontend: getZuletztBearbeitet()
  */
 router.get(
     '/recent-projects',
     query('workspaceId').optional().isString(),
-
-    async (req, res, next) => {
+    async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ success: false, errors: errors.array() });
@@ -84,7 +90,8 @@ router.get(
             const { workspaceId } = req.query as any;
             const recentProjects = await startPageService.getRecentProjects(workspaceId, 5);
 
-            res.json({ success: true, data: recentProjects });
+            // Frontend erwartet direkt ein Array von Projekten
+            res.json(recentProjects);
         } catch (error) {
             next(error);
         }
