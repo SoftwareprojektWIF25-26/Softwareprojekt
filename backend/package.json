@@ -17,7 +17,8 @@
     "test:db:down": "docker-compose -f docker-compose.test.yml down",
     "test:setup": "npm run test:db:up && dotenv -e .env.test -- npx prisma migrate deploy && dotenv -e .env.test -- npx prisma db seed",
     "test:e2e": "npm run test:setup && dotenv -e .env.test -- vitest run",
-    "test:cleanup": "npm run test:db:down"
+    "test:cleanup": "npm run test:db:down",
+    "test:coverage": "npm run test:setup && dotenv -e .env.test -- vitest run --coverage"
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
@@ -28,6 +29,7 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.9.0",
     "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^4.0.13",
     "dotenv-cli": "^11.0.0",
     "install": "^0.13.0",
     "nodemon": "^3.1.10",
