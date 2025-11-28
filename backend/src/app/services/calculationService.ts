@@ -1,4 +1,5 @@
-// calculationService.ts - Kern-Berechnungslogik
+// src/app/services/calculationService.ts
+// Kern-Berechnungslogik für Projektschätzung
 
 import {
     InputField,
@@ -31,21 +32,23 @@ export class ProjectCalculationService {
                     normalized = input.value / 100;
                     break;
 
-                case 'number':
+                case 'number': {
                     const min = input.min ?? 0;
                     const max = input.max ?? 100;
-                    normalized = (input.value - min) / (max - min);
+                    normalized = (input.value - min) / (max - min || 1);
                     break;
+                }
 
-                case 'select':
+                case 'select': {
                     // Annahme: Options sind sortiert von schlecht zu gut
                     const idx = input.options?.indexOf(input.value) ?? 0;
                     const optCount = (input.options?.length ?? 1) - 1;
                     normalized = optCount > 0 ? idx / optCount : 0;
                     break;
+                }
             }
 
-            // Bei negativen Faktoren invertieren
+            // Bei negativen Faktoren invertieren (hoher Wert = schlechter, da mehr Aufwand benötigt...)
             if (input.isNegative) {
                 normalized = 1 - normalized;
             }
@@ -65,15 +68,15 @@ export class ProjectCalculationService {
     applyWeights(
         normalizedValues: NormalizedValue[],
         weights: WeightConfig,
-        inputs: InputField[]
+        _inputs: InputField[]
     ): NormalizedValue[] {
-        // Rohgewichte holen
+        // Rohgewichte holen (Default 1.0, falls nichts angegeben)
         const rawWeights = normalizedValues.map(nv =>
             weights[nv.fieldId] ?? 1.0
         );
 
         // Summe berechnen
-        const weightSum = rawWeights.reduce((sum, w) => sum + w, 0);
+        const weightSum = rawWeights.reduce((sum, w) => sum + w, 0) || 1;
 
         // Normalisieren
         return normalizedValues.map((nv, idx) => ({
@@ -103,14 +106,14 @@ export class ProjectCalculationService {
             }
 
             // Gewichtete Summe bilden
-            const weightSum = categoryValues.reduce((sum, cv) => sum + cv.weight, 0);
+            const weightSum = categoryValues.reduce((sum, cv) => sum + cv.weight, 0) || 1;
             const weightedSum = categoryValues.reduce(
                 (sum, cv) => sum + cv.normalized * cv.weight,
                 0
             );
 
             // Normalisieren auf Kategorie-Ebene
-            scores[category] = weightSum > 0 ? weightedSum / weightSum : 0.5;
+            scores[category] = weightedSum / weightSum;
         });
 
         return scores as CategoryScore;
@@ -139,6 +142,7 @@ export class ProjectCalculationService {
         const readinessFactor = 1 + (0.5 - categoryScores.readiness); // R niedrig → +50%
         const complexityFactor = 1 + (categoryScores.complexity * 0.8); // C hoch → +80%
         const uncertaintyFactor = 1 + (categoryScores.uncertainty * 0.6); // U hoch → +60%
+        //TODO: Werte aus dem Frontend entgegenehmen -> Typen anpassen
 
         // Bonus bei sehr schlechter Readiness
         const readinessBonus = categoryScores.readiness < 0.3 ? 1.2 : 1.0;
@@ -192,35 +196,92 @@ export class ProjectCalculationService {
         const phases: ProjectPhase[] = [];
         let currentWeek = 0;
 
-        BASE_PHASE_DISTRIBUTION.forEach((phase, idx) => {
-            // Anpassung der Phasengewichtung basierend auf Scores
-            let adjustedPercentage = phase.percentage;
+        const { readiness, complexity, uncertainty } = categoryScores;
 
-            // Beispiel: Bei schlechter Datenqualität mehr Zeit für Aufbereitung
-            if (phase.name.includes('Datenaufbereitung') && categoryScores.uncertainty > 0.6) {
-                adjustedPercentage *= 1.3;
+        // 1) Basisverteilung holen und Anpassungsfaktoren berechnen
+        const phaseWithFactors = BASE_PHASE_DISTRIBUTION.map((phase) => {
+            const nameLower = phase.name.toLowerCase();
+            let factor = 1;
+
+            // Readiness-Defizit: 0 = sehr gut vorbereitet, 1 = sehr schlecht
+            const readinessDeficit = 1 - readiness;
+
+            const c = complexity;
+            const u = uncertainty;
+        /*
+        * BASE_PHASE_DISTRIBUTION ist z.B.:
+        * [
+            *   { name: 'Anforderungsanalyse', percentage: 0.10 },
+        *   { name: 'Datenaufbereitung', percentage: 0.25 },
+        *   { name: 'Modellierung', percentage: 0.35 },
+        *   { name: 'Evaluation & Testing', percentage: 0.15 },
+        *   { name: 'Deployment & Dokumentation', percentage: 0.15 }
+        * ]
+        */
+
+            if (nameLower.includes('anforderungsanalyse') || nameLower.includes('business')) {
+                // frühe Phase: stark von Readiness abhängig
+                factor += readinessDeficit * 0.7 + u * 0.2;
+            } else if (nameLower.includes('daten') || nameLower.includes('data')) {
+                // Datenaufbereitung: stark von Uncertainty abhängig
+                factor += u * 0.7 + readinessDeficit * 0.3;
+            } else if (nameLower.includes('modell') || nameLower.includes('analysis')) {
+                // Modellierung: vor allem von Complexity, etwas von Uncertainty
+                factor += c * 0.8 + u * 0.2;
+            } else if (nameLower.includes('evaluation') || nameLower.includes('test')) {
+                // Evaluation & Testing: von Complexity und Uncertainty
+                factor += c * 0.4 + u * 0.6;
+            } else if (nameLower.includes('deployment') || nameLower.includes('dokument')) {
+                // Deployment & Dokumentation: von Readiness & Uncertainty
+                factor += readinessDeficit * 0.4 + u * 0.4;
+            } else {
+                // Fallback: neue/sonstige Phase
+                factor += (c + u + readinessDeficit) / 3 * 0.5;
             }
 
-            // Bei hoher Komplexität mehr Modellierungszeit
-            if (phase.name.includes('Modellierung') && categoryScores.complexity > 0.6) {
-                adjustedPercentage *= 1.2;
-            }
+            // Faktor begrenzen, damit nichts explodiert
+            factor = Math.max(0.5, Math.min(2.0, factor));
 
-            const phaseEffort = effortPersonWeeks * adjustedPercentage;
-            const phaseDuration = Math.max(1, Math.round(durationWeeks * adjustedPercentage));
+            return {
+                ...phase,
+                factor,
+                adjustedBase: phase.percentage * factor
+            };
+        });
+
+        // 2) Prozentwerte auf Summe = 1 normalisieren
+        const totalAdjustedBase = phaseWithFactors
+            .reduce((sum, p) => sum + p.adjustedBase, 0) || 1;
+
+        const normalizedPhases = phaseWithFactors.map((p) => {
+            const normalizedPercentage = p.adjustedBase / totalAdjustedBase;
+
+            return {
+                name: p.name,
+                percentage: normalizedPercentage
+            };
+        });
+
+        // 3) Aus den normalisierten Prozenten Aufwand & Dauer pro Phase berechnen
+        normalizedPhases.forEach((phase) => {
+            const phaseEffort = effortPersonWeeks * phase.percentage;
+            const phaseDuration = Math.max(
+                1,
+                Math.round(durationWeeks * phase.percentage)
+            );
 
             phases.push({
                 name: phase.name,
                 startWeek: currentWeek,
                 durationWeeks: phaseDuration,
                 effortPersonWeeks: Math.round(phaseEffort * 10) / 10,
-                percentage: adjustedPercentage
+                percentage: phase.percentage
             });
 
             currentWeek += phaseDuration;
         });
 
-        // Normalisieren, damit Gesamtdauer passt
+        // 4) Dauer normalisieren, damit Summe der Wochen = durationWeeks ist
         const totalCalculatedWeeks = phases.reduce((sum, p) => sum + p.durationWeeks, 0);
         if (totalCalculatedWeeks !== durationWeeks) {
             const scaleFactor = durationWeeks / totalCalculatedWeeks;
@@ -228,17 +289,20 @@ export class ProjectCalculationService {
 
             phases.forEach((phase, idx) => {
                 if (idx < phases.length - 1) {
-                    phase.durationWeeks = Math.max(1, Math.round(phase.durationWeeks * scaleFactor));
+                    phase.durationWeeks = Math.max(
+                        1,
+                        Math.round(phase.durationWeeks * scaleFactor)
+                    );
                     adjustedTotal += phase.durationWeeks;
                 } else {
                     // Letzte Phase bekommt den Rest
-                    phase.durationWeeks = durationWeeks - adjustedTotal;
+                    phase.durationWeeks = Math.max(1, durationWeeks - adjustedTotal);
                 }
             });
 
             // Start-Wochen neu berechnen
             currentWeek = 0;
-            phases.forEach(phase => {
+            phases.forEach((phase) => {
                 phase.startWeek = currentWeek;
                 currentWeek += phase.durationWeeks;
             });
@@ -258,15 +322,15 @@ export class ProjectCalculationService {
             velocityPerSprint = 20
         } = request;
 
-        // Schritt 1-2: Normierung & Gewichtung
+        // Schritt 1–2: Normierung & Gewichtung
         const normalized = this.normalizeInputs(inputs);
         const weighted = this.applyWeights(normalized, weights, inputs);
 
-        // Schritt 3-4: Scores berechnen
+        // Schritt 3–4: Scores berechnen
         const categoryScores = this.calculateCategoryScores(weighted, inputs);
         const overallScore = this.calculateOverallScore(categoryScores);
 
-        // Schritt 5-6: Aufwand & Dauer
+        // Schritt 5–6: Aufwand & Dauer
         const effortPersonWeeks = this.estimateEffort(projectType, categoryScores);
         const durationWeeks = this.estimateDuration(
             effortPersonWeeks,
