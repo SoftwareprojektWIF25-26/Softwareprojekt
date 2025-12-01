@@ -1,10 +1,10 @@
-
-import { PrismaClient, Prisma, LocalWorkspace, ProjectStatus } from '@prisma/client';
+// src/app/services/startpage.ts
+import { PrismaClient, Prisma, ProjectStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 interface StartPageFilters {
-    workspaceId?: string;
+    // workspaceId entfernt
     search?: string;
     status?: ProjectStatus;
     sortBy: 'updatedAt' | 'createdAt' | 'title';
@@ -14,15 +14,14 @@ interface StartPageFilters {
 export class StartPageService {
     /**
      * Hauptfunktion: Lädt alle Daten für die Startseite
+     * (Keine Projekt-ID nötig, da wir EINE LISTE laden)
      */
     async getStartPageData(filters: StartPageFilters) {
-        const workspace = await this.getOrCreateWorkspace(filters.workspaceId);
 
-        // WHERE-Clause
-        const whereClause: Prisma.ProjectWhereInput = {
-            workspaceId: workspace.id
-        };
+        // 1. Basis Where-Clause (ohne Workspace Filter!)
+        const whereClause: Prisma.ProjectWhereInput = {};
 
+        // 2. Filter anwenden
         if (filters.status) {
             whereClause.status = filters.status;
         }
@@ -34,7 +33,7 @@ export class StartPageService {
             ];
         }
 
-        // Projekte laden
+        // 3. Projekte laden
         const projects = await prisma.project.findMany({
             where: whereClause,
             include: {
@@ -57,7 +56,7 @@ export class StartPageService {
             orderBy: { [filters.sortBy]: filters.sortOrder }
         });
 
-        // Projekte aufbereiten
+        // 4. Projekte aufbereiten (Mapping bleibt gleich)
         const projectList = projects.map(project => {
             // Wizard-Fortschritt
             const wizardProgress = Math.round((project.wizardStep / 6) * 100);
@@ -91,7 +90,7 @@ export class StartPageService {
             };
         });
 
-        // Statistiken
+        // 5. Statistiken berechnen
         const statistics = {
             totalProjects: projects.length,
             planning: projects.filter(p => p.status === 'PLANNING').length,
@@ -102,10 +101,7 @@ export class StartPageService {
         };
 
         return {
-            workspace: {
-                id: workspace.id,
-                name: workspace.name
-            },
+            // Workspace-Objekt entfernt, da nicht mehr existent
             projects: projectList,
             statistics,
             totalCount: projectList.length
@@ -113,13 +109,11 @@ export class StartPageService {
     }
 
     /**
-     * Statistiken
+     * Statistiken (Global)
      */
-    async getStatistics(workspaceId?: string) {
-        const workspace = await this.getOrCreateWorkspace(workspaceId);
-
+    async getStatistics() { // Parameter entfernt
+        // Einfach alle Projekte laden (evtl. optimiert nur Status abfragen)
         const projects = await prisma.project.findMany({
-            where: { workspaceId: workspace.id },
             select: { status: true }
         });
 
@@ -136,11 +130,9 @@ export class StartPageService {
     /**
      * Zuletzt bearbeitete Projekte
      */
-    async getRecentProjects(workspaceId?: string, limit: number = 5) {
-        const workspace = await this.getOrCreateWorkspace(workspaceId);
+    async getRecentProjects(limit: number = 5) { // WorkspaceId Parameter entfernt
 
         const projects = await prisma.project.findMany({
-            where: { workspaceId: workspace.id },
             orderBy: { updatedAt: 'desc' },
             take: limit,
             select: {
@@ -156,44 +148,5 @@ export class StartPageService {
         return projects;
     }
 
-    /**
-     * Workspace laden oder erstellen
-     */
-    private async getOrCreateWorkspace(workspaceId?: string): Promise<LocalWorkspace> {
-        if (workspaceId) {
-            const id = this.parseId(workspaceId, 'Workspace-ID')
-            const workspace = await prisma.localWorkspace.findUnique({
-                where: { id }
-            });
 
-            if (!workspace) {
-                throw new Error(`Workspace mit ID ${workspaceId} nicht gefunden`);
-            }
-
-            return workspace;
-        }
-
-        let workspace = await prisma.localWorkspace.findFirst();
-
-        if (!workspace) {
-            workspace = await prisma.localWorkspace.create({
-                data: { name: 'Default Workspace' }
-            });
-        }
-
-        return workspace;
-    }
-
-    /**
-     * Hilfsfunktion: String zu Int konvertieren mit Validierung
-     */
-    private parseId(value: string, fieldName: string): number {
-        const id = parseInt(value, 10);
-
-        if (isNaN(id) || id <= 0) {
-            throw new Error(`Ungültige ${fieldName}: ${value}`);
-        }
-
-        return id;
-    }
 }

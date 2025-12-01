@@ -13,7 +13,7 @@ const startPageService = new StartPageService();
 router.get(
     '/',
     [
-        query('workspaceId').optional().isString(),
+
         query('search').optional().isString(),
         query('status')
             .optional()
@@ -29,10 +29,10 @@ router.get(
         }
 
         try {
-            const { workspaceId, search, status, sortBy, sortOrder } = req.query as any;
+            const { search, status, sortBy, sortOrder } = req.query as any;
 
             const data = await startPageService.getStartPageData({
-                workspaceId,
+
                 search,
                 status,
                 sortBy: sortBy || 'updatedAt',
@@ -54,7 +54,7 @@ router.get(
  */
 router.get(
     '/statistics',
-    query('workspaceId').optional().isString(),
+
     async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -62,8 +62,8 @@ router.get(
         }
 
         try {
-            const { workspaceId } = req.query as any;
-            const statistics = await startPageService.getStatistics(workspaceId);
+
+            const statistics = await startPageService.getStatistics();
 
             // Frontend erwartet direkt das Statistics-Objekt
             res.json(statistics);
@@ -79,7 +79,7 @@ router.get(
  */
 router.get(
     '/recent-projects',
-    query('workspaceId').optional().isString(),
+
     async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -87,8 +87,8 @@ router.get(
         }
 
         try {
-            const { workspaceId } = req.query as any;
-            const recentProjects = await startPageService.getRecentProjects(workspaceId, 5);
+
+            const recentProjects = await startPageService.getRecentProjects();
 
             // Frontend erwartet direkt ein Array von Projekten
             res.json(recentProjects);

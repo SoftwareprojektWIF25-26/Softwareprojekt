@@ -15,7 +15,7 @@ router.post(
     [
         body('title').notEmpty().withMessage('Titel ist erforderlich'),
         body('domain').optional().isString(),
-        body('workspaceId').optional().isString()
+
     ],
     async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
@@ -27,12 +27,12 @@ router.post(
         }
 
         try {
-            const { title, domain, workspaceId } = req.body;
+            const { title, domain } = req.body;
 
             const project = await projectService.createProject({
                 title,
                 domain,
-                workspaceId
+
             });
 
             res.status(201).json({
