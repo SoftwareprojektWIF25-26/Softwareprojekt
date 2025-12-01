@@ -17,7 +17,7 @@ describe('Database Integration Test', () => {
 
     it('sollte das geseedete Projekt in der Test-DB finden', async () => {
         // Wir suchen das Projekt, das wir in seed.ts erstellt haben
-        // (Achte darauf, dass der Titel mit deinem Seed übereinstimmt)
+
         const project = await prisma.project.findFirst({
             where: { title: 'Integration Test Project' }, // Oder 'E2E Test Project', je nachdem was im Seed steht
             include: {

@@ -7,7 +7,7 @@ import startpageRoutes from './app/routes/startpageRoutes.js';
 import dashboardRoutes from './app/routes/dashboardRoutes.js';
 import estimationRoutes from './app/routes/calcRoutes.js';
 import configRoutes from './app/routes/configRoutes.js';
-import CreateProject from './app/routes/CreaProjRoutes.ts';
+import CreateProject from './app/routes/CRUD-Project.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

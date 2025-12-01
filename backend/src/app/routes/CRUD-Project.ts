@@ -1,7 +1,7 @@
 // src/app/routes/projectRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
-import { ProjectService } from '../services/CreateProjectService.ts';
+import { ProjectService } from '../services/CRUD-Project.ts';
 
 const router = Router();
 const projectService = new ProjectService();
