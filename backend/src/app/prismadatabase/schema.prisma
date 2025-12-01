@@ -12,29 +12,11 @@ datasource db {
 }
 
 // ========================================
-// 1. LOCAL WORKSPACE (Arbeitsbereich)
-// ========================================
-
-model LocalWorkspace {
-  id        Int      @id @default(autoincrement())
-  name      String   @default("Default Workspace")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relationen
-  projects Project[]
-
-  @@map("local_workspaces")
-}
-
-// ========================================
 // 2. PROJECT (Hauptentität)
 // ========================================
 
 model Project {
-  id          Int            @id @default(autoincrement())
-  workspaceId Int
-  workspace   LocalWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  id Int @id @default(autoincrement())
 
   // Template 0.x - General
   title  String
@@ -61,7 +43,10 @@ model Project {
   projectPlan           ProjectPlan?
   evaluations           ProjectEvaluation[]
 
-  @@index([workspaceId, status])
+  // Index für schnelle Sortierung auf dem Dashboard (Zuletzt bearbeitet)
+  @@index([updatedAt])
+  // Index für Filterung nach Status
+  @@index([status])
   @@map("projects")
 }
 
