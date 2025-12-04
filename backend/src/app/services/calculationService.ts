@@ -52,7 +52,7 @@ export class ProjectCalculationService {
             if (input.isNegative) {
                 normalized = 1 - normalized;
             }
-
+            normalized = Math.round(normalized * 100) / 100; // auf 2 Nachkommastellen runden
             // Sicherstellen: 0 <= normalized <= 1
             normalized = Math.max(0, Math.min(1, normalized));
 
