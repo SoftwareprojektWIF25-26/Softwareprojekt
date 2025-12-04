@@ -58,7 +58,7 @@ entity "DataCharacteristics" as data {
   updatedAt : DateTime
 }
 
-entity "AnalysisConfig" as analysis {
+entity "Analysis" as analysis {
   PRIMARY_KEY(id) : String
   FOREIGN_KEY(projectId) : String
   --
@@ -71,7 +71,7 @@ entity "AnalysisConfig" as analysis {
   updatedAt : DateTime
 }
 
-entity "DeploymentConfig" as deployment {
+entity "Deployment" as deployment {
   PRIMARY_KEY(id) : String
   FOREIGN_KEY(projectId) : String
   --
@@ -84,7 +84,7 @@ entity "DeploymentConfig" as deployment {
   completedAt : DateTime?
 }
 
-entity "UtilizationConfig" as utilization {
+entity "Utilization" as utilization {
   PRIMARY_KEY(id) : String
   FOREIGN_KEY(projectId) : String
   --
