@@ -1,0 +1,183 @@
+@startuml DS-Projektplanungstool-ER-Schema
+
+
+!define PRIMARY_KEY(x) <u>x</u>
+!define FOREIGN_KEY(x) <i>x</i>
+
+skinparam linetype ortho
+skinparam backgroundColor #FEFEFE
+
+entity "Project" as project {
+  PRIMARY_KEY(id) : String
+  --
+  title : String
+  domain : String?
+  wizardStep : Int
+  wizardCompleted : Boolean
+  status : ProjectStatus
+  startDate : DateTime?
+  endDate : DateTime?
+  createdAt : DateTime
+  updatedAt : DateTime
+}
+
+entity "BusinessUnderstanding" as business {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  businessGoal : String?
+  formOfFinalProduct : FormOfFinalProduct?
+  projectTeamRoles : TeamRole[]
+  teamSize : Int?
+  timelineValue : Int?
+  timelineUnit : TimelineUnit
+  estimatedCost : Float?
+  toolsBusinessUnderstanding : String?
+  status : TemplatePhaseStatus
+  completedAt : DateTime?
+}
+
+entity "DataCharacteristics" as data {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  dataAccess : DataAccessType[]
+  dataAvailability : Boolean?
+  dataSources : String[]
+  dataSecurityConstraints : String?
+  velocity : DataVelocity?
+  veracity : DataVeracity?
+  variety : DataVariety?
+  volumeValue : Float?
+  volumeUnit : VolumeUnit
+  variability : DataVariability
+  dataPreparationSteps : DataPreparationStep
+  toolsData : String?
+  status : TemplatePhaseStatus
+  completedAt : DateTime?
+  updatedAt : DateTime
+}
+
+entity "AnalysisConfig" as analysis {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  dataScienceGoals : String?
+  typeOfAnalytics : AnalyticsType?
+  evaluationMetrics : String[]
+  toolsAnalysis : String?
+  status : TemplatePhaseStatus
+  completedAt : DateTime?
+  updatedAt : DateTime
+}
+
+entity "DeploymentConfig" as deployment {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  timelinessOfAnalytics : TimelinessLevel?
+  addressedUsers : String?
+  tests : String?
+  projectIssues : ProjectIssueType[]
+  toolsDeployment : String?
+  status : TemplatePhaseStatus
+  completedAt : DateTime?
+}
+
+entity "UtilizationConfig" as utilization {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  monitoring : String?
+  maintenance : String?
+  toolsUtilization : String?
+  status : TemplatePhaseStatus
+  completedAt : DateTime?
+}
+
+entity "ProjectPlan" as plan {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  estimatedDuration : Int?
+  estimatedEffort : Float?
+  calculatedComplexity : Float?
+  bufferPercentage : Int
+  phaseWeights : Json?
+  createdAt : DateTime
+  updatedAt : DateTime
+}
+
+entity "ProjectPhase" as phase {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectPlanId) : String
+  --
+  name : String
+  phaseType : PhaseType
+  description : String?
+  orderIndex : Int
+  estimatedDuration : Int?
+  estimatedEffort : Float?
+  startDate : DateTime?
+  endDate : DateTime?
+  createdAt : DateTime
+}
+
+entity "PhaseTask" as task {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectPlanId) : String
+  FOREIGN_KEY(phaseId) : String?
+  --
+  taskType : StandardTaskType
+  customTitle : String?
+  title : String?
+  description : String?
+  status : TaskStatus
+  estimatedDuration : Int?
+  estimatedEffort : Float?
+  startDate : DateTime?
+  endDate : DateTime?
+  createdAt : DateTime
+  updatedAt : DateTime
+}
+
+entity "TaskDependency" as dependency {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectPlanId) : String
+  FOREIGN_KEY(fromTaskId) : String
+  FOREIGN_KEY(toTaskId) : String
+  --
+  dependencyType : DependencyType
+  lag : Int
+  createdAt : DateTime
+}
+
+entity "ProjectEvaluation" as evaluation {
+  PRIMARY_KEY(id) : String
+  FOREIGN_KEY(projectId) : String
+  --
+  category : String
+  rating : Int
+  notes : String?
+  createdAt : DateTime
+}
+
+' Relationships mit Kardinalitäten [min,max]
+project "[1,1]" -- "[0,1]" business
+project "[1,1]" -- "[0,1]" data
+project "[1,1]" -- "[0,1]" analysis
+project "[1,1]" -- "[0,1]" deployment
+project "[1,1]" -- "[0,1]" utilization
+project "[1,1]" -- "[0,1]" plan
+project "[1,1]" -- "[0,*]" evaluation
+
+plan "[1,1]" -- "[0,*]" phase
+plan "[1,1]" -- "[0,*]" task
+plan "[1,1]" -- "[0,*]" dependency
+
+phase "[0,1]" -- "[0,*]" task
+
+task "[1,1]" -- "[0,*]" dependency
+task "[1,1]" -- "[0,*]" dependency
+
+@enduml

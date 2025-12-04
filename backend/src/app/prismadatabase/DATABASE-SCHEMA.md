@@ -1,15 +1,5 @@
 # Datenbankschema: DS-Projektplanungstool (PostgreSQL)
 
-#  LocalWorkspace (Arbeitsbereich)
-| Feld      | Typ      | Beschreibung                                            | Schlüssel   |
-| --------- | -------- | ------------------------------------------------------- | ----------- |
-| id        | String   | Eindeutiger Identifikator (CUID)                        | Primary Key |
-| name      | String   | Name des Arbeitsbereichs (Default: "Default Workspace") |             |
-| createdAt | DateTime | Zeitstempel der Erstellung                              |             |
-| updatedAt | DateTime | Zeitstempel der letzten Aktualisierung                  |             |
----
-# Relationen:
-projects → Project[] (1:n)
 
 
 
@@ -17,7 +7,6 @@ projects → Project[] (1:n)
 | Feld            | Typ           | Beschreibung                 | Schlüssel   |
 | --------------- | ------------- | ---------------------------- | ----------- |
 | id              | String        | Eindeutiger Identifikator    | Primary Key |
-| workspaceId     | String        | Fremdschlüssel zum Workspace | Foreign Key |
 | title           | String        | Titel des Projekts           |             |
 | domain          | String?       | Fachliche Domäne             |             |
 | wizardStep      | Int           | Wizard-Schritt (0-6)         |             |
@@ -30,7 +19,6 @@ projects → Project[] (1:n)
 
 **Relationen:**
 
-workspace → LocalWorkspace
 
 businessUnderstanding → BusinessUnderstanding? (1:1)
 
@@ -157,7 +145,7 @@ DataPreparationStep: JOINS, DEDUPLICATION, OUTLIER_DETECTION, NORMALIZATION, MIS
 
 
 
-### 3. AnalysisConfig (Template 3.x)
+### 3. Analysis (Template 3.x)
 | Feld              | Typ                 | Beschreibung               | Schlüssel           |
 | ----------------- | ------------------- | -------------------------- | ------------------- |
 | id                | String              | Eindeutiger Identifikator  | Primary Key         |
@@ -191,7 +179,7 @@ OTHER
 
 
 
-### 4. DeploymentConfig (Template 4.x)
+### 4. Deployment (Template 4.x)
 | Feld                  | Typ                 | Beschreibung                | Schlüssel           |
 | --------------------- | ------------------- | --------------------------- | ------------------- |
 | id                    | String              | Eindeutiger Identifikator   | Primary Key         |
@@ -232,7 +220,7 @@ TEAM_COORDINATION
 
 
 
-### 5. UtilizationConfig (Template 5.x)
+### 5. Utilization (Template 5.x)
 | Feld             | Typ                 | Beschreibung               | Schlüssel           |
 | ---------------- | ------------------- | -------------------------- | ------------------- |
 | id               | String              | Eindeutiger Identifikator  | Primary Key         |
