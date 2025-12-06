@@ -19,11 +19,8 @@ describe('E2E Project Wizard Flow', () => {
 
     beforeAll(async () => {
         await prisma.$connect();
-        // Sicherstellen, dass ein Default Workspace existiert
-        const ws = await prisma.localWorkspace.findFirst();
-        if (!ws) {
-            await prisma.localWorkspace.create({ data: { name: 'Default Workspace' } });
-        }
+
+
     });
 
     afterAll(async () => {

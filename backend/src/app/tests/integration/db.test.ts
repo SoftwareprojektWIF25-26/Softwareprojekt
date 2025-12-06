@@ -21,7 +21,7 @@ describe('Database Integration Test', () => {
         const project = await prisma.project.findFirst({
             where: { title: 'Integration Test Project' }, // Oder 'E2E Test Project', je nachdem was im Seed steht
             include: {
-                workspace: true,
+
                 businessUnderstanding: true
             }
         });
@@ -29,7 +29,7 @@ describe('Database Integration Test', () => {
         // Prüfungen (Assertions)
         expect(project).not.toBeNull();
         expect(project?.title).toContain('Test Project');
-        expect(project?.workspace).toBeDefined();
+
 
         console.log('✅ Gefundenes Projekt:', project?.title);
     });
