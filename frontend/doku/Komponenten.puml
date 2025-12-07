@@ -1,0 +1,45 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+left to right direction
+
+Person("user", "User", "Interagiert mit dem Frontend")
+
+Boundary("ui", "UI ") {
+Component("views", views,, Seiten)
+Component("layouts", "Layouts", "", "Globale Seitenstruktur")
+Component("components", "Components", "", "Wiederverwendbare UI Bausteine")
+Component("assets", assets, ,"Schriftarten, Bilder, Grundstil")
+}
+
+Boundary("state", "Navigation & State ") {
+Component("api", api,axios, Schnittstelle zum Backend)
+Component("stores", stores)
+}
+
+Boundary("logic", "Logic ") {
+Component("router", router,, Navigationslogik)
+Component("types", types,, Interfaces für Objekte)
+}
+
+System("backend", "Backend", "REST-Endpunkte für CRUD")
+ContainerDb("datenbank", "Datenbank", prisma)
+
+Rel("views", "layouts",)
+Rel("views", "components",verwendet Komponenten)
+Rel("views", "router", führt Navigation aus)
+Rel("views", "api","patch, post, get")
+Rel("views", "assets",)
+Rel("views", "types",verwendet Typdefinition)
+
+Rel("router", "views", lädt Seiten)
+
+Rel("components", "api","patch, post, get")
+Rel("components", "types", verwendet Typdefinition)
+Rel("components", "assets",)
+Rel("components", "router", führt Navigation aus)
+
+Rel("user", "views",nutzt)
+Rel("api", "backend", HTTP Request)
+Rel("backend", "datenbank",)
+
+@enduml
