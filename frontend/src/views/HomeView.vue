@@ -4,17 +4,19 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-function gotToProjekt_erstellen(){
-  router.push({ name: 'Projekt_erstellen' })
+function goToProjektErstellen() {
+  router.push({ name: 'projekt-erstellen' })
 }
 </script>
 
 <template>
   <Projektliste />
-<button
-  class="btn btn-primary"
-  type="button"
-  @click ="gotToProjekt_erstellen">
-  Neues Projekt erstellen
+
+  <button
+    class="btn btn-primary"
+    type="button"
+    @click="goToProjektErstellen"
+  >
+    Neues Projekt erstellen
   </button>
 </template>

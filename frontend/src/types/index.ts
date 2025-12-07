@@ -1,42 +1,39 @@
-export interface Projekt{
+export interface Projekt {
   ID: string;
   Titel: string;
   Domain?: string;
   Beschreibung?: string;
-
   Geschaeftsziel?: string;
-  Teamrollen: string[];
-  Teamgroesses?: number;
+  Teamrolle?: string[];
+  Teamgrosse?: number;
   Kosten?: number;
-  Zeitrahmen: string;
+  Zeitraum?: string;
   FormFinaleProdukt?: string;
   WerkzeugeGeschaeftsverstaendnis?: string;
 
-  Datenzugriff: string[];
+  Datenzugriff?: string[];
   Datenverfuegbarkeit?: boolean;
   Datenquellen: string[];
-  Datensicherhiet?: string;
+  Datensicherheit?: string;
   Datenqualitaet?: string;
   Datengeschwindigkeit?: string;
   Datenumfang?: number;
   Datenvielfalt?: string;
   Datenvariabilitaet?: string;
-  Datenvorbereitungsschritte: string;
+  Datenvorbereitungsschritte?: string;
   Datentools?: string;
 
   Analysetools?: string;
   DataScienceZiele?: string;
   Analysetyp?: string;
   Bewertungsmetriken: string[];
-
   Analysezeitrahmen?: string;
   Tests?: string;
   Zielgruppe?: string;
-  Projektprobleme: string[];
+  Projektprobleme?: string[];
   DeploymentTools?: string;
 
   Wartung?: string;
   Verwendungstools?: string;
   Ueberwachung?: string;
-
 }

@@ -3,7 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import Dashboard from "@/views/Dashboard.vue";
 import Projekt_erstellen from "@/views/Projekt_erstellen.vue";
 
-const router = createRouter({
+const router: Router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
@@ -15,10 +15,11 @@ const router = createRouter({
       path: '/dashboard/:id',
       name: 'dashboard',
       component: Dashboard,
-      props: true},
+      props: true,
+    },
     {
-      path: '/Projekt_erstellen',
-      name: 'Projekt_erstellen',
+      path: '/projekt-erstellen',
+      name: 'projekt-erstellen',
       component: Projekt_erstellen,
     },
   ],
