@@ -1,27 +1,15 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import Header from "@/layouts/Header.vue";
 </script>
 
 <template>
-  <header>
-    <img alt=" logo" class="logo" src="@/assets/Signet_FIN_1.jpeg" width="300" height="125" />
-
-  </header>
+  <Header/>
 
   <RouterView />
 </template>
 
 <style scoped>
-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
 
 nav {
   width: 100%;
