@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, LocalWorkspace, ProjectStatus, TemplatePhaseStatus } from '@prisma/client';
+import { PrismaClient, Prisma, ProjectStatus, TemplatePhaseStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +40,7 @@ export class DashboardService {
         const project = await prisma.project.findUnique({
             where: { id },
             include: {
-                workspace: true,
+
                 businessUnderstanding: true,
                 dataCharacteristics: true,
                 analysisConfig: true,
@@ -174,10 +174,7 @@ export class DashboardService {
                 createdAt: project.createdAt,
                 updatedAt: project.updatedAt
             },
-            workspace: {
-                id: project.workspace.id,
-                name: project.workspace.name
-            },
+
             wizardProgress,
             templatePhases,
             templateProgress,
