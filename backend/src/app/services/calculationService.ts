@@ -131,10 +131,11 @@ export class ProjectCalculationService {
         );
     }
 
-    // Schritt 5: Aufwandsschätzung
+    // Schritt 5: Aufwandsschätzung mit optionalem Risiko-Puffer
     estimateEffort(
         projectType: ProjectType,
-        categoryScores: CategoryScore
+        categoryScores: CategoryScore,
+        includeRiskBuffer = true
     ): number {
         const baseEffort = BASE_EFFORT[projectType];
 
@@ -142,16 +143,22 @@ export class ProjectCalculationService {
         const readinessFactor = 1 + (0.5 - categoryScores.readiness); // R niedrig → +50%
         const complexityFactor = 1 + (categoryScores.complexity * 0.8); // C hoch → +80%
         const uncertaintyFactor = 1 + (categoryScores.uncertainty * 0.6); // U hoch → +60%
-        //TODO: Werte aus dem Frontend entgegenehmen -> Typen anpassen
 
         // Bonus bei sehr schlechter Readiness
         const readinessBonus = categoryScores.readiness < 0.3 ? 1.2 : 1.0;
 
-        const effort = baseEffort *
+        let effort = baseEffort *
             readinessFactor *
             complexityFactor *
             uncertaintyFactor *
             readinessBonus;
+
+        // Risiko-Puffer hinzufügen
+        if (includeRiskBuffer) {
+            const riskLevel = (categoryScores.complexity + categoryScores.uncertainty) / 2;
+            const buffer = 1 + (riskLevel * 0.15); // bis zu +15% Puffer
+            effort *= buffer;
+        }
 
         return Math.round(effort * 10) / 10; // Auf 1 Dezimale runden
     }
@@ -187,16 +194,20 @@ export class ProjectCalculationService {
         return { storyPoints, sprintCount };
     }
 
-    // Gantt-Phasen generieren
+    // Gantt-Phasen generieren (KORRIGIERT: 6 Phasen nach DSLC mit Puffer-Tracking)
     generatePhases(
         effortPersonWeeks: number,
         durationWeeks: number,
-        categoryScores: CategoryScore
+        categoryScores: CategoryScore,
+        riskBufferTotal: number = 0  // NEU: Gesamt-Puffer in PW
     ): ProjectPhase[] {
         const phases: ProjectPhase[] = [];
         let currentWeek = 0;
 
         const { readiness, complexity, uncertainty } = categoryScores;
+
+        // Basis-Aufwand (ohne Puffer)
+        const baseEffort = effortPersonWeeks - riskBufferTotal;
 
         // 1) Basisverteilung holen und Anpassungsfaktoren berechnen
         const phaseWithFactors = BASE_PHASE_DISTRIBUTION.map((phase) => {
@@ -208,34 +219,57 @@ export class ProjectCalculationService {
 
             const c = complexity;
             const u = uncertainty;
-        /*
-        * BASE_PHASE_DISTRIBUTION ist z.B.:
-        * [
-            *   { name: 'Anforderungsanalyse', percentage: 0.10 },
-        *   { name: 'Datenaufbereitung', percentage: 0.25 },
-        *   { name: 'Modellierung', percentage: 0.35 },
-        *   { name: 'Evaluation & Testing', percentage: 0.15 },
-        *   { name: 'Deployment & Dokumentation', percentage: 0.15 }
-        * ]
-        */
 
-            if (nameLower.includes('anforderungsanalyse') || nameLower.includes('business')) {
-                // frühe Phase: stark von Readiness abhängig
-                factor += readinessDeficit * 0.7 + u * 0.2;
-            } else if (nameLower.includes('daten') || nameLower.includes('data')) {
-                // Datenaufbereitung: stark von Uncertainty abhängig
-                factor += u * 0.7 + readinessDeficit * 0.3;
-            } else if (nameLower.includes('modell') || nameLower.includes('analysis')) {
+            /*
+            * BASE_PHASE_DISTRIBUTION basiert auf DSLC (6 Phasen):
+            * [
+            *   { name: 'Business Understanding', percentage: 0.10 },
+            *   { name: 'Data Collection, Exploration & Preparation', percentage: 0.25 },
+            *   { name: 'Analysis', percentage: 0.30 },
+            *   { name: 'Evaluation', percentage: 0.15 },
+            *   { name: 'Deployment', percentage: 0.10 },
+            *   { name: 'Utilization', percentage: 0.10 }
+            * ]
+            */
+
+            // Business Understanding
+            if (nameLower.includes('business') || nameLower.includes('understanding')) {
+                // Frühe Phase: stark von Readiness und Uncertainty abhängig
+                factor += readinessDeficit * 0.7 + u * 0.3;
+            }
+            // Data Collection, Exploration & Preparation
+            else if (nameLower.includes('data') &&
+                (nameLower.includes('collection') ||
+                    nameLower.includes('exploration') ||
+                    nameLower.includes('preparation'))) {
+                // Datenphase: stark von Uncertainty und Readiness abhängig
+                factor += u * 0.6 + readinessDeficit * 0.4;
+            }
+            // Analysis / Modeling
+            else if (nameLower.includes('analysis') || nameLower.includes('modeling')) {
                 // Modellierung: vor allem von Complexity, etwas von Uncertainty
-                factor += c * 0.8 + u * 0.2;
-            } else if (nameLower.includes('evaluation') || nameLower.includes('test')) {
-                // Evaluation & Testing: von Complexity und Uncertainty
-                factor += c * 0.4 + u * 0.6;
-            } else if (nameLower.includes('deployment') || nameLower.includes('dokument')) {
-                // Deployment & Dokumentation: von Readiness & Uncertainty
-                factor += readinessDeficit * 0.4 + u * 0.4;
-            } else {
-                // Fallback: neue/sonstige Phase
+                factor += c * 0.7 + u * 0.3;
+            }
+            // Evaluation
+            else if (nameLower.includes('evaluation') || nameLower.includes('testing')) {
+                // Evaluation: von Complexity und Uncertainty
+                factor += c * 0.5 + u * 0.5;
+            }
+            // Deployment
+            else if (nameLower.includes('deployment')) {
+                // Deployment: von Readiness und Complexity
+                factor += readinessDeficit * 0.4 + c * 0.4;
+            }
+            // Utilization / Monitoring & Maintenance
+            else if (nameLower.includes('utilization') ||
+                nameLower.includes('monitoring') ||
+                nameLower.includes('maintenance')) {
+                // Betriebsphase: von Complexity und Uncertainty abhängig
+                // Komplexe/unsichere Modelle brauchen mehr Monitoring
+                factor += c * 0.5 + u * 0.5;
+            }
+            // Fallback für neue/sonstige Phasen
+            else {
                 factor += (c + u + readinessDeficit) / 3 * 0.5;
             }
 
@@ -262,20 +296,62 @@ export class ProjectCalculationService {
             };
         });
 
+        // 2.5) NEU: Risiko-Gewichte pro Phase berechnen für Puffer-Verteilung
+        const phaseRiskWeights = normalizedPhases.map(phase => {
+            const riskWeight = this.calculatePhaseRiskWeight(phase.name, categoryScores);
+            return {
+                name: phase.name,
+                percentage: phase.percentage,
+                riskWeight
+            };
+        });
+
+        const totalRiskWeight = phaseRiskWeights.reduce((sum, p) => sum + p.riskWeight, 0) || 1;
+
+        // Puffer auf Phasen verteilen
+        const bufferDistribution: Record<string, number> = {};
+        phaseRiskWeights.forEach(phase => {
+            const phaseBufferRatio = phase.riskWeight / totalRiskWeight;
+            bufferDistribution[phase.name] = riskBufferTotal * phaseBufferRatio;
+        });
+
         // 3) Aus den normalisierten Prozenten Aufwand & Dauer pro Phase berechnen
         normalizedPhases.forEach((phase) => {
-            const phaseEffort = effortPersonWeeks * phase.percentage;
+            // Basis-Aufwand für diese Phase
+            const phaseBaseEffort = baseEffort * phase.percentage;
+
+            // Puffer für diese Phase
+            const phaseBufferEffort = bufferDistribution[phase.name] || 0;
+
+            // Gesamt-Aufwand = Basis + Puffer
+            const phaseTotalEffort = phaseBaseEffort + phaseBufferEffort;
+
+            // Dauer berechnen (proportional zum Gesamt-Aufwand)
             const phaseDuration = Math.max(
                 1,
                 Math.round(durationWeeks * phase.percentage)
             );
 
+            // Dauer-Aufteilung: Basis vs. Puffer
+            // Annahme: Puffer erhöht Dauer proportional zum Aufwand
+            const effortRatio = phaseTotalEffort > 0
+                ? phaseBaseEffort / phaseTotalEffort
+                : 1;
+            const baseDuration = Math.max(1, Math.round(phaseDuration * effortRatio));
+            const bufferDuration = phaseDuration - baseDuration;
+
             phases.push({
                 name: phase.name,
                 startWeek: currentWeek,
                 durationWeeks: phaseDuration,
-                effortPersonWeeks: Math.round(phaseEffort * 10) / 10,
-                percentage: phase.percentage
+                effortPersonWeeks: Math.round(phaseTotalEffort * 10) / 10,
+                percentage: phase.percentage,
+
+                // NEU: Aufschlüsselung für Gantt-Visualisierung
+                baseEffort: Math.round(phaseBaseEffort * 10) / 10,
+                bufferEffort: Math.round(phaseBufferEffort * 10) / 10,
+                baseDuration: baseDuration,
+                bufferDuration: bufferDuration
             });
 
             currentWeek += phaseDuration;
@@ -289,14 +365,31 @@ export class ProjectCalculationService {
 
             phases.forEach((phase, idx) => {
                 if (idx < phases.length - 1) {
+                    const oldDuration = phase.durationWeeks;
                     phase.durationWeeks = Math.max(
                         1,
                         Math.round(phase.durationWeeks * scaleFactor)
                     );
+
+                    // Basis- und Puffer-Dauer auch skalieren
+                    if (phase.baseDuration !== undefined && phase.bufferDuration !== undefined) {
+                        const durationScale = phase.durationWeeks / oldDuration;
+                        phase.baseDuration = Math.max(0, Math.round(phase.baseDuration * durationScale));
+                        phase.bufferDuration = phase.durationWeeks - phase.baseDuration;
+                    }
+
                     adjustedTotal += phase.durationWeeks;
                 } else {
                     // Letzte Phase bekommt den Rest
+                    const oldDuration = phase.durationWeeks;
                     phase.durationWeeks = Math.max(1, durationWeeks - adjustedTotal);
+
+                    // Basis- und Puffer-Dauer auch anpassen
+                    if (phase.baseDuration !== undefined && phase.bufferDuration !== undefined) {
+                        const durationScale = phase.durationWeeks / oldDuration;
+                        phase.baseDuration = Math.max(0, Math.round(phase.baseDuration * durationScale));
+                        phase.bufferDuration = phase.durationWeeks - phase.baseDuration;
+                    }
                 }
             });
 
@@ -311,8 +404,91 @@ export class ProjectCalculationService {
         return phases;
     }
 
+    // NEU: Hilfsmethode für Phase-Risiko-Gewicht
+    private calculatePhaseRiskWeight(
+        phaseName: string,
+        categoryScores: CategoryScore
+    ): number {
+        const nameLower = phaseName.toLowerCase();
+        const { readiness, complexity, uncertainty } = categoryScores;
+        const readinessDeficit = 1 - readiness;
+
+        let riskWeight = 0;
+
+        // Business Understanding: Risiko bei schlechter Readiness
+        if (nameLower.includes('business') || nameLower.includes('understanding')) {
+            riskWeight = readinessDeficit * 0.7 + uncertainty * 0.3;
+        }
+        // Data Collection: Risiko bei hoher Uncertainty
+        else if (nameLower.includes('data') &&
+            (nameLower.includes('collection') ||
+                nameLower.includes('exploration') ||
+                nameLower.includes('preparation'))) {
+            riskWeight = uncertainty * 0.8 + readinessDeficit * 0.2;
+        }
+        // Analysis/Modeling: Risiko bei Complexity + Uncertainty
+        else if (nameLower.includes('analysis') || nameLower.includes('modeling')) {
+            riskWeight = complexity * 0.6 + uncertainty * 0.4;
+        }
+        // Evaluation: Risiko bei Complexity
+        else if (nameLower.includes('evaluation') || nameLower.includes('testing')) {
+            riskWeight = complexity * 0.7 + uncertainty * 0.3;
+        }
+        // Deployment: Risiko bei Readiness-Defizit
+        else if (nameLower.includes('deployment')) {
+            riskWeight = readinessDeficit * 0.5 + complexity * 0.5;
+        }
+        // Utilization: Risiko bei Complexity
+        else if (nameLower.includes('utilization') ||
+            nameLower.includes('monitoring')) {
+            riskWeight = complexity * 0.6 + uncertainty * 0.4;
+        }
+        else {
+            riskWeight = (complexity + uncertainty + readinessDeficit) / 3;
+        }
+
+        return Math.max(0, Math.min(1, riskWeight));
+    }
+
+    // Request-Validierung
+    validateRequest(request: CalculationRequest): { isValid: boolean; errors: string[] } {
+        const errors: string[] = [];
+
+        if (!request.inputs || request.inputs.length === 0) {
+            errors.push("Keine Eingabewerte vorhanden");
+        }
+
+        if (!request.projectType) {
+            errors.push("Projekttyp muss angegeben werden");
+        }
+
+        if (request.teamSize < 1) {
+            errors.push("Teamgröße muss mindestens 1 sein");
+        }
+
+        if (request.productivityFactor &&
+            (request.productivityFactor <= 0 || request.productivityFactor > 1)) {
+            errors.push("Produktivitätsfaktor muss zwischen 0 und 1 liegen");
+        }
+
+        if (request.velocityPerSprint && request.velocityPerSprint <= 0) {
+            errors.push("Velocity pro Sprint muss größer als 0 sein");
+        }
+
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+    }
+
     // Hauptmethode: Vollständige Berechnung
     calculate(request: CalculationRequest): ProjectMetrics {
+        // Validierung
+        const validation = this.validateRequest(request);
+        if (!validation.isValid) {
+            throw new Error(`Ungültige Eingaben: ${validation.errors.join(', ')}`);
+        }
+
         const {
             inputs,
             weights,
@@ -322,6 +498,9 @@ export class ProjectCalculationService {
             velocityPerSprint = 20
         } = request;
 
+        // Risiko-Puffer standardmäßig aktiviert
+        const includeRiskBuffer = (request as any).includeRiskBuffer ?? true;
+
         // Schritt 1–2: Normierung & Gewichtung
         const normalized = this.normalizeInputs(inputs);
         const weighted = this.applyWeights(normalized, weights, inputs);
@@ -330,8 +509,20 @@ export class ProjectCalculationService {
         const categoryScores = this.calculateCategoryScores(weighted, inputs);
         const overallScore = this.calculateOverallScore(categoryScores);
 
-        // Schritt 5–6: Aufwand & Dauer
-        const effortPersonWeeks = this.estimateEffort(projectType, categoryScores);
+        // Schritt 5: Aufwand OHNE Puffer berechnen
+        const effortWithoutBuffer = this.estimateEffort(
+            projectType,
+            categoryScores,
+            false  // Ohne Puffer
+        );
+
+        // Risiko-Puffer separat berechnen
+        const riskLevel = (categoryScores.complexity + categoryScores.uncertainty) / 2;
+        const bufferPercentage = includeRiskBuffer ? riskLevel * 0.15 : 0;
+        const riskBufferTotal = effortWithoutBuffer * bufferPercentage;
+        const effortPersonWeeks = effortWithoutBuffer + riskBufferTotal;
+
+        // Schritt 6: Dauer
         const durationWeeks = this.estimateDuration(
             effortPersonWeeks,
             teamSize,
@@ -346,10 +537,13 @@ export class ProjectCalculationService {
             effortPersonWeeks,
             velocityPerSprint
         );
+
+        // Phasen mit Puffer-Tracking
         const phases = this.generatePhases(
             effortPersonWeeks,
             durationWeeks,
-            categoryScores
+            categoryScores,
+            riskBufferTotal  // Puffer-Info für Verteilung
         );
 
         return {
@@ -360,7 +554,14 @@ export class ProjectCalculationService {
             projectSize,
             storyPoints,
             sprintCount,
-            phases
+            phases,
+            // NEU: Aufschlüsselung für transparente Darstellung
+            effortBreakdown: {
+                baseEffort: effortWithoutBuffer,
+                bufferEffort: riskBufferTotal,
+                bufferPercentage: bufferPercentage,
+                riskLevel: riskLevel
+            }
         };
     }
 }

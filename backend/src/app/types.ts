@@ -51,6 +51,14 @@ export interface ProjectMetrics {
     effortPersonWeeks: number;
     durationWeeks: number;
 
+    //Aufwands-Aufschlüsselung
+    effortBreakdown: {
+        baseEffort: number;             // Basis-Aufwand ohne Puffer
+        bufferEffort: number;           // Nur der Puffer
+        bufferPercentage: number;       // Puffer in % (z.B. 0.15 = 15%)
+        riskLevel: number;              // 0-1 (Basis für Puffer-Berechnung)
+    };
+
     // Klassifizierung
     projectSize: ProjectSize;
 
@@ -68,6 +76,12 @@ export interface ProjectPhase {
     durationWeeks: number;
     effortPersonWeeks: number;
     percentage: number;
+
+    // NEU: Aufschlüsselung für Visualisierung
+    baseEffort?: number;           // Basis-Aufwand ohne Puffer
+    bufferEffort?: number;         // Nur der Puffer
+    baseDuration?: number;         // Basis-Dauer in Wochen
+    bufferDuration?: number;       // Puffer-Dauer in Wochen
 }
 
 export interface CalculationRequest {
@@ -77,6 +91,7 @@ export interface CalculationRequest {
     teamSize: number;
     productivityFactor?: number; // Standard: 0.6
     velocityPerSprint?: number; // Standard: 20 SP
+    includeRiskBuffer?: boolean; // NEU: Standard: true
 }
 
 export interface CalculationResponse {
@@ -101,11 +116,24 @@ export const PROJECT_SIZE_THRESHOLDS = [
     { size: ProjectSize.XL, max: Infinity }
 ];
 
-// Phasenverteilung (Basis-Prozentsätze)
+// Phasenverteilung nach DSLC (Data Science Lifecycle) - 6 Phasen
+// Entspricht dem Standard aus der Literatur und CRISP-DM
 export const BASE_PHASE_DISTRIBUTION = [
-    { name: 'Anforderungsanalyse', percentage: 0.10 },
-    { name: 'Datenaufbereitung', percentage: 0.25 },
-    { name: 'Modellierung', percentage: 0.35 },
-    { name: 'Evaluation & Testing', percentage: 0.15 },
-    { name: 'Deployment & Dokumentation', percentage: 0.15 }
+    { name: 'Business Understanding', percentage: 0.10 },
+    { name: 'Data Collection, Exploration & Preparation', percentage: 0.25 },
+    { name: 'Analysis', percentage: 0.30 },
+    { name: 'Evaluation', percentage: 0.15 },
+    { name: 'Deployment', percentage: 0.10 },
+    { name: 'Utilization', percentage: 0.10 }
 ];
+
+
+// Deutschen Namen für UI -> optional falls wir das brauchen
+export const PHASE_TRANSLATIONS: Record<string, string> = {
+    'Business Understanding': 'Geschäftsverständnis',
+    'Data Collection, Exploration & Preparation': 'Datenerfassung & -aufbereitung',
+    'Analysis': 'Analyse & Modellierung',
+    'Evaluation': 'Evaluation & Testing',
+    'Deployment': 'Deployment',
+    'Utilization': 'Betrieb & Monitoring'
+};
