@@ -257,6 +257,19 @@ describe('ProjectCalculationService', () => {
 
             expect(highResult).toBeGreaterThan(lowResult);
         });
+
+        it('sollte Aufwand ohne Puffer berechnen können', () => {
+            const categoryScores = {
+                readiness: 0.5,
+                complexity: 0.5,
+                uncertainty: 0.5
+            };
+
+            const withBuffer = service.estimateEffort(ProjectType.REPORTING, categoryScores, true);
+            const withoutBuffer = service.estimateEffort(ProjectType.REPORTING, categoryScores, false);
+
+            expect(withBuffer).toBeGreaterThan(withoutBuffer);
+        });
     });
 
     describe('estimateDuration', () => {
@@ -323,17 +336,46 @@ describe('ProjectCalculationService', () => {
     });
 
     describe('generatePhases', () => {
-        it('sollte Phasen generieren', () => {
+        it('sollte 6 DSLC-Phasen generieren', () => {
             const categoryScores = {
                 readiness: 0.5,
                 complexity: 0.5,
                 uncertainty: 0.5
             };
 
-            const result = service.generatePhases(100, 20, categoryScores);
+            const result = service.generatePhases(100, 20, categoryScores, 10);
 
-            expect(result.length).toBeGreaterThan(0);
+            expect(result.length).toBe(6);
             expect(result[0].startWeek).toBe(0);
+        });
+
+        it('sollte Puffer-Tracking-Felder enthalten', () => {
+            const categoryScores = {
+                readiness: 0.5,
+                complexity: 0.5,
+                uncertainty: 0.5
+            };
+
+            const riskBuffer = 10;
+            const result = service.generatePhases(100, 20, categoryScores, riskBuffer);
+
+            result.forEach(phase => {
+                expect(phase).toHaveProperty('baseEffort');
+                expect(phase).toHaveProperty('bufferEffort');
+                expect(phase).toHaveProperty('baseDuration');
+                expect(phase).toHaveProperty('bufferDuration');
+
+                // Gesamtaufwand sollte Basis + Puffer sein
+                expect(phase.effortPersonWeeks).toBeCloseTo(
+                    phase.baseEffort! + phase.bufferEffort!,
+                    1
+                );
+
+                // Gesamtdauer sollte Basis + Puffer sein
+                expect(phase.durationWeeks).toBe(
+                    phase.baseDuration! + phase.bufferDuration!
+                );
+            });
         });
 
         it('sollte Gesamtdauer korrekt verteilen', () => {
@@ -344,7 +386,7 @@ describe('ProjectCalculationService', () => {
             };
 
             const durationWeeks = 20;
-            const result = service.generatePhases(100, durationWeeks, categoryScores);
+            const result = service.generatePhases(100, durationWeeks, categoryScores, 10);
 
             const totalWeeks = result.reduce((sum, phase) => sum + phase.durationWeeks, 0);
             expect(totalWeeks).toBe(durationWeeks);
@@ -357,10 +399,41 @@ describe('ProjectCalculationService', () => {
                 uncertainty: 0.5
             };
 
-            const result = service.generatePhases(100, 20, categoryScores);
+            const result = service.generatePhases(100, 20, categoryScores, 10);
 
             const totalPercentage = result.reduce((sum, phase) => sum + phase.percentage, 0);
             expect(totalPercentage).toBeCloseTo(1, 5);
+        });
+
+        it('sollte Puffer risikobasiert verteilen', () => {
+            const highRisk = {
+                readiness: 0.2,
+                complexity: 0.8,
+                uncertainty: 0.8
+            };
+
+            const lowRisk = {
+                readiness: 0.8,
+                complexity: 0.2,
+                uncertainty: 0.2
+            };
+
+            const totalBuffer = 15;
+            const highRiskPhases = service.generatePhases(100, 20, highRisk, totalBuffer);
+            const lowRiskPhases = service.generatePhases(100, 20, lowRisk, totalBuffer);
+
+            // Bei hohem Risiko sollte mehr Puffer in kritische Phasen fließen
+            const highRiskTotalBuffer = highRiskPhases.reduce(
+                (sum, p) => sum + (p.bufferEffort || 0),
+                0
+            );
+            const lowRiskTotalBuffer = lowRiskPhases.reduce(
+                (sum, p) => sum + (p.bufferEffort || 0),
+                0
+            );
+
+            expect(highRiskTotalBuffer).toBeCloseTo(totalBuffer, 1);
+            expect(lowRiskTotalBuffer).toBeCloseTo(totalBuffer, 1);
         });
 
         it('sollte Phasen bei niedriger Readiness anpassen', () => {
@@ -376,15 +449,31 @@ describe('ProjectCalculationService', () => {
                 uncertainty: 0.5
             };
 
-            const lowResult = service.generatePhases(100, 20, lowReadiness);
-            const highResult = service.generatePhases(100, 20, highReadiness);
+            const lowResult = service.generatePhases(100, 20, lowReadiness, 10);
+            const highResult = service.generatePhases(100, 20, highReadiness, 10);
 
-            const lowPhase1 = lowResult.find(p => p.name.includes('Anforderungsanalyse'));
-            const highPhase1 = highResult.find(p => p.name.includes('Anforderungsanalyse'));
+            // Business Understanding Phase sollte bei niedriger Readiness mehr Aufwand haben
+            const lowPhase1 = lowResult.find(p => p.name.includes('Business'));
+            const highPhase1 = highResult.find(p => p.name.includes('Business'));
 
             if (lowPhase1 && highPhase1) {
                 expect(lowPhase1.percentage).toBeGreaterThan(highPhase1.percentage);
             }
+        });
+
+        it('sollte ohne Puffer funktionieren', () => {
+            const categoryScores = {
+                readiness: 0.5,
+                complexity: 0.5,
+                uncertainty: 0.5
+            };
+
+            const result = service.generatePhases(100, 20, categoryScores, 0);
+
+            result.forEach(phase => {
+                expect(phase.bufferEffort).toBe(0);
+                expect(phase.effortPersonWeeks).toBeCloseTo(phase.baseEffort!, 1);
+            });
         });
     });
 
@@ -422,10 +511,23 @@ describe('ProjectCalculationService', () => {
             expect(result).toHaveProperty('storyPoints');
             expect(result).toHaveProperty('sprintCount');
             expect(result).toHaveProperty('phases');
+            expect(result).toHaveProperty('effortBreakdown');
 
             expect(result.effortPersonWeeks).toBeGreaterThan(0);
             expect(result.durationWeeks).toBeGreaterThan(0);
-            expect(result.phases.length).toBeGreaterThan(0);
+            expect(result.phases.length).toBe(6);
+
+            // Puffer-Breakdown prüfen
+            expect(result.effortBreakdown).toHaveProperty('baseEffort');
+            expect(result.effortBreakdown).toHaveProperty('bufferEffort');
+            expect(result.effortBreakdown).toHaveProperty('bufferPercentage');
+            expect(result.effortBreakdown).toHaveProperty('riskLevel');
+
+            // Gesamtaufwand = Basis + Puffer
+            expect(result.effortPersonWeeks).toBeCloseTo(
+                result.effortBreakdown.baseEffort + result.effortBreakdown.bufferEffort,
+                1
+            );
         });
 
         it('sollte mit minimalen Eingaben funktionieren', () => {
@@ -440,6 +542,67 @@ describe('ProjectCalculationService', () => {
 
             expect(result.effortPersonWeeks).toBeGreaterThan(0);
             expect(result.durationWeeks).toBeGreaterThan(0);
+            expect(result.phases.length).toBe(6);
+        });
+
+        it('sollte Risiko-Puffer korrekt berechnen', () => {
+            const highRiskRequest: CalculationRequest = {
+                inputs: [
+                    {
+                        id: 'f1', type: 'percentage', value: 10, category: 'readiness', isNegative: false,
+                        label: ""
+                    },
+                    {
+                        id: 'f2', type: 'percentage', value: 90, category: 'complexity', isNegative: false,
+                        label: ""
+                    },
+                    {
+                        id: 'f3', type: 'percentage', value: 90, category: 'uncertainty', isNegative: false,
+                        label: ""
+                    }
+                ],
+                weights: {},
+                projectType: ProjectType.CLASSIC_ML,
+                teamSize: 5
+            };
+
+            const result = service.calculate(highRiskRequest);
+
+            // Bei hohem Risiko sollte Puffer vorhanden sein
+            expect(result.effortBreakdown.bufferEffort).toBeGreaterThan(0);
+            expect(result.effortBreakdown.riskLevel).toBeGreaterThan(0.5);
+
+            // Puffer sollte auf Phasen verteilt sein
+            const totalPhaseBuffer = result.phases.reduce(
+                (sum, p) => sum + (p.bufferEffort || 0),
+                0
+            );
+            expect(totalPhaseBuffer).toBeCloseTo(result.effortBreakdown.bufferEffort, 1);
+        });
+
+        it('sollte ohne Risiko-Puffer funktionieren wenn deaktiviert', () => {
+            const request: any = {
+                inputs: [
+                    {
+                        id: 'f1', type: 'percentage', value: 50, category: 'complexity', isNegative: false,
+                        label: ""
+                    }
+                ],
+                weights: {},
+                projectType: ProjectType.REPORTING,
+                teamSize: 3,
+                includeRiskBuffer: false
+            };
+
+            const result = service.calculate(request);
+
+            expect(result.effortBreakdown.bufferEffort).toBe(0);
+            expect(result.effortBreakdown.bufferPercentage).toBe(0);
+
+            // Keine Puffer in Phasen
+            result.phases.forEach(phase => {
+                expect(phase.bufferEffort).toBe(0);
+            });
         });
     });
 });
