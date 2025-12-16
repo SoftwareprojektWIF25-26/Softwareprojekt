@@ -210,21 +210,22 @@ const projekt = ref({
 </template>
 
 <style scoped>
+/* ✅ NUR DIESE SEITE: macht sie breit, ohne Startseite zu beeinflussen */
 .wizard-page {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  overflow: auto;
   background: #111;
   color: #f5f5f5;
-  padding: 2rem 0;
+  padding: 32px 24px 48px;
 }
 
 .wizard-container {
-  max-width: 1200px;
+  width: min(1400px, 100%);
   margin: 0 auto;
-  padding: 0 2rem 3rem;
 }
 
 /* HEADER */
-
 .wizard-step {
   font-size: 0.85rem;
   color: #aaaaaa;
@@ -233,7 +234,7 @@ const projekt = ref({
 
 .wizard-header h1 {
   font-size: 2.2rem;
-  color: #0070c9; /* OVGU-Blau ähnlich */
+  color: #0070c9;
   margin-bottom: 0.5rem;
 }
 
@@ -243,7 +244,6 @@ const projekt = ref({
 }
 
 /* STEPPER */
-
 .wizard-steps {
   display: flex;
   gap: 1rem;
@@ -291,7 +291,6 @@ const projekt = ref({
 }
 
 /* HAUPTBEREICH */
-
 .wizard-main {
   display: grid;
   grid-template-columns: 2fr 1.4fr;
@@ -321,11 +320,6 @@ const projekt = ref({
 }
 
 /* FORM SEKTION */
-
-.form-section + .form-section {
-  margin-top: 1.5rem;
-}
-
 .section-header {
   display: flex;
   justify-content: space-between;
@@ -353,7 +347,6 @@ const projekt = ref({
 }
 
 /* GRID */
-
 .section-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -365,7 +358,6 @@ const projekt = ref({
 }
 
 /* FELDER */
-
 .field label {
   display: block;
   font-size: 0.85rem;
@@ -403,7 +395,6 @@ const projekt = ref({
 }
 
 /* INPUT MIT SUFFIX */
-
 .input-inline {
   display: flex;
   align-items: center;
@@ -415,7 +406,6 @@ const projekt = ref({
 }
 
 /* FOOTER BUTTONS */
-
 .wizard-footer {
   margin-top: 2.5rem;
   display: flex;
@@ -427,7 +417,7 @@ const projekt = ref({
 .btn-secondary,
 .btn-ghost {
   border-radius: 999px;
-  padding: 0.55rem 1.4rem;
+  padding: 8px 16px; /* ✅ kleiner */
   font-size: 0.9rem;
   border: none;
   cursor: pointer;
@@ -455,14 +445,9 @@ const projekt = ref({
 }
 
 /* RESPONSIVE */
-
 @media (max-width: 960px) {
   .wizard-main {
     grid-template-columns: 1fr;
-  }
-
-  .preview-card {
-    order: 2;
   }
 }
 </style>
