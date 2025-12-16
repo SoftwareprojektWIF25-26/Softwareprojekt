@@ -1,0 +1,87 @@
+@startuml
+left to right direction
+
+!theme plain
+skinparam componentStyle uml2
+skinparam backgroundColor white
+skinparam handwritten false
+skinparam defaultFontName Arial
+
+' Farben (passend zum blauen Stil des Bildes)
+!define COMPONENT_BG #90CAF9
+!define SYSTEM_BG #1565C0
+!define COMPONENT_BORDER #1565C0
+!define FONT_COLOR black
+!define SYSTEM_FONT_COLOR white
+
+skinparam component {
+    FontColor<<system>> white
+    BackgroundColor<<system>> #1565C0
+    BorderColor<<system>> #0D47A1
+}
+
+skinparam interface {
+  BackgroundColor COMPONENT_BG
+  BorderColor COMPONENT_BORDER
+}
+
+skinparam package {
+  BackgroundColor white
+  BorderColor #999999
+  BorderStyle dashed
+  FontColor #666666
+}
+
+' Externe Akteure
+component [Frontend] as FE <<system>>
+component [PostgreSQL] as DB <<system>>
+
+' --- BACKEND STRUKTUR ---
+
+package "Entry Point & Routing" {
+    component [index.ts] as INDEX {
+        note bottom of INDEX : Server Start & Middleware
+    }
+
+    component [Routes] as ROUTER {
+        note bottom of ROUTER : API Endpunkte & Validierung
+    }
+}
+
+package "Business Logic" {
+    component [Services] as SERVICES {
+        note bottom of SERVICES : Geschäftslogik & Berechnungen
+    }
+}
+
+package "Data Access" {
+    component [Prisma] as PRISMA {
+        note bottom of PRISMA : ORM & SQL Abstraktion
+    }
+}
+
+package "Shared Resources" {
+    component [Types] as SHARED {
+        note bottom of SHARED : Interfaces & Datenmodelle
+    }
+}
+
+' --- VERBINDUNGEN (wie im Bild) ---
+
+' Frontend -> Entry
+FE -> INDEX : HTTP Request
+INDEX -> ROUTER : leitet weiter
+
+' Router -> Logic
+ROUTER --> SERVICES : ruft auf
+ROUTER ..> SHARED : nutzt Typen
+
+' Logic -> Data
+SERVICES --> PRISMA : fragt Daten ab
+SERVICES ..> SHARED : nutzt Typen
+
+' Data -> DB
+PRISMA -> DB : SQL Query
+PRISMA ..> SHARED : generiert Typen
+
+@enduml
