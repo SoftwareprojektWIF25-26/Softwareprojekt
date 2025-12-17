@@ -1,9 +1,10 @@
 // src/app/services/ProjectService.ts
-import { PrismaClient, ProjectStatus } from '@prisma/client';
 // Falls ProjectMetrics nicht gefunden wird, stelle sicher, dass der Pfad stimmt
 import { ProjectMetrics } from "../../types.ts";
 import { mappingService } from '../mapping/mapping.service.js';
-import { calculationService } from '../calculation/calculationService.js';
+import { calculationService } from '../calculation/calculationService.ts';
+import { PrismaClient, ProjectStatus, TeamRole } from '@prisma/client';
+
 
 const prisma = new PrismaClient();
 
@@ -31,7 +32,7 @@ export interface UpdateProjectRequest {
 export interface UpdateBusinessUnderstandingRequest {
     businessGoal?: string;
     formOfFinalProduct?: any;
-    projectTeamRoles?: any[];
+    projectTeamRoles?: TeamRole[];
     teamSize?: number;
     timelineValue?: number;
     timelineUnit?: 'DAYS' | 'WEEKS' | 'MONTHS';
@@ -278,16 +279,32 @@ export class ProjectService {
     async updateDataCharacteristics(projectId: string, data: UpdateDataCharacteristicsRequest) {
         const id = this.parseId(projectId, 'Projekt-ID');
 
+        const safeData: any = {
+            dataAvailability: data.dataAvailability,
+            dataSecurityConstraints: data.dataSecurityConstraints,
+            velocity: data.velocity,
+            veracity: data.veracity,
+            variety: data.variety,
+            volumeValue: data.volumeValue,
+            volumeUnit: data.volumeUnit,
+            toolsData: data.toolsData,
+            variability: data.variability || 'NEVER',
+            dataPreparationSteps: data.dataPreparationSteps || 'JOINS',
+            status: 'DRAFT'
+        };
+
+        if (Array.isArray(data.dataSources)) {
+            safeData.dataSources = data.dataSources;
+        }
+
+        if (Array.isArray(data.dataAccess)) {
+            safeData.dataAccess = data.dataAccess;
+        }
+
         const dataCharacteristics = await prisma.dataCharacteristics.upsert({
             where: { projectId: id },
-            create: {
-                projectId: id,
-                ...data,
-                variability: data.variability || 'NEVER',
-                dataPreparationSteps: data.dataPreparationSteps || 'JOINS',
-                status: 'DRAFT'
-            },
-            update: { ...data, status: 'DRAFT' }
+            create: { projectId: id, ...safeData },
+            update: safeData
         });
 
         await this.advanceWizardStep(id, 2);
@@ -295,6 +312,7 @@ export class ProjectService {
 
         return dataCharacteristics;
     }
+
 
     // ======================================================
     // Wizard & Planning Logic
@@ -485,7 +503,7 @@ export class ProjectService {
     }
 
     private async initializeTemplatePhases(projectId: number) {
-        await prisma.businessUnderstanding.create({ data: { projectId, status: 'DRAFT' } });
+        await prisma.businessUnderstanding.create({ data: { projectId, status: 'DRAFT'} });
         await prisma.dataCharacteristics.create({
             data: { projectId, status: 'BLOCKED', variability: 'NEVER', dataPreparationSteps: 'JOINS' }
         });
@@ -517,4 +535,42 @@ export class ProjectService {
         if (isNaN(id) || id <= 0) throw new Error(`Ungültige ${fieldName}: ${value}`);
         return id;
     }
+    async updateAnalysisConfig(projectId: string, data: any) {
+        const id = this.parseId(projectId, 'Projekt-ID');
+
+        const safeData: any = {
+            dataScienceGoals: data.dataScienceGoals,
+            typeOfAnalytics: data.typeOfAnalytics,
+            toolsAnalysis: data.toolsAnalysis,
+            status: 'DRAFT'
+        };
+
+        if (Array.isArray(data.evaluationMetrics)) {
+            safeData.evaluationMetrics = data.evaluationMetrics;
+        }
+
+        const analysisConfig = await prisma.analysisConfig.upsert({
+            where: { projectId: id },
+            create: { projectId: id, ...safeData },
+            update: safeData
+        });
+
+        await this.advanceWizardStep(id, 3);
+        await this.unlockNextPhase(id, 'deploymentConfig');
+
+        return analysisConfig;
+    }
+
+    async debugBusinessUnderstanding() {
+        const rows = await prisma.businessUnderstanding.findMany({
+            select: {
+                id: true,
+                projectTeamRoles: true
+            }
+        });
+
+        console.log('DEBUG business_understanding:', rows);
+    }
+
+
 }

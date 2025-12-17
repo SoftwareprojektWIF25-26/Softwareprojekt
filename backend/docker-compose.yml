@@ -1,26 +1,23 @@
 version: '3.8'
+
 services:
   postgres:
-    image: postgres:15
-    container_name: dsproject-postgres
+    image: postgres:15-alpine
+    container_name: ds-project-db
     restart: unless-stopped
     environment:
-      POSTGRES_PASSWORD: localdev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: dsproject
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
-
-
-# Befehle zu docker:
-#  Datenbank starten (falls gestoppt)
-#  docker-compose up -d
-
-#  Datenbank stoppen (optional am Ende des Tages)
-#  docker-compose down
-
-#  Status prüfen
-#  docker-compose ps

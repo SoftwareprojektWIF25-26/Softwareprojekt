@@ -11,7 +11,7 @@ const projectService = new ProjectService();
  * Neues Projekt erstellen
  */
 router.post(
-    '/',
+    '/create',
     [
         body('title').notEmpty().withMessage('Titel ist erforderlich'),
         body('domain').optional().isString(),
@@ -218,6 +218,28 @@ router.post(
                 success: true,
                 data: projectPlan,
                 message: 'Projektplan erfolgreich erstellt'
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+/**
+ * PATCH /api/projects/:id/analysis-config
+ * Analysis Config Phase aktualisieren
+ */
+router.patch(
+    '/:id/analysis-config',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const data = req.body;
+            const result = await projectService.updateAnalysisConfig(id, data);
+
+            res.json({
+                success: true,
+                data: result,
+                message: 'Analysis Config erfolgreich aktualisiert'
             });
         } catch (error) {
             next(error);
