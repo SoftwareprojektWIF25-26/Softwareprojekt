@@ -14,7 +14,7 @@ import {
     PROJECT_SIZE_THRESHOLDS,
     BASE_PHASE_DISTRIBUTION,
     CalculationRequest
-} from '../types.js';
+} from '../../types.ts';
 
 export class ProjectCalculationService {
 

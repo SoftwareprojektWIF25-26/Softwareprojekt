@@ -1,19 +1,30 @@
 // src/app/routes/configRoutes.ts
-
 import { Router, Request, Response } from 'express';
 import { defaultFields } from '../config/defaultFields.js';
 import { defaultWeights } from '../config/defaultWeights.js';
 
 const router = Router();
 
-// Endpoint: Standard-Eingabefelder abrufen
+/**
+ * GET /api/config/fields/default
+ * Standard-Eingabefelder abrufen
+ */
 router.get('/fields/default', (req: Request, res: Response) => {
-    res.json(defaultFields);
+    res.json({
+        success: true,
+        data: defaultFields
+    });
 });
 
-// Endpoint: Standard-Gewichte abrufen
+/**
+ * GET /api/config/weights/default
+ * Standard-Gewichte abrufen
+ */
 router.get('/weights/default', (req: Request, res: Response) => {
-    res.json(defaultWeights);
+    res.json({
+        success: true,
+        data: defaultWeights
+    });
 });
 
 export default router;

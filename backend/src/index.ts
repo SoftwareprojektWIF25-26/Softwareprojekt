@@ -1,13 +1,8 @@
-// src/app/index.ts
+// src/index.ts
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-
-import startpageRoutes from './app/routes/startpageRoutes.js';
-import dashboardRoutes from './app/routes/dashboardRoutes.js';
-import estimationRoutes from './app/routes/calcRoutes.js';
-import configRoutes from './app/routes/configRoutes.js';
-import CreateProject from './app/routes/CRUD-Project.ts';
+import apiRoutes from './app/routes/index.js'; // ← NEU: Zentrale Route-Datei
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -28,21 +23,21 @@ if (process.env.NODE_ENV !== 'production') {
     });
 }
 
-// Basis-Health
+// Health-Check Endpoints
 app.get('/api/hello', (req, res) => {
     res.json({ message: 'Hello from backend!' });
 });
 
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', time: new Date().toISOString() });
+    res.json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
 });
 
-// Routen montieren
-app.use('/api/startpage', startpageRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/estimation', estimationRoutes);
-app.use('/api/estimation', configRoutes);
-app.use('/api/projects', CreateProject);
+// ✨ ALLE API-Routes zentral montieren
+app.use('/api', apiRoutes);
 
 // Static Frontend für Production
 if (process.env.NODE_ENV === 'production') {
@@ -54,7 +49,18 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
+// Error Handler (NEU)
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('Error:', err);
+    res.status(err.status || 500).json({
+        success: false,
+        error: err.message || 'Interner Server-Fehler',
+        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+});
+
 app.listen(port, () => {
-    console.log(` Server running on port ${port}`);
-    console.log(` Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🚀 Server running on port ${port}`);
+    console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 API: http://localhost:${port}/api`);
 });

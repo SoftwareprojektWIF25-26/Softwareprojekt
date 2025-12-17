@@ -1,7 +1,7 @@
 // src/app/routes/dashboardRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 // src/app/routes/dashboardRoutes.ts
-import { DashboardService } from '../services/dashboard.js';
+import { DashboardService } from '../services/dashboard/dashboard.service.ts';
 
 const router = Router();
 const dashboardService = new DashboardService();

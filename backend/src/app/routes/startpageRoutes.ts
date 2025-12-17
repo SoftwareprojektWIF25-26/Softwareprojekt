@@ -1,7 +1,7 @@
 // src/app/routes/startpageRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { query, validationResult } from 'express-validator';
-import { StartPageService } from '../services/startpage.js'; // Pfad passt, weil routes & services unter app liegen
+import { StartPageService } from '../services/startpage/startpage.service.ts'; // Pfad passt, weil routes & services unter app liegen
 
 const router = Router();
 const startPageService = new StartPageService();

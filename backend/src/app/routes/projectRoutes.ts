@@ -1,21 +1,20 @@
 // src/app/routes/projectRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
-import { ProjectService } from '../services/CRUD-Project.ts';
+import { ProjectService } from '../services/project/project.service.js';
 
 const router = Router();
 const projectService = new ProjectService();
 
 /**
  * POST /api/projects
- * Neues Projekt erstellen (initial, minimal)
+ * Neues Projekt erstellen
  */
 router.post(
     '/',
     [
         body('title').notEmpty().withMessage('Titel ist erforderlich'),
         body('domain').optional().isString(),
-
     ],
     async (req: Request, res: Response, next: NextFunction) => {
         const errors = validationResult(req);
@@ -28,12 +27,7 @@ router.post(
 
         try {
             const { title, domain } = req.body;
-
-            const project = await projectService.createProject({
-                title,
-                domain,
-
-            });
+            const project = await projectService.createProject({ title, domain });
 
             res.status(201).json({
                 success: true,
@@ -41,7 +35,6 @@ router.post(
                 message: 'Projekt erfolgreich erstellt'
             });
         } catch (error) {
-            console.error('Error in POST /api/projects', error);
             next(error);
         }
     }
@@ -49,19 +42,20 @@ router.post(
 
 /**
  * GET /api/projects/:id
- * Projekt mit allen Details abrufen
+ * Projekt mit Details abrufen
  */
 router.get(
     '/:id',
     async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
         try {
             const { id } = req.params;
-
             const project = await projectService.getProjectById(id);
 
-            res.json(project);
+            res.json({
+                success: true,
+                data: project
+            });
         } catch (error) {
-            console.error('Error in GET /api/projects/:id', error);
             next(error);
         }
     }
@@ -76,9 +70,7 @@ router.patch(
     [
         body('title').optional().isString(),
         body('domain').optional().isString(),
-        body('status')
-            .optional()
-            .isIn(['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED']),
+        body('status').optional().isIn(['PLANNING', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED']),
         body('startDate').optional().isISO8601(),
         body('endDate').optional().isISO8601(),
         body('wizardStep').optional().isInt({ min: 0, max: 6 }),
@@ -97,13 +89,8 @@ router.patch(
             const { id } = req.params;
             const updateData = req.body;
 
-            // Datum-Strings zu Date-Objekten konvertieren
-            if (updateData.startDate) {
-                updateData.startDate = new Date(updateData.startDate);
-            }
-            if (updateData.endDate) {
-                updateData.endDate = new Date(updateData.endDate);
-            }
+            if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
+            if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
 
             const project = await projectService.updateProject(id, updateData);
 
@@ -113,7 +100,6 @@ router.patch(
                 message: 'Projekt erfolgreich aktualisiert'
             });
         } catch (error) {
-            console.error('Error in PATCH /api/projects/:id', error);
             next(error);
         }
     }
@@ -127,19 +113,14 @@ router.delete(
     '/:id',
     async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
         try {
-            // Route Parameter extrahieren
-            // Beispiel: Bei URL "/api/projects/42" ist id = "42"
             const { id } = req.params;
-
-            // 2. Service-Methode aufrufen
             const result = await projectService.deleteProject(id);
 
-            // 3. Erfolgs-Response zurückgeben
-            // HTTP 200 OK (Express default)
-            // Body: { success: true, message: "..." }
-            res.json(result);
+            res.json({
+                success: true,
+                message: result.message
+            });
         } catch (error) {
-            console.error('Error in DELETE /api/projects/:id', error);
             next(error);
         }
     }
@@ -155,7 +136,6 @@ router.patch(
         try {
             const { id } = req.params;
             const data = req.body;
-
             const result = await projectService.updateBusinessUnderstanding(id, data);
 
             res.json({
@@ -164,7 +144,6 @@ router.patch(
                 message: 'Business Understanding erfolgreich aktualisiert'
             });
         } catch (error) {
-            console.error('Error in PATCH /api/projects/:id/business-understanding', error);
             next(error);
         }
     }
@@ -180,7 +159,6 @@ router.patch(
         try {
             const { id } = req.params;
             const data = req.body;
-
             const result = await projectService.updateDataCharacteristics(id, data);
 
             res.json({
@@ -189,7 +167,6 @@ router.patch(
                 message: 'Data Characteristics erfolgreich aktualisiert'
             });
         } catch (error) {
-            console.error('Error in PATCH /api/projects/:id/data-characteristics', error);
             next(error);
         }
     }
@@ -197,19 +174,21 @@ router.patch(
 
 /**
  * POST /api/projects/:id/complete-wizard
- * Wizard abschließen und Projektplan generieren
+ * Wizard abschließen und Berechnung starten
  */
 router.post(
     '/:id/complete-wizard',
     async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
         try {
             const { id } = req.params;
-
             const result = await projectService.completeWizard(id);
 
-            res.json(result);
+            res.json({
+                success: true,
+                data: result,
+                message: 'Wizard abgeschlossen und Projektplan erstellt'
+            });
         } catch (error) {
-            console.error('Error in POST /api/projects/:id/complete-wizard', error);
             next(error);
         }
     }
@@ -217,19 +196,23 @@ router.post(
 
 /**
  * POST /api/projects/:id/plan
- * ProjectPlan aus Calculation-Metriken erstellen
+ * Projektplan manuell aus Metrics erstellen
  */
 router.post(
     '/:id/plan',
     async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
         try {
             const { id } = req.params;
-            const { metrics } = req.body; // ProjectMetrics vom Frontend
+            const { metrics } = req.body;
 
-            const projectPlan = await projectService.createProjectPlanFromMetrics(
-                id,
-                metrics
-            );
+            if (!metrics) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Metrics sind erforderlich'
+                });
+            }
+
+            const projectPlan = await projectService.createProjectPlanFromMetrics(id, metrics);
 
             res.status(201).json({
                 success: true,
@@ -237,7 +220,6 @@ router.post(
                 message: 'Projektplan erfolgreich erstellt'
             });
         } catch (error) {
-            console.error('Error in POST /api/projects/:id/plan', error);
             next(error);
         }
     }

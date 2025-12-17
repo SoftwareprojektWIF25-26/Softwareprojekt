@@ -1,7 +1,9 @@
 // src/app/services/ProjectService.ts
 import { PrismaClient, ProjectStatus } from '@prisma/client';
 // Falls ProjectMetrics nicht gefunden wird, stelle sicher, dass der Pfad stimmt
-import { ProjectMetrics } from "../types.ts";
+import { ProjectMetrics } from "../../types.ts";
+import { mappingService } from '../mapping/mapping.service.js';
+import { calculationService } from '../calculation/calculationService.js';
 
 const prisma = new PrismaClient();
 
@@ -301,23 +303,45 @@ export class ProjectService {
     async completeWizard(projectId: string) {
         const id = this.parseId(projectId, 'Projekt-ID');
 
+        // 1. Template-Daten laden (bleibt)
         const project = await prisma.project.findUnique({
             where: { id },
             include: {
                 businessUnderstanding: true,
                 dataCharacteristics: true,
-                analysisConfig: true
+                analysisConfig: true,
+                deploymentConfig: true,
+                utilizationConfig: true
             }
         });
 
-        if (!project) {
-            throw new Error(`Projekt mit ID ${id} nicht gefunden`);
-        }
+        if (!project) throw new Error(`Projekt ${id} nicht gefunden`);
 
-        if (!project.businessUnderstanding || !project.dataCharacteristics) {
-            throw new Error('Business Understanding und Data Characteristics müssen ausgefüllt sein');
-        }
+        // 2. NEU: In InputFields konvertieren
+        const inputs = mappingService.mapToCalculationInputs({
+            businessUnderstanding: project.businessUnderstanding,
+            dataCharacteristics: project.dataCharacteristics,
+            analysisConfig: project.analysisConfig,
+            deploymentConfig: project.deploymentConfig,
+            utilizationConfig: project.utilizationConfig
+        });
 
+        // 3. NEU: ProjectType bestimmen
+        const projectType = mappingService.determineProjectType({
+            businessUnderstanding: project.businessUnderstanding,
+            dataCharacteristics: project.dataCharacteristics,
+            analysisConfig: project.analysisConfig
+        });
+
+        // 4. NEU: Berechnung durchführen
+        const metrics = calculationService.calculate({
+            inputs,
+            weights: {}, // defaultWeights später
+            projectType,
+            teamSize: project.businessUnderstanding?.teamSize || 3
+        });
+
+        // 5. Wizard als completed markieren
         await prisma.project.update({
             where: { id },
             data: {
@@ -327,15 +351,14 @@ export class ProjectService {
             }
         });
 
+        // 6. Projektplan erstellen
+        await this.createProjectPlanFromMetrics(String(id), metrics);
+
         return {
             success: true,
-            message: 'Wizard abgeschlossen - Projekt bereit für Berechnung',
+            message: 'Wizard abgeschlossen & Berechnung durchgeführt',
             projectId: id,
-            project: {
-                businessUnderstanding: project.businessUnderstanding,
-                dataCharacteristics: project.dataCharacteristics,
-                analysisConfig: project.analysisConfig
-            }
+            metrics
         };
     }
 

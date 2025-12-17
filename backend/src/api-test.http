@@ -1,0 +1,260 @@
+### ===========================================
+### DS PROJECT PLANNING TOOL - API TESTS
+### ===========================================
+
+### 1. Health Check
+GET http://localhost:8080/api/health
+
+### 2. Projekt erstellen
+POST http://localhost:8080/api/projects
+Content-Type: application/json
+
+{
+  "title": "ML Healthcare Projekt",
+  "domain": "Healthcare"
+}
+
+### 3. Projekt abrufen (ID aus Response von #2 nutzen)
+GET http://localhost:8080/api/projects/1
+
+### 4. Business Understanding speichern
+PATCH http://localhost:8080/api/projects/1/business-understanding
+Content-Type: application/json
+
+{
+  "businessGoal": "Vorhersage von Patientenrisiken durch ML-Modell",
+  "teamSize": 5,
+  "timelineValue": 12,
+  "timelineUnit": "WEEKS",
+  "estimatedCost": 75000,
+  "projectTeamRoles": ["Data Scientist", "ML Engineer", "Product Owner", "DevOps"],
+  "formOfFinalProduct": "API Service",
+  "toolsBusinessUnderstanding": "Jira, Confluence, Slack"
+}
+
+### 5. Data Characteristics speichern
+PATCH http://localhost:8080/api/projects/1/data-characteristics
+Content-Type: application/json
+
+{
+  "dataAvailability": true,
+  "dataSources": ["EHR System", "Lab Database", "Patient Records"],
+  "dataSecurityConstraints": "GDPR, HIPAA compliant",
+  "velocity": "BATCH",
+  "veracity": "MEDIUM",
+  "variety": "STRUCTURED",
+  "volumeValue": 500000,
+  "volumeUnit": "RECORDS",
+  "variability": "SOMETIMES",
+  "dataAccess": ["READ", "WRITE"],
+  "dataPreparationSteps": "JOINS",
+  "toolsData": "PostgreSQL, Pandas, Apache Spark"
+}
+
+### 6. Analysis Config speichern (optional)
+PATCH http://localhost:8080/api/projects/1/analysis-config
+Content-Type: application/json
+
+{
+  "analyticsType": "PREDICTIVE",
+  "dataScienceGoals": "Risiko-Score für Patienten",
+  "evaluationMetrics": ["Accuracy", "Precision", "Recall", "F1-Score"],
+  "toolsAnalysis": "Python, scikit-learn, TensorFlow"
+}
+
+### 7. 🎯 WIZARD ABSCHLIESSEN + BERECHNUNG TRIGGERN
+POST http://localhost:8080/api/projects/1/complete-wizard
+
+> {%
+    client.test("Wizard completed", function() {
+        client.assert(response.status === 200, "Response status is 200");
+        client.assert(response.body.success === true, "Success is true");
+        client.assert(response.body.data.metrics, "Metrics wurden berechnet");
+    });
+
+    client.log("✅ Wizard abgeschlossen!");
+    client.log("📊 Metrics:", JSON.stringify(response.body.data.metrics, null, 2));
+%}
+
+### 8. Dashboard abrufen (nach Berechnung)
+GET http://localhost:8080/api/dashboard/1
+
+### 9. Timeline/Gantt abrufen
+GET http://localhost:8080/api/dashboard/1/timeline
+
+### 10. Projektliste (Startpage)
+GET http://localhost:8080/api/startpage
+
+### 11. Statistiken
+GET http://localhost:8080/api/startpage/statistics
+
+### 12. Default Config abrufen
+GET http://localhost:8080/api/config/fields/default
+
+### 13. Default Weights abrufen
+GET http://localhost:8080/api/config/weights/default
+
+### 14. Direkte Berechnung (ohne DB-Speicherung)
+POST http://localhost:8080/api/calculation/estimate
+Content-Type: application/json
+
+{
+  "projectType": "CLASSIC_ML",
+  "teamSize": 5,
+  "inputs": [
+    {
+      "id": "data_access",
+      "label": "Datenzugriff vorhanden",
+      "type": "boolean",
+      "value": true,
+      "category": "readiness"
+    },
+    {
+      "id": "data_availability",
+      "label": "Datenverfügbarkeit (%)",
+      "type": "percentage",
+      "value": 85,
+      "category": "readiness"
+    },
+    {
+      "id": "stakeholder_support",
+      "label": "Stakeholder-Unterstützung",
+      "type": "select",
+      "value": "hoch",
+      "category": "readiness",
+      "options": ["niedrig", "mittel", "hoch"]
+    },
+    {
+      "id": "tools_available",
+      "label": "Tools & Infrastruktur",
+      "type": "boolean",
+      "value": true,
+      "category": "readiness"
+    },
+    {
+      "id": "data_variety",
+      "label": "Datenvielfalt (1-10)",
+      "type": "number",
+      "value": 5,
+      "category": "complexity",
+      "isNegative": true,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "id": "num_sources",
+      "label": "Anzahl Datenquellen",
+      "type": "number",
+      "value": 3,
+      "category": "complexity",
+      "isNegative": true,
+      "min": 1,
+      "max": 20
+    },
+    {
+      "id": "data_velocity",
+      "label": "Datengeschwindigkeit",
+      "type": "select",
+      "value": "batch",
+      "category": "complexity",
+      "options": ["batch", "near-realtime", "streaming"]
+    },
+    {
+      "id": "analytics_type",
+      "label": "Art der Analytik",
+      "type": "select",
+      "value": "predictive",
+      "category": "complexity",
+      "options": ["descriptive", "diagnostic", "predictive", "prescriptive"]
+    },
+    {
+      "id": "data_quality",
+      "label": "Datenqualität (%)",
+      "type": "percentage",
+      "value": 75,
+      "category": "uncertainty"
+    },
+    {
+      "id": "privacy_concerns",
+      "label": "Datenschutz-Bedenken",
+      "type": "select",
+      "value": "mittel",
+      "category": "uncertainty",
+      "isNegative": true,
+      "options": ["niedrig", "mittel", "hoch", "kritisch"]
+    },
+    {
+      "id": "missing_data",
+      "label": "Fehlende Daten (%)",
+      "type": "percentage",
+      "value": 15,
+      "category": "uncertainty",
+      "isNegative": true
+    },
+    {
+      "id": "goal_clarity",
+      "label": "Zielsetzung klar",
+      "type": "boolean",
+      "value": true,
+      "category": "uncertainty"
+    }
+  ],
+  "weights": {
+    "data_access": 1.5,
+    "data_availability": 1.2,
+    "stakeholder_support": 1.0,
+    "tools_available": 0.8,
+    "data_variety": 1.0,
+    "data_velocity": 1.0,
+    "num_sources": 1.0,
+    "analytics_type": 1.3,
+    "data_quality": 1.5,
+    "privacy_concerns": 1.2,
+    "missing_data": 1.1,
+    "goal_clarity": 1.4
+  }
+}
+
+### 15. Projekt Status ändern
+PATCH http://localhost:8080/api/projects/1
+Content-Type: application/json
+
+{
+  "status": "IN_PROGRESS"
+}
+
+### 16. Projekt löschen (Vorsicht!)
+# DELETE http://localhost:8080/api/projects/1
+```
+
+---
+
+### Schritt 3: Tests ausführen
+
+1. **Öffne die `api-tests.http` Datei in WebStorm**
+
+2. **Du siehst grüne "Play"-Buttons** links neben jedem Request:
+```
+   ### 1. Health Check
+   ▶ GET http://localhost:8080/api/health
+```
+
+3. **Klicke auf den grünen Play-Button** → Request wird ausgeführt
+
+4. **Ergebnis erscheint unten** in einem Split-View
+
+---
+
+### Schritt 4: Test-Flow durchlaufen
+
+**In dieser Reihenfolge ausführen:**
+```
+1. Health Check                    → Server läuft?
+2. Projekt erstellen              → Notiere ID (z.B. 1)
+3. Projekt abrufen                → Projekt existiert?
+4. Business Understanding         → Phase 1 speichern
+5. Data Characteristics           → Phase 2 speichern
+6. Analysis Config (optional)     → Phase 3 speichern
+7. 🎯 WIZARD ABSCHLIESSEN         → Triggert Berechnung!
+8. Dashboard abrufen              → Siehst du Metrics?
+9. Timeline abrufen               → Siehst du Phasen?

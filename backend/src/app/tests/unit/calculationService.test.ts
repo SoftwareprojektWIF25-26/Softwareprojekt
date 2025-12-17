@@ -1,6 +1,6 @@
 // src/app/services/__tests__/calculationService.test.ts
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ProjectCalculationService } from '../../services/calculationService.js';
+import { ProjectCalculationService } from '../../services/calculation/calculationService.ts';
 import {
     InputField,
     WeightConfig,
