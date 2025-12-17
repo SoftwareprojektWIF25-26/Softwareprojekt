@@ -1,45 +1,30 @@
-## Startseite:
-- Liste von Projekten mit Titel, Id → Link zum Dashboard der Projekte
-- Button um neues Projekt anzulegen → Link zu Wizard Steckbrief
-- **ggf** vielleicht Liste mit Meilensteinen in den nächsten 7 Tagen 
-
-## Wizard Steckbrief:
-- Eingabe der Daten + Button speichern → Link zu Dashboard
-
-
-## Dashboard:
-- Liste der Projektdetails
-- Button zum Ändern der Projektdetails 
-- **ggf** Gantt Diagramm
-- **ggf** Notizfeld
-
-## Fragen:
-- _Gewichtung_: 
-  - Bereich, in dem Gewichtung der einzelnen Punkte angepasst werden kann auf Extra seite 
-  - oder bei Projektdaten ändern?
-- _Projektdaten ändern_: 
-  - verwenden von Wizard Steckbrief, aber wie Umgang mit Feldern, die nicht mehr bearbeitet werden dürfen? 
-  - oder lieber extra Formular zum Ändern der Projektdaten?
-
-## neue API Endpunkte implementiert (12.11):
-Startpage (3 Endpunkte):
-
-GET /api/startpage - Projektliste mit Filtern
-
-GET /api/startpage/statistics - Statistiken
-
-GET /api/startpage/recent-projects - Zuletzt bearbeitet
-
-Dashboard (6 Endpunkte):
-
-GET /api/dashboard/:projectId - Projekt-Dashboard
-
-GET /api/dashboard/:projectId/timeline - Timeline/Gantt
-
-PATCH /api/dashboard/tasks/:taskId/status - Task-Status
-
-PATCH /api/dashboard/:projectId/status - Projekt-Status
-
-PATCH /api/dashboard/:projectId/template-phase/:phase/status - Template-Phase
-
-POST /api/dashboard/:projectId/evaluations - Evaluierung
+## Aufbau API Aufrufe im Backend/api
+├── /projects
+│   ├── POST    /                              → Projekt erstellen
+│   ├── GET     /:id                           → Projekt abrufen
+│   ├── PATCH   /:id                           → Projekt aktualisieren
+│   ├── DELETE  /:id                           → Projekt löschen
+│   ├── PATCH   /:id/business-understanding    → Phase 1 speichern
+│   ├── PATCH   /:id/data-characteristics      → Phase 2 speichern
+│   ├── POST    /:id/complete-wizard           → Wizard abschließen
+│   └── POST    /:id/plan                      → Plan manuell erstellen
+│
+├── /dashboard
+│   ├── GET     /:id                           → Dashboard-Daten
+│   ├── GET     /:id/timeline                  → Timeline/Gantt
+│   ├── PATCH   /tasks/:id/status              → Task-Status
+│   ├── PATCH   /:id/status                    → Projekt-Status
+│   └── POST    /:id/evaluations               → Evaluation hinzufügen
+│
+├── /startpage
+│   ├── GET     /                              → Projektliste
+│   ├── GET     /statistics                    → Statistiken
+│   └── GET     /recent-projects               → Zuletzt bearbeitet
+│
+├── /calculation
+│   ├── POST    /estimate                      → Berechnung (ohne DB)
+│   └── POST    /validate-weights              → Gewichte validieren
+│
+└── /config
+    ├── GET     /fields/default                → Default-Felder
+    └── GET     /weights/default               → Default-Gewichte
