@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 // Type für vollständiges Projekt mit allen Relationen
 type ProjectWithAll = Prisma.ProjectGetPayload<{
     include: {
-        workspace: true;
+
         businessUnderstanding: true;
         dataCharacteristics: true;
         analysisConfig: true;

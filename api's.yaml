@@ -2,7 +2,7 @@ openapi: 3.0.0
 info:
   title: Projekt Management API
   version: 1.0.0
-  description: API für Projekt- und Task-Management mit Startpage, Dashboard und Wizard-basierter Projekterstellung
+  description: API für Projekt- und Task-Management, inklusive Wizard, Dashboard und Calculation-Service
 servers:
   - url: http://localhost:8080
     description: Development Server
@@ -18,8 +18,120 @@ tags:
     description: Wizard-basierte Projekterstellung
   - name: Planning
     description: Projektplan-Generierung
+  - name: Config
+    description: Konfigurationsdaten (Felder, Gewichte)
+  - name: Calculation
+    description: Berechnungslogik für Projektmetriken
 
 paths:
+  # ========================================
+  # CONFIG ENDPOINTS (NEU aus configRoutes.ts)
+  # ========================================
+  /api/config/fields/default:
+    get:
+      summary: Standard-Eingabefelder abrufen
+      tags:
+        - Config
+      responses:
+        '200':
+          description: Erfolgreich
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Key-Value Paarung der Standardfelder
+        '500':
+          description: Serverfehler
+
+  /api/config/weights/default:
+    get:
+      summary: Standard-Gewichte abrufen
+      tags:
+        - Config
+      responses:
+        '200':
+          description: Erfolgreich
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Key-Value Paarung der Standardgewichte
+        '500':
+          description: Serverfehler
+
+  # ========================================
+  # CALCULATION ENDPOINTS (NEU aus calcRoutes.ts)
+  # ========================================
+  /api/calc/calculate:
+    post:
+      summary: Projektmetriken berechnen
+      description: Berechnet Metriken basierend auf Inputs, Projekttyp und Teamgröße
+      tags:
+        - Calculation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalculationRequest'
+      responses:
+        '200':
+          description: Berechnung erfolgreich
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  metrics:
+                    $ref: '#/components/schemas/ProjectMetrics'
+        '400':
+          description: Validierungsfehler (Inputs fehlen, Teamgröße < 1)
+        '500':
+          description: Serverfehler
+
+  /api/calc/weights/validate:
+    post:
+      summary: Gewichte validieren und normalisieren
+      tags:
+        - Calculation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - weights
+              properties:
+                weights:
+                  type: object
+                  additionalProperties:
+                    type: number
+                  description: Objekt mit Gewichtungen (Key -> Number)
+      responses:
+        '200':
+          description: Erfolgreich normalisiert
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  originalSum:
+                    type: number
+                  normalizedWeights:
+                    type: object
+                    additionalProperties:
+                      type: number
+        '400':
+          description: Ungültige Gewichte
+        '500':
+          description: Serverfehler
+
   # ========================================
   # STARTPAGE ENDPOINTS
   # ========================================
@@ -30,22 +142,17 @@ paths:
       tags:
         - Startpage
       parameters:
-        - name: workspaceId
-          in: query
-          schema:
-            type: string
-          description: Filter nach Workspace-ID
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum: [PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED]
-          description: Filter nach Projektstatus
         - name: search
           in: query
           schema:
             type: string
           description: Suchbegriff für Projektname
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PLANNING, IN_PROGRESS, COMPLETED, ON_HOLD, CANCELLED]
+          description: Filter nach Projektstatus
         - name: sortBy
           in: query
           schema:
@@ -80,12 +187,6 @@ paths:
       description: Ruft allgemeine Projekt-Statistiken ab
       tags:
         - Startpage
-      parameters:
-        - name: workspaceId
-          in: query
-          schema:
-            type: string
-          description: Filter nach Workspace-ID
       responses:
         '200':
           description: Erfolgreich - Statistiken
@@ -93,6 +194,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Statistics'
+        '400':
+          description: Fehlerhafte Anfrage
         '500':
           description: Serverfehler
 
@@ -102,18 +205,6 @@ paths:
       description: Ruft die zuletzt bearbeiteten Projekte ab
       tags:
         - Startpage
-      parameters:
-        - name: workspaceId
-          in: query
-          schema:
-            type: string
-          description: Filter nach Workspace-ID
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 5
-          description: Anzahl der zurückzugebenden Projekte
       responses:
         '200':
           description: Erfolgreich - Zuletzt bearbeitete Projekte
@@ -123,6 +214,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Project'
+        '400':
+          description: Fehlerhafte Anfrage
         '500':
           description: Serverfehler
 
@@ -204,7 +297,6 @@ paths:
                 status:
                   type: string
                   enum: [TODO, IN_PROGRESS, BLOCKED, DONE]
-                  description: Neuer Status der Aufgabe
       responses:
         '200':
           description: Erfolgreich aktualisiert
@@ -222,7 +314,6 @@ paths:
   /api/dashboard/{projectId}/status:
     patch:
       summary: Projekt-Status aktualisieren
-      description: Aktualisiert den Status eines Projekts
       tags:
         - Dashboard
       parameters:
@@ -231,7 +322,6 @@ paths:
           required: true
           schema:
             type: string
-          description: ID des Projekts
       requestBody:
         required: true
         content:
@@ -243,8 +333,8 @@ paths:
               properties:
                 status:
                   type: string
+                  # Typ im Code ist 'any', hier enum zur Sicherheit
                   enum: [PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED]
-                  description: Neuer Status des Projekts
       responses:
         '200':
           description: Erfolgreich aktualisiert
@@ -252,17 +342,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-        '400':
-          description: Ungültige Anfrage
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
   /api/dashboard/{projectId}/template-phase/{phase}/status:
     patch:
       summary: Template-Phase-Status aktualisieren
-      description: Aktualisiert den Status einer Template-Phase
       tags:
         - Dashboard
       parameters:
@@ -271,14 +356,12 @@ paths:
           required: true
           schema:
             type: string
-          description: ID des Projekts
         - name: phase
           in: path
           required: true
           schema:
             type: string
             enum: [businessUnderstanding, dataCharacteristics, analysisConfig, deploymentConfig, utilizationConfig]
-          description: Name der Template-Phase
       requestBody:
         required: true
         content:
@@ -291,7 +374,6 @@ paths:
                 status:
                   type: string
                   enum: [BLOCKED, READY, DRAFT, COMPLETED]
-                  description: Neuer Status der Phase
       responses:
         '200':
           description: Erfolgreich aktualisiert
@@ -299,17 +381,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-        '400':
-          description: Ungültige Anfrage
-        '404':
-          description: Projekt oder Phase nicht gefunden
         '500':
           description: Serverfehler
 
   /api/dashboard/{projectId}/evaluations:
     post:
       summary: Evaluierung erstellen
-      description: Erstellt eine neue Evaluierung für ein Projekt
       tags:
         - Dashboard
       parameters:
@@ -318,7 +395,6 @@ paths:
           required: true
           schema:
             type: string
-          description: ID des Projekts
       requestBody:
         required: true
         content:
@@ -331,15 +407,12 @@ paths:
               properties:
                 category:
                   type: string
-                  description: Kategorie der Evaluierung (z.B. Complexity, Data Quality)
                 rating:
                   type: integer
                   minimum: 1
                   maximum: 5
-                  description: Bewertung von 1 bis 5
                 notes:
                   type: string
-                  description: Optionale Notizen
       responses:
         '201':
           description: Erfolgreich erstellt
@@ -347,20 +420,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-        '400':
-          description: Ungültige Anfrage
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
   # ========================================
-  # PROJECT MANAGEMENT ENDPOINTS (NEU)
+  # PROJECT MANAGEMENT ENDPOINTS
   # ========================================
   /api/projects:
     post:
       summary: Neues Projekt erstellen
-      description: Erstellt ein minimales Projekt mit Titel und Domain
       tags:
         - Projects
       requestBody:
@@ -374,13 +442,8 @@ paths:
               properties:
                 title:
                   type: string
-                  description: Projekttitel
                 domain:
                   type: string
-                  description: Projekt-Domain (optional)
-                workspaceId:
-                  type: string
-                  description: Workspace-ID (optional, nutzt Default)
       responses:
         '201':
           description: Projekt erfolgreich erstellt
@@ -396,7 +459,6 @@ paths:
   /api/projects/{projectId}:
     get:
       summary: Projekt abrufen
-      description: Ruft Projekt mit allen Template-Phasen und Wizard-Status ab
       tags:
         - Projects
       parameters:
@@ -405,7 +467,6 @@ paths:
           required: true
           schema:
             type: string
-          description: Projekt-ID
       responses:
         '200':
           description: Erfolgreich
@@ -419,8 +480,7 @@ paths:
           description: Serverfehler
 
     patch:
-      summary: Projekt aktualisieren
-      description: Aktualisiert Basis-Felder eines Projekts
+      summary: Projekt aktualisieren (Basisdaten)
       tags:
         - Projects
       parameters:
@@ -463,14 +523,11 @@ paths:
                 $ref: '#/components/schemas/ApiResponse'
         '400':
           description: Validierungsfehler
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
     delete:
       summary: Projekt löschen
-      description: Löscht Projekt und alle verknüpften Daten (Cascade)
       tags:
         - Projects
       parameters:
@@ -491,18 +548,17 @@ paths:
                     type: boolean
                   message:
                     type: string
-        '404':
-          description: Projekt nicht gefunden
+        '400':
+          description: Fehler
         '500':
           description: Serverfehler
 
   # ========================================
-  # WIZARD ENDPOINTS (NEU)
+  # WIZARD & PLANNING
   # ========================================
   /api/projects/{projectId}/business-understanding:
     patch:
       summary: Business Understanding aktualisieren
-      description: Aktualisiert Business Understanding Phase (Wizard Step 1)
       tags:
         - Projects
         - Wizard
@@ -524,15 +580,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
   /api/projects/{projectId}/data-characteristics:
     patch:
       summary: Data Characteristics aktualisieren
-      description: Aktualisiert Data Characteristics Phase (Wizard Step 2)
       tags:
         - Projects
         - Wizard
@@ -554,15 +607,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
   /api/projects/{projectId}/complete-wizard:
     post:
       summary: Wizard abschließen
-      description: Markiert Wizard als abgeschlossen und bereitet Projekt für Berechnung vor
       tags:
         - Projects
         - Wizard
@@ -574,7 +624,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Wizard erfolgreich abgeschlossen
+          description: Wizard abgeschlossen
           content:
             application/json:
               schema:
@@ -588,20 +638,12 @@ paths:
                     type: integer
                   project:
                     type: object
-        '400':
-          description: Validierungsfehler (fehlende Template-Phasen)
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
-  # ========================================
-  # PLANNING ENDPOINTS (NEU)
-  # ========================================
   /api/projects/{projectId}/plan:
     post:
       summary: Projektplan erstellen
-      description: Erstellt ProjectPlan aus Calculation-Metriken
       tags:
         - Projects
         - Planning
@@ -624,7 +666,7 @@ paths:
                   $ref: '#/components/schemas/ProjectMetrics'
       responses:
         '201':
-          description: Projektplan erfolgreich erstellt
+          description: Projektplan erstellt
           content:
             application/json:
               schema:
@@ -636,57 +678,58 @@ paths:
                     $ref: '#/components/schemas/ProjectPlanResponse'
                   message:
                     type: string
-        '400':
-          description: Wizard nicht abgeschlossen oder Plan existiert bereits
-        '404':
-          description: Projekt nicht gefunden
         '500':
           description: Serverfehler
 
 components:
   schemas:
+    # --- Calculation Schemas ---
+    CalculationRequest:
+      type: object
+      required:
+        - inputs
+        - projectType
+        - teamSize
+      properties:
+        projectType:
+          type: string
+          description: z.B. 'NLP', 'COMPUTER_VISION'
+        teamSize:
+          type: integer
+          minimum: 1
+        inputs:
+          type: array
+          description: Liste der Eingabewerte aus dem Wizard
+          items:
+            type: object
+            # Hier kann die Struktur der Inputs spezifiziert werden,
+            # wenn bekannt (z.B. id, value, fieldId)
+            additionalProperties: true
+
+    # --- Project Schemas ---
     Project:
       type: object
       properties:
         id:
           type: integer
-          description: Eindeutige Projekt-ID
         name:
           type: string
-          description: Projektname
         type:
           type: string
-          description: Projekt-Domain/Typ
         status:
           type: string
           enum: [PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED]
-          description: Aktueller Projektstatus
         lastModified:
           type: string
           format: date-time
-          description: Letzte Aktualisierung
         description:
           type: string
-          description: Projektbeschreibung
 
     Statistics:
       type: object
-      properties:
-        totalProjects:
-          type: integer
-          description: Gesamtanzahl der Projekte
-        activeProjects:
-          type: integer
-          description: Anzahl aktiver Projekte
-        completedProjects:
-          type: integer
-          description: Anzahl abgeschlossener Projekte
-        totalTasks:
-          type: integer
-          description: Gesamtanzahl der Aufgaben
-        completedTasks:
-          type: integer
-          description: Anzahl abgeschlossener Aufgaben
+      additionalProperties: true
+      # Wenn du die genaue Struktur von getStatistics() kennst, hier definieren.
+      # Laut Code wird ein Objekt zurückgegeben.
 
     Timeline:
       type: object
@@ -712,327 +755,81 @@ components:
                 type: string
                 enum: [task, milestone, phase]
 
-    Task:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Eindeutige Task-ID
-        title:
-          type: string
-          description: Task-Titel
-        description:
-          type: string
-          description: Task-Beschreibung
-        status:
-          type: string
-          enum: [TODO, IN_PROGRESS, BLOCKED, DONE]
-          description: Task-Status
-        projectId:
-          type: string
-          description: Zugehöriges Projekt
-        assignedTo:
-          type: string
-          description: Zugewiesene Person
-        dueDate:
-          type: string
-          format: date
-          description: Fälligkeitsdatum
-
-    TemplatePhase:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Eindeutige Phasen-ID
-        name:
-          type: string
-          description: Phasenname
-        status:
-          type: string
-          enum: [BLOCKED, READY, DRAFT, COMPLETED]
-          description: Phasenstatus
-        order:
-          type: integer
-          description: Reihenfolge der Phase
-        tasks:
-          type: array
-          items:
-            $ref: '#/components/schemas/Task'
-
-    Evaluation:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: Eindeutige Evaluierungs-ID
-        projectId:
-          type: integer
-          description: Zugehöriges Projekt
-        category:
-          type: string
-          description: Kategorie der Evaluierung
-        rating:
-          type: integer
-          minimum: 1
-          maximum: 5
-          description: Bewertung
-        notes:
-          type: string
-          description: Optionale Notizen
-        createdAt:
-          type: string
-          format: date-time
-          description: Erstellungsdatum
-
     ApiResponse:
       type: object
       properties:
         success:
           type: boolean
-          description: Erfolgs-Status
         data:
           type: object
-          description: Rückgabedaten
         message:
           type: string
-          description: Statusnachricht
+        errors:
+          type: array
+          items:
+            type: object
 
     ProjectDetail:
       type: object
       properties:
-        project:
-          type: object
-          properties:
-            id:
-              type: integer
-            title:
-              type: string
-            domain:
-              type: string
-            status:
-              type: string
-              enum: [PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED]
-            wizardStep:
-              type: integer
-            wizardCompleted:
-              type: boolean
-            createdAt:
-              type: string
-              format: date-time
-            updatedAt:
-              type: string
-              format: date-time
-        workspace:
-          type: object
-          properties:
-            id:
-              type: integer
-            name:
-              type: string
-        wizardProgress:
-          type: object
-          properties:
-            currentStep:
-              type: integer
-            totalSteps:
-              type: integer
-            completed:
-              type: boolean
-            percentage:
-              type: integer
+        id:
+          type: string
+        title:
+          type: string
+        domain:
+          type: string
+        status:
+          type: string
+        # Weitere Felder basierend auf ProjectService.getProjectById Rückgabe
+        wizardStep:
+          type: integer
         templatePhases:
           type: array
           items:
             type: object
-            properties:
-              phase:
-                type: string
-              name:
-                type: string
-              status:
-                type: string
-                enum: [BLOCKED, READY, DRAFT, COMPLETED]
-              data:
-                type: object
 
     BusinessUnderstandingInput:
       type: object
-      properties:
-        businessGoal:
-          type: string
-        formOfFinalProduct:
-          type: string
-          enum: [REPORT, APPLICATION_SOFTWARE, AUTOMATED_DECISION_SYSTEM, INSIGHT_DOCUMENT, OTHER]
-        projectTeamRoles:
-          type: array
-          items:
-            type: string
-            enum: [DATA_SCIENTIST, DATA_ENGINEER, PROJECT_MANAGER, DOMAIN_EXPERT, BUSINESS_ANALYST, IT_INFRASTRUCTURE, ML_ENGINEER]
-        teamSize:
-          type: integer
-        timelineValue:
-          type: integer
-        timelineUnit:
-          type: string
-          enum: [DAYS, WEEKS, MONTHS]
-        estimatedCost:
-          type: number
-        toolsBusinessUnderstanding:
-          type: string
+      additionalProperties: true
 
     DataCharacteristicsInput:
       type: object
-      properties:
-        dataAccess:
-          type: array
-          items:
-            type: string
-            enum: [INTERNAL, EXTERNAL, HYBRID]
-        dataAvailability:
-          type: boolean
-        dataSources:
-          type: array
-          items:
-            type: string
-        dataSecurityConstraints:
-          type: string
-        velocity:
-          type: string
-          enum: [BATCH, DAILY, HOURLY, CONTINUOUS]
-        veracity:
-          type: string
-          enum: [POOR, MEDIUM, GOOD, EXCELLENT]
-        variety:
-          type: string
-          enum: [LOW, MEDIUM, HIGH]
-        volumeValue:
-          type: number
-        volumeUnit:
-          type: string
-          enum: [RECORDS, GB, TB, PB]
-        variability:
-          type: string
-          enum: [NEVER, YEARLY, MONTHLY, WEEKLY, DAILY, HOURLY]
-        dataPreparationSteps:
-          type: string
-          enum: [JOINS, DEDUPLICATION, OUTLIER_DETECTION, NORMALIZATION, MISSING_VALUE_IMPUTATION, FEATURE_ENGINEERING, ONE_HOT_ENCODING, DATA_CLEANING, TRANSFORMATION]
-        toolsData:
-          type: string
+      additionalProperties: true
 
     ProjectMetrics:
       type: object
+      description: Ergebnis der Calculation
       required:
         - categoryScores
         - effortPersonWeeks
         - durationWeeks
-        - projectSize
-        - phases
       properties:
         categoryScores:
           type: object
-          required:
-            - readiness
-            - complexity
-            - uncertainty
-          properties:
-            readiness:
-              type: number
-              format: float
-              minimum: 0
-              maximum: 1
-            complexity:
-              type: number
-              format: float
-              minimum: 0
-              maximum: 1
-            uncertainty:
-              type: number
-              format: float
-              minimum: 0
-              maximum: 1
         overallScore:
           type: number
-          format: float
-          minimum: 0
-          maximum: 1
         effortPersonWeeks:
           type: number
-          format: float
         durationWeeks:
           type: integer
         projectSize:
           type: string
-          enum: [XS, S, M, L, XL]
-        storyPoints:
-          type: integer
-        sprintCount:
-          type: integer
         phases:
           type: array
           items:
             type: object
-            required:
-              - name
-              - startWeek
-              - durationWeeks
-              - effortPersonWeeks
-              - percentage
-            properties:
-              name:
-                type: string
-              startWeek:
-                type: integer
-              durationWeeks:
-                type: integer
-              effortPersonWeeks:
-                type: number
-                format: float
-              percentage:
-                type: number
-                format: float
 
     ProjectPlanResponse:
       type: object
+      description: Der generierte Projektplan
       properties:
         id:
           type: integer
-        projectId:
-          type: integer
         estimatedDuration:
           type: integer
-          description: Gesamtdauer in Tagen
         estimatedEffort:
           type: number
-          description: Gesamtaufwand in Person-Tagen
-        calculatedComplexity:
-          type: number
-          description: Komplexitätsscore 0-100
-        bufferPercentage:
-          type: integer
-        phaseWeights:
-          type: object
         phases:
           type: array
           items:
             type: object
-            properties:
-              id:
-                type: integer
-              name:
-                type: string
-              phaseType:
-                type: string
-              orderIndex:
-                type: integer
-              estimatedDuration:
-                type: integer
-              estimatedEffort:
-                type: number
-              tasks:
-                type: array
-                items:
-                  type: object
-        createdAt:
-          type: string
-          format: date-time
