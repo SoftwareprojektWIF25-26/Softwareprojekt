@@ -3,4 +3,4 @@ key.json
 *.json
 !package.json
 !tsconfig.json
-node_modules/
+node_modules
