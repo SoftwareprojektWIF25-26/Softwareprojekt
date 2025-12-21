@@ -1,161 +1,134 @@
 <script setup lang="ts">
-import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
-import { useProjectDraftStore } from "@/stores/projektDraft";
 import { useRouter } from "vue-router";
+import { useProjectDraftStore } from "@/stores/projektDraft";
+import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
 
+function goBack() {
+  router.push({ name: "projekt-erstellen" });
+}
+
 function goNext() {
-  router.push({ name: "projekt-erstellen-data" });
+  router.push({ name: "projekt-erstellen-analysis" });
 }
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
-      <!-- HEADER / STEP INFO -->
       <section class="wizard-header">
-        <p class="wizard-step">Projekt-Wizard · Schritt 1 von 5</p>
-        <h1>Projekt anlegen – Business Understanding</h1>
+        <p class="wizard-step">Projekt-Wizard · Schritt 2 von 5</p>
+        <h1>Projekt anlegen – Data Collection</h1>
         <p class="wizard-subtitle">
-          Fülle die wichtigsten Infos zu deinem Data-Science-Projekt aus. Rechts siehst du eine Live-Vorschau.
+          Beschreibe Titel, Domain, Ziel und Projekt-Rahmen. Rechts siehst du eine Live-Vorschau.
         </p>
 
         <ol class="wizard-steps">
-          <li class="is-active">Business Understanding</li>
-          <li>Data Collection, Exploration &amp; Preparation</li>
+          <li class="is-done">Business Understanding</li>
+          <li class="is-active">Data Collection, Exploration &amp; Preparation</li>
           <li>Analysis</li>
           <li>Deployment</li>
           <li>Utilization</li>
         </ol>
       </section>
 
-      <!-- MAIN: LINKS FORM, RECHTS VORSCHAU -->
       <section class="wizard-main">
-        <!-- LINKE KARTE: FORM -->
         <div class="form-card">
           <h2>Projekt-Steckbrief</h2>
           <p class="card-subtitle">
-            Beschreibe dein Projekt in mehreren Kategorien. Die Vorschau aktualisiert sich automatisch.
+            Fülle die Basisinfos aus. Die Vorschau aktualisiert sich automatisch.
           </p>
 
-          <!-- 1. Business Understanding -->
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>1. Business Understanding</h3>
-                <p class="section-description">
-                  Basisinfos zu Domain, Ziel und Team.
-                </p>
+                <h3>2. Data Collection</h3>
+                <p class="section-description">Titel, Domain, Ziele, Rahmenbedingungen.</p>
               </div>
               <div>
-                <span class="section-status">0/8 Felder</span>
+                <span class="section-status">0/6 Felder</span>
               </div>
             </header>
 
             <div class="section-grid">
-              <!-- Titel -->
               <div class="field field-full">
-                <label for="title">Projekt-Titel</label>
+                <label for="titel">Titel</label>
                 <input
-                  id="title"
+                  id="titel"
                   type="text"
                   v-model="draft.projekt.Titel"
-                  placeholder="z. B. Vorhersage von Parkplatzauslastung in Split"
+                  placeholder="z.B. Customer Churn Prediction"
                 />
-                <p class="field-help">Max. 100 Zeichen.</p>
               </div>
 
-              <!-- Domain -->
               <div class="field">
                 <label for="domain">Domain</label>
-                <select id="domain" v-model="draft.projekt.Domain">
-                  <option value="">Bitte wählen</option>
-                  <option>Public Services</option>
-                  <option>Manufacturing</option>
-                  <option>Healthcare</option>
-                  <option>Finance</option>
-                  <option>Retail</option>
-                </select>
-                <p class="field-help">Wähle die fachliche Domäne des Projekts.</p>
-              </div>
-
-              <!-- Teamgröße -->
-              <div class="field">
-                <label for="team-size">Teamgröße</label>
                 <input
-                  id="team-size"
-                  type="number"
-                  min="1"
-                  max="20"
-                  v-model.number="draft.projekt.Teamgroesse"
+                  id="domain"
+                  type="text"
+                  v-model="draft.projekt.Domain"
+                  placeholder="z.B. Retail, Finance, HR"
                 />
               </div>
 
-              <!-- Zeithorizont -->
               <div class="field">
-                <label for="timeline">Zeithorizont</label>
-                <select id="timeline" v-model="draft.projekt.Zeitraum">
-                  <option value="">Bitte wählen</option>
-                  <option>&lt; 3 Monate</option>
-                  <option>3–6 Monate</option>
-                  <option>&gt; 6 Monate</option>
-                </select>
+                <label for="team">Teamgröße</label>
+                <input
+                  id="team"
+                  type="number"
+                  v-model.number="draft.projekt.Teamgroesse"
+                  placeholder="z.B. 4"
+                />
               </div>
 
-              <!-- Form des finalen Produkts -->
-              <div class="field">
-                <label for="final-product">Form des finalen Produkts</label>
-                <select id="final-product" v-model="draft.projekt.FormFinaleProdukt">
-                  <option value="">Bitte wählen</option>
-                  <option>Dashboard</option>
-                  <option>Report</option>
-                  <option>API</option>
-                  <option>Anwendung / Service</option>
-                </select>
-              </div>
-
-              <!-- Kosten -->
-              <div class="field">
-                <label for="costs">Kosten (geschätzt)</label>
-                <div class="input-inline">
-                  <input
-                    id="costs"
-                    type="number"
-                    min="0"
-                    v-model.number="draft.projekt.Kosten"
-                  />
-                  <span class="suffix">€</span>
-                </div>
-                <p class="field-help">Kann grob geschätzt werden; optional.</p>
-              </div>
-
-              <!-- Geschäftsziel -->
               <div class="field field-full">
                 <label for="goal">Geschäftsziel</label>
                 <textarea
                   id="goal"
                   rows="3"
                   v-model="draft.projekt.Geschaeftsziel"
-                  placeholder="Wie verbessert das Projekt einen Geschäftsprozess oder eine Kennzahl?"
+                  placeholder="Was soll das Projekt für das Business erreichen?"
+                />
+              </div>
+
+              <div class="field">
+                <label for="zeitraum">Zeitraum</label>
+                <input
+                  id="zeitraum"
+                  type="text"
+                  v-model="draft.projekt.Zeitraum"
+                  placeholder="z.B. 8 Wochen"
+                />
+              </div>
+
+              <div class="field">
+                <label for="kosten">Kosten</label>
+                <input
+                  id="kosten"
+                  type="number"
+                  v-model.number="draft.projekt.Kosten"
+                  placeholder="z.B. 5000"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <!-- RECHTE KARTE: VORSCHAU -->
         <aside class="preview-card">
           <h2>Projektsteckbrief – Vorschau</h2>
-          <p class="card-subtitle">Aktualisiert sich automatisch während du tippst.</p>
+          <p class="card-subtitle">
+            Aktualisiert sich automatisch während du tippst.
+          </p>
           <ProjektSteckbrief :projekt="draft.projekt" />
         </aside>
       </section>
 
-      <!-- FOOTER BUTTONS -->
       <section class="wizard-footer">
-        <button type="button" class="btn-secondary" disabled>Zurück</button>
+        <button type="button" class="btn-secondary" @click="goBack">
+          Zurück
+        </button>
         <div class="footer-actions">
           <button type="button" class="btn-ghost">Entwurf speichern</button>
           <button type="button" class="btn-primary" @click="goNext">

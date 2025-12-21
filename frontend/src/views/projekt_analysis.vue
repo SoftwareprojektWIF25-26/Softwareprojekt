@@ -1,161 +1,143 @@
 <script setup lang="ts">
-import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
-import { useProjectDraftStore } from "@/stores/projektDraft";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { useProjectDraftStore } from "@/stores/projektDraft";
+import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
 
-function goNext() {
+function goBack() {
   router.push({ name: "projekt-erstellen-data" });
 }
+
+function goNext() {
+  router.push({ name: "projekt-erstellen-deployment" });
+}
+
+const bewertungText = computed({
+  get() {
+    return (draft.projekt.Bewertungskriterien ?? []).join(", ");
+  },
+  set(val: string) {
+    draft.projekt.Bewertungskriterien = val
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  },
+});
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
-      <!-- HEADER / STEP INFO -->
       <section class="wizard-header">
-        <p class="wizard-step">Projekt-Wizard · Schritt 1 von 5</p>
-        <h1>Projekt anlegen – Business Understanding</h1>
+        <p class="wizard-step">Projekt-Wizard · Schritt 3 von 5</p>
+        <h1>Projekt anlegen – Analysis</h1>
         <p class="wizard-subtitle">
-          Fülle die wichtigsten Infos zu deinem Data-Science-Projekt aus. Rechts siehst du eine Live-Vorschau.
+          Beschreibe Ziele, Analytik-Typ und Bewertungsmetriken. Rechts siehst du die Live-Vorschau.
         </p>
 
         <ol class="wizard-steps">
-          <li class="is-active">Business Understanding</li>
-          <li>Data Collection, Exploration &amp; Preparation</li>
-          <li>Analysis</li>
+          <li class="is-done">Business Understanding</li>
+          <li class="is-done">Data Collection, Exploration &amp; Preparation</li>
+          <li class="is-active">Analysis</li>
           <li>Deployment</li>
           <li>Utilization</li>
         </ol>
       </section>
 
-      <!-- MAIN: LINKS FORM, RECHTS VORSCHAU -->
       <section class="wizard-main">
-        <!-- LINKE KARTE: FORM -->
         <div class="form-card">
           <h2>Projekt-Steckbrief</h2>
           <p class="card-subtitle">
-            Beschreibe dein Projekt in mehreren Kategorien. Die Vorschau aktualisiert sich automatisch.
+            Fülle die Analyse-Infos aus. Die Vorschau aktualisiert sich automatisch.
           </p>
 
-          <!-- 1. Business Understanding -->
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>1. Business Understanding</h3>
+                <h3>3. Analysis</h3>
                 <p class="section-description">
-                  Basisinfos zu Domain, Ziel und Team.
+                  Ziele, Analytik-Typ, Zeitraum, Tools und Bewertung.
                 </p>
               </div>
               <div>
-                <span class="section-status">0/8 Felder</span>
+                <span class="section-status">0/5 Felder</span>
               </div>
             </header>
 
             <div class="section-grid">
-              <!-- Titel -->
               <div class="field field-full">
-                <label for="title">Projekt-Titel</label>
-                <input
-                  id="title"
-                  type="text"
-                  v-model="draft.projekt.Titel"
-                  placeholder="z. B. Vorhersage von Parkplatzauslastung in Split"
-                />
-                <p class="field-help">Max. 100 Zeichen.</p>
-              </div>
-
-              <!-- Domain -->
-              <div class="field">
-                <label for="domain">Domain</label>
-                <select id="domain" v-model="draft.projekt.Domain">
-                  <option value="">Bitte wählen</option>
-                  <option>Public Services</option>
-                  <option>Manufacturing</option>
-                  <option>Healthcare</option>
-                  <option>Finance</option>
-                  <option>Retail</option>
-                </select>
-                <p class="field-help">Wähle die fachliche Domäne des Projekts.</p>
-              </div>
-
-              <!-- Teamgröße -->
-              <div class="field">
-                <label for="team-size">Teamgröße</label>
-                <input
-                  id="team-size"
-                  type="number"
-                  min="1"
-                  max="20"
-                  v-model.number="draft.projekt.Teamgroesse"
-                />
-              </div>
-
-              <!-- Zeithorizont -->
-              <div class="field">
-                <label for="timeline">Zeithorizont</label>
-                <select id="timeline" v-model="draft.projekt.Zeitraum">
-                  <option value="">Bitte wählen</option>
-                  <option>&lt; 3 Monate</option>
-                  <option>3–6 Monate</option>
-                  <option>&gt; 6 Monate</option>
-                </select>
-              </div>
-
-              <!-- Form des finalen Produkts -->
-              <div class="field">
-                <label for="final-product">Form des finalen Produkts</label>
-                <select id="final-product" v-model="draft.projekt.FormFinaleProdukt">
-                  <option value="">Bitte wählen</option>
-                  <option>Dashboard</option>
-                  <option>Report</option>
-                  <option>API</option>
-                  <option>Anwendung / Service</option>
-                </select>
-              </div>
-
-              <!-- Kosten -->
-              <div class="field">
-                <label for="costs">Kosten (geschätzt)</label>
-                <div class="input-inline">
-                  <input
-                    id="costs"
-                    type="number"
-                    min="0"
-                    v-model.number="draft.projekt.Kosten"
-                  />
-                  <span class="suffix">€</span>
-                </div>
-                <p class="field-help">Kann grob geschätzt werden; optional.</p>
-              </div>
-
-              <!-- Geschäftsziel -->
-              <div class="field field-full">
-                <label for="goal">Geschäftsziel</label>
+                <label for="ds-goals">Data Science Goals</label>
                 <textarea
-                  id="goal"
+                  id="ds-goals"
                   rows="3"
-                  v-model="draft.projekt.Geschaeftsziel"
-                  placeholder="Wie verbessert das Projekt einen Geschäftsprozess oder eine Kennzahl?"
+                  v-model="draft.projekt.DataScienceZiele"
+                  placeholder="Was soll vorhergesagt/klassifiziert/optimiert werden?"
                 />
+              </div>
+
+              <div class="field">
+                <label for="atype">Type of Analytics</label>
+                <select id="atype" v-model="draft.projekt.Analysetyp">
+                  <option value="">Bitte wählen</option>
+                  <option>Descriptive</option>
+                  <option>Diagnostic</option>
+                  <option>Predictive</option>
+                  <option>Prescriptive</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="atime">Timelines of Analytics</label>
+                <select id="atime" v-model="draft.projekt.Analysezeitrahmen">
+                  <option value="">Bitte wählen</option>
+                  <option>Einmalig / ad-hoc</option>
+                  <option>Täglich</option>
+                  <option>Wöchentlich</option>
+                  <option>Monatlich</option>
+                  <option>Continuous Streaming</option>
+                </select>
+              </div>
+
+              <div class="field field-full">
+                <label for="atools">Tools Analysis</label>
+                <input
+                  id="atools"
+                  type="text"
+                  v-model="draft.projekt.Analysetools"
+                  placeholder="z.B. scikit-learn, PyTorch, R, Power BI"
+                />
+              </div>
+
+              <div class="field field-full">
+                <label for="metrics">Evaluation Metrics</label>
+                <textarea
+                  id="metrics"
+                  rows="2"
+                  v-model="bewertungText"
+                  placeholder="Kommagetrennt, z.B. RMSE, Accuracy, Recall, F1"
+                />
+                <p class="field-help">Tipp: einfach mit Komma trennen.</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- RECHTE KARTE: VORSCHAU -->
         <aside class="preview-card">
           <h2>Projektsteckbrief – Vorschau</h2>
-          <p class="card-subtitle">Aktualisiert sich automatisch während du tippst.</p>
+          <p class="card-subtitle">
+            Aktualisiert sich automatisch während du tippst.
+          </p>
           <ProjektSteckbrief :projekt="draft.projekt" />
         </aside>
       </section>
 
-      <!-- FOOTER BUTTONS -->
       <section class="wizard-footer">
-        <button type="button" class="btn-secondary" disabled>Zurück</button>
+        <button type="button" class="btn-secondary" @click="goBack">
+          Zurück
+        </button>
         <div class="footer-actions">
           <button type="button" class="btn-ghost">Entwurf speichern</button>
           <button type="button" class="btn-primary" @click="goNext">
@@ -166,7 +148,6 @@ function goNext() {
     </main>
   </div>
 </template>
-
 <style scoped>
 /* Layout */
 .wizard-page {
