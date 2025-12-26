@@ -1,172 +1,134 @@
 <script setup lang="ts">
-import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
-import { useProjectDraftStore } from "@/stores/projektDraft";
 import { useRouter } from "vue-router";
+import { useProjectDraftStore } from "@/stores/projektDraft";
+import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
+import api from "@/api"; // API-Service importieren
 
 const draft = useProjectDraftStore();
 const router = useRouter();
 
-function goNext() {
-  router.push({ name: "projekt-erstellen-data" });
+function goBack() {
+  router.push({ name: "projekt-erstellen-deployment" });
+}
+
+// "Abschließen"-Funktion anpassen
+async function finishWizard() {
+  try {
+    // 1. Projektdaten an die neue API-Funktion übergeben
+    const neuesProjekt = await api.createProjekt(draft.projekt);
+
+    // 2. Nach dem Speichern zum Dashboard des NEUEN Projekts navigieren
+    // Wir nutzen die 'id', die das Backend zurückgibt.
+    router.push({ name: "dashboard", params: { id: neuesProjekt.id } });
+
+    // Optional: Den Entwurf im Store zurücksetzen
+    draft.reset();
+
+  } catch (error) {
+    console.error("Fehler beim Erstellen des Projekts:", error);
+    // Hier könntest du dem Nutzer eine Fehlermeldung anzeigen
+    alert("Das Projekt konnte nicht gespeichert werden.");
+  }
 }
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
-      <!-- HEADER / STEP INFO -->
       <section class="wizard-header">
-        <p class="wizard-step">Projekt-Wizard · Schritt 1 von 5</p>
-        <h1>Projekt anlegen – Business Understanding</h1>
+        <p class="wizard-step">Projekt-Wizard · Schritt 5 von 5</p>
+        <h1>Projekt anlegen – Utilization</h1>
         <p class="wizard-subtitle">
-          Fülle die wichtigsten Infos zu deinem Data-Science-Projekt aus. Rechts siehst du eine Live-Vorschau.
+          Beschreibe Monitoring, Wartung und Tools im Betrieb. Rechts siehst du die Live-Vorschau.
         </p>
 
         <ol class="wizard-steps">
-          <li class="is-active">Business Understanding</li>
-          <li>Data Collection, Exploration &amp; Preparation</li>
-          <li>Analysis</li>
-          <li>Deployment</li>
-          <li>Utilization</li>
+          <li class="is-done">Business Understanding</li>
+          <li class="is-done">Data Collection, Exploration &amp; Preparation</li>
+          <li class="is-done">Analysis</li>
+          <li class="is-done">Deployment</li>
+          <li class="is-active">Utilization</li>
         </ol>
       </section>
 
-      <!-- MAIN: LINKS FORM, RECHTS VORSCHAU -->
       <section class="wizard-main">
-        <!-- LINKE KARTE: FORM -->
         <div class="form-card">
-          <h2>Projekt-Steckbrief</h2>
+          <h2>Utilization</h2>
           <p class="card-subtitle">
-            Beschreibe dein Projekt in mehreren Kategorien. Die Vorschau aktualisiert sich automatisch.
+            Was passiert nach dem Go-Live? Wie wird überwacht, gewartet und betrieben?
           </p>
 
-          <!-- 1. Business Understanding -->
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>1. Business Understanding</h3>
+                <h3>5. Utilization</h3>
                 <p class="section-description">
-                  Basisinfos zu Domain, Ziel und Team.
+                  Monitoring, Wartung und Tools im Betrieb.
                 </p>
               </div>
               <div>
-                <span class="section-status">0/8 Felder</span>
+                <span class="section-status">0/3 Felder</span>
               </div>
             </header>
 
             <div class="section-grid">
-              <!-- Titel -->
               <div class="field field-full">
-                <label for="title">Projekt-Titel</label>
-                <input
-                  id="title"
-                  type="text"
-                  v-model="draft.projekt.Titel"
-                  placeholder="z. B. Vorhersage von Parkplatzauslastung in Split"
-                />
-                <p class="field-help">Max. 100 Zeichen.</p>
-              </div>
-
-              <!-- Domain -->
-              <div class="field">
-                <label for="domain">Domain</label>
-                <select id="domain" v-model="draft.projekt.Domain">
-                  <option value="">Bitte wählen</option>
-                  <option>Public Services</option>
-                  <option>Manufacturing</option>
-                  <option>Healthcare</option>
-                  <option>Finance</option>
-                  <option>Retail</option>
-                </select>
-                <p class="field-help">Wähle die fachliche Domäne des Projekts.</p>
-              </div>
-
-              <!-- Teamgröße -->
-              <div class="field">
-                <label for="team-size">Teamgröße</label>
-                <input
-                  id="team-size"
-                  type="number"
-                  min="1"
-                  max="20"
-                  v-model.number="draft.projekt.Teamgroesse"
-                />
-              </div>
-
-              <!-- Zeithorizont -->
-              <div class="field">
-                <label for="timeline">Zeithorizont</label>
-                <select id="timeline" v-model="draft.projekt.Zeitraum">
-                  <option value="">Bitte wählen</option>
-                  <option>&lt; 3 Monate</option>
-                  <option>3–6 Monate</option>
-                  <option>&gt; 6 Monate</option>
-                </select>
-              </div>
-
-              <!-- Form des finalen Produkts -->
-              <div class="field">
-                <label for="final-product">Form des finalen Produkts</label>
-                <select id="final-product" v-model="draft.projekt.FormFinaleProdukt">
-                  <option value="">Bitte wählen</option>
-                  <option>Dashboard</option>
-                  <option>Report</option>
-                  <option>API</option>
-                  <option>Anwendung / Service</option>
-                </select>
-              </div>
-
-              <!-- Kosten -->
-              <div class="field">
-                <label for="costs">Kosten (geschätzt)</label>
-                <div class="input-inline">
-                  <input
-                    id="costs"
-                    type="number"
-                    min="0"
-                    v-model.number="draft.projekt.Kosten"
-                  />
-                  <span class="suffix">€</span>
-                </div>
-                <p class="field-help">Kann grob geschätzt werden; optional.</p>
-              </div>
-
-              <!-- Geschäftsziel -->
-              <div class="field field-full">
-                <label for="goal">Geschäftsziel</label>
+                <label for="monitoring">Monitoring</label>
                 <textarea
-                  id="goal"
+                  id="monitoring"
                   rows="3"
-                  v-model="draft.projekt.Geschaeftsziel"
-                  placeholder="Wie verbessert das Projekt einen Geschäftsprozess oder eine Kennzahl?"
+                  v-model="draft.projekt.Ueberwachung"
+                  placeholder="z. B. Drift-Detection, KPI-Monitoring, Alerts, Logging..."
                 />
+              </div>
+
+              <div class="field field-full">
+                <label for="maintenance">Wartung</label>
+                <textarea
+                  id="maintenance"
+                  rows="3"
+                  v-model="draft.projekt.Wartung"
+                  placeholder="z. B. Retraining-Zyklen, Modell-Updates, Datenpflege..."
+                />
+              </div>
+
+              <div class="field field-full">
+                <label for="util-tools">Tools – Utilization</label>
+                <input
+                  id="util-tools"
+                  type="text"
+                  v-model="draft.projekt.Verwendungstools"
+                  placeholder="z. B. Grafana, Prometheus, ELK, Airflow, Azure Monitor..."
+                />
+                <p class="field-help">Mehrere Tools mit Komma trennen.</p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- RECHTE KARTE: VORSCHAU -->
         <aside class="preview-card">
           <h2>Projektsteckbrief – Vorschau</h2>
-          <p class="card-subtitle">Aktualisiert sich automatisch während du tippst.</p>
+          <p class="card-subtitle">
+            Aktualisiert sich automatisch während du tippst.
+          </p>
           <ProjektSteckbrief :projekt="draft.projekt" />
         </aside>
       </section>
 
-      <!-- FOOTER BUTTONS -->
       <section class="wizard-footer">
-        <button type="button" class="btn-secondary" disabled>Zurück</button>
+        <button type="button" class="btn-secondary" @click="goBack">
+          Zurück
+        </button>
         <div class="footer-actions">
           <button type="button" class="btn-ghost">Entwurf speichern</button>
-          <button type="button" class="btn-primary" @click="goNext">
-            Speichern &amp; Weiter
+          <button type="button" class="btn-primary" @click="finishWizard">
+            Abschließen
           </button>
         </div>
       </section>
     </main>
   </div>
 </template>
-
 <style scoped>
 /* Layout */
 .wizard-page {
@@ -180,7 +142,6 @@ function goNext() {
   width: min(1400px, 100%);  /* maximale Breite 1400px, sonst 100% */
   margin: 0 auto;           /* zentrieren */
 }
-
 
 
 /* Header */
