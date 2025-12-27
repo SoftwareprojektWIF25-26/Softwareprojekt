@@ -1,6 +1,22 @@
 // ============================================
 // PROJEKT BASIS
 // ============================================
+export interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export interface ProjectResponse {
+  id: number;
+  title: string;
+  domain?: string;
+  wizardStep: number;
+  wizardCompleted: boolean;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Project {
   id: number;
@@ -27,6 +43,8 @@ export type ProjectStatus =
 // ============================================
 
 export interface BusinessUnderstandingData {
+  projectTitle?: string;
+  projectDomain?: string;
   businessGoal?: string;
   formOfFinalProduct?: FormOfFinalProduct;
   projectTeamRoles?: TeamRole[];
@@ -170,3 +188,209 @@ export interface FullProject extends Project {
   deploymentConfig?: DeploymentConfigData;
   utilizationConfig?: UtilizationConfigData;
 }
+
+
+// types/index.ts - ERGÄNZUNGEN am Ende
+
+// ============================================
+// RESPONSE TYPES (mit Utility Types)
+// ============================================
+
+// Helper Type für Backend-Responses (fügt id,  timestamps hinzu)
+export interface DatabaseEntity {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Jetzt einfach die vorhandenen Types erweitern!
+export type BusinessUnderstandingResponse = BusinessUnderstandingData & DatabaseEntity;
+export type DataCharacteristicsResponse = DataCharacteristicsData & DatabaseEntity;
+export type AnalysisConfigResponse = AnalysisConfigData & DatabaseEntity;
+export type DeploymentConfigResponse = DeploymentConfigData & DatabaseEntity;
+export type UtilizationConfigResponse = UtilizationConfigData & DatabaseEntity;
+
+// Complete Wizard Response
+export interface CompleteWizardResponse {
+  success: boolean;
+  message: string;
+  metrics: ProjectMetrics;
+}
+
+export interface ProjectMetrics {
+  categoryScores: {
+    readiness: number;
+    complexity: number;
+    uncertainty: number;
+  };
+  overallScore: number;
+  effortPersonWeeks: number;
+  durationWeeks: number;
+  projectSize: string;
+  storyPoints: number;
+  sprintCount: number;
+  phases: PhaseMetrics[];
+  effortBreakdown: {
+    baseEffort: number;
+    bufferEffort: number;
+    bufferPercentage: number;
+    riskLevel: number;
+  };
+}
+
+export interface PhaseMetrics {
+  name: string;
+  startWeek: number;
+  durationWeeks: number;
+  effortPersonWeeks: number;
+  percentage: number;
+  baseEffort: number;
+  bufferEffort: number;
+  baseDuration: number;
+  bufferDuration: number;
+}
+
+// ============================================
+// DASHBOARD TYPES
+// ============================================
+
+export interface DashboardData {
+  project: {
+    id: number;
+    title: string;
+    domain: string;
+    status: ProjectStatus;
+    startDate: Date | null;
+    endDate: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+  wizardProgress: {
+    currentStep: number;
+    totalSteps: number;
+    completed: boolean;
+    percentage: number;
+  };
+
+  templatePhases: TemplatePhase[];
+  templateProgress: number;
+
+  projectPlanProgress: ProjectPlanProgress | null;
+  ganttData: GanttPhase[];
+
+  team: TeamInfo | null;
+
+  configurations: {
+    businessUnderstanding: BusinessUnderstandingResponse | null;
+    dataCharacteristics: DataCharacteristicsResponse | null;
+    analysisConfig: AnalysisConfigResponse | null;
+    deploymentConfig: DeploymentConfigResponse | null;
+    utilizationConfig: UtilizationConfigResponse | null;
+  };
+
+  evaluations: ProjectEvaluation[];
+}
+
+export interface TemplatePhase {
+  name: string;
+  status: TemplatePhaseStatus;
+  completedAt: Date | null;
+}
+
+export interface ProjectPlanProgress {
+  totalPhases: number;
+  totalTasks: number;
+  completedTasks: number;
+  percentage: number;
+  estimatedDuration: number;
+  estimatedEffort: number;
+  calculatedComplexity: number;
+}
+
+export interface GanttPhase {
+  id: number;
+  name: string;
+  phaseType: string;
+  description: string | null;
+  orderIndex: number;
+  startDate: Date | null;
+  endDate: Date | null;
+  estimatedDuration: number;
+  estimatedEffort: number;
+  tasks: GanttTask[];
+}
+
+export interface GanttTask {
+  id: number;
+  title: string;
+  taskType: string;
+  status: TaskStatus;
+  estimatedDuration: number;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+export interface TeamInfo {
+  roles: string[];
+  teamSize: number | null;
+  timeline: {
+    value: number | null;
+    unit: TimelineUnit;
+  };
+  estimatedCost: number | null;
+}
+
+export interface ProjectEvaluation {
+  id: number;
+  category: string;
+  rating: number;
+  notes: string | null;
+  createdAt: Date;
+}
+
+// Enums
+export type ProjectStatus = 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED'
+export type TemplatePhaseStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
+
+// ============================================
+// STARTSEITE / PROJEKT LISTE
+// ============================================
+
+export interface ProjectListItem {
+  id: number;
+  title: string;
+  domain: string;
+  status: ProjectStatus;
+  wizardStep: number;
+  wizardCompleted: boolean;
+  wizardProgress: number;
+  taskProgress: {
+    completed: number;
+    total: number;
+    percentage: number;
+  } | null;
+  teamRoles: string[];
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  startDate: Date | string | null;
+  endDate: Date | string | null;
+}
+
+export interface StartPageData {
+  projects: ProjectListItem[];
+  statistics: ProjectStatistics;
+  totalCount: number;
+}
+
+export interface ProjectStatistics {
+  totalProjects: number;
+  PLANNING: number;
+  IN_PROGRESS: number;
+  COMPLETED: number;
+  ON_HOLD: number;
+  CANCELLED: number;
+}
+
+

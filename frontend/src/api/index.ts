@@ -1,5 +1,7 @@
-import axios from 'axios';
+// api/index.ts
+import axios, { AxiosError } from 'axios';
 import {
+  ApiResponse,
   Project,
   CreateProjectRequest,
   UpdateBusinessUnderstandingRequest,
@@ -7,87 +9,391 @@ import {
   UpdateAnalysisConfigRequest,
   UpdateDeploymentConfigRequest,
   UpdateUtilizationConfigRequest,
-  FullProject
+  FullProject,
+  BusinessUnderstandingResponse,
+  DataCharacteristicsResponse,
+  AnalysisConfigResponse,
+  DeploymentConfigResponse,
+  UtilizationConfigResponse,
+  CompleteWizardResponse,
+  DashboardData
 } from '@/types';
 
-// STARTSEITE
-function getProjektListe(): Promise<Project[]> {
-  return axios.get('/api/startpage').then(res => res.data);
+
+// Axios Instance mit Base-Config
+const apiClient = axios.create({
+  baseURL: '/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Response Interceptor für besseres Error-Handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    console.error('❌ API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    return Promise.reject(error);
+  }
+);
+
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Extrahiert Daten aus der Backend-Response-Struktur
+ * Wirft einen Error wenn success = false
+ * @param response - Axios Response mit ApiResponse<T> Struktur
+ * @returns Die unwrapped Daten vom Typ T
+ */
+function unwrapResponse<T>(response: { data: ApiResponse<T> }): T {
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'API Request fehlgeschlagen');
+  }
+  return response.data.data;
+}
+
+// ===== STARTSEITE =====
+
+/**
+ * Holt alle Projekte für die Startseite
+ */
+async function getProjektListe(): Promise<ProjectListItem[]> {
+  try {
+    console.log('📤 GET Projekt Liste');
+
+    // Backend liefert { projects, statistics, totalCount }
+    const response = await apiClient.get('/startpage');
+
+    console.log('📥 Projekt Liste Response:', response.data);
+
+    // Extrahiere nur projects-Array
+    const projects = response.data.projects || [];
+
+    console.log('✅ Projekt Liste geladen:', projects.length, 'Projekte');
+
+    return projects;
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Projekt Liste Error:', error.response?.data);
+      throw new Error('Fehler beim Laden der Projekte');
+    }
+    throw error;
+  }
 }
 
 function getStatistiken() {
-  return axios.get('/api/startpage/statistics').then(res => res.data);
+  return apiClient.get('/startpage/statistics').then(res => res.data);
 }
 
 function getZuletztBearbeitet(): Promise<Project[]> {
-  return axios.get('/api/startpage/recent-projects').then(res => res.data);
+  return apiClient.get('/startpage/recent-projects').then(res => res.data);
 }
 
-// DASHBOARD
+// ===== DASHBOARD =====
+
 function getProjektById(id: number): Promise<FullProject> {
-  return axios.get(`/api/dashboard/${id}`).then(res => res.data);
+  return apiClient.get(`/dashboard/${id}`).then(res => res.data);
 }
 
 function getTimeline(id: number) {
-  return axios.get(`/api/dashboard/${id}/timeline`).then(res => res.data);
+  return apiClient.get(`/dashboard/${id}/timeline`).then(res => res.data);
 }
 
 function postEvaluation(id: number) {
-  return axios.post(`/api/dashboard/${id}/evaluations`).then(res => res.data);
+  return apiClient.post(`/dashboard/${id}/evaluations`).then(res => res.data);
 }
 
 function patchProjektStatus(id: number, status: string) {
-  return axios.patch(`/api/dashboard/${id}/status`, { status }).then(res => res.data);
+  return apiClient.patch(`/dashboard/${id}/status`, { status }).then(res => res.data);
 }
 
 function patchTaskStatus(id: number, status: string) {
-  return axios.patch(`/api/dashboard/tasks/${id}/status`, { status }).then(res => res.data);
+  return apiClient.patch(`/dashboard/tasks/${id}/status`, { status }).then(res => res.data);
 }
 
 function patchTemplatePhase(id: number, phase: string) {
-  return axios.patch(`/api/dashboard/${id}/template-phase/${phase}/status`, { phase: id }).then(res => res.data);
+  return apiClient.patch(`/dashboard/${id}/template-phase/${phase}/status`, { phase: id }).then(res => res.data);
 }
 
-// === WIZARD FUNKTIONEN ===
+// ===== WIZARD FUNKTIONEN =====
 
-function createProjekt(projektData: CreateProjectRequest): Promise<{ success: boolean; data: { id: number } }> {
-  return axios.post('/api/projects/create', projektData).then(res => res.data);
+/**
+ * Erstellt ein neues Projekt
+ * @param projektData - Projekt-Daten (title, domain)
+ * @returns Promise mit dem erstellten Projekt (inkl. ID)
+ */
+async function createProjekt(projektData: CreateProjectRequest): Promise<Project> {
+  try {
+    console.log('📤 CREATE Projekt Request:', projektData);
+
+    const response = await apiClient.post<ApiResponse<Project>>(
+      '/projects/create',
+      projektData
+    );
+
+    console.log('📥 CREATE Projekt Response:', response.data);
+
+    // unwrapResponse validiert success und extrahiert data
+    const project = unwrapResponse(response);
+
+    if (!project.id) {
+      throw new Error('Ungültige Response: Keine Projekt-ID vorhanden');
+    }
+
+    console.log('✅ Projekt erfolgreich erstellt mit ID:', project.id);
+
+    return project;
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Axios Error:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
+
+      // Extrahiere Fehlermeldung aus Backend-Response
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      const validationErrors = error.response?.data?.errors;
+
+      if (validationErrors && Array.isArray(validationErrors)) {
+        throw new Error(validationErrors.map((e: any) => e.msg).join(', '));
+      }
+
+      throw new Error(backendError || error.message || 'Netzwerkfehler beim Erstellen');
+    }
+
+    throw error;
+  }
 }
 
-function patchBusinessUnderstanding(id: number, data: UpdateBusinessUnderstandingRequest) {
-  return axios.patch(`/api/projects/${id}/business-understanding`, data).then(res => res.data);
+/**
+ * Aktualisiert Business Understanding eines Projekts
+ */
+async function patchBusinessUnderstanding(
+  id: number,
+  data: UpdateBusinessUnderstandingRequest
+): Promise<BusinessUnderstandingResponse> {
+  try {
+    console.log(`📤 PATCH Business Understanding (ID: ${id}):`, data);
+
+    const response = await apiClient.patch<ApiResponse<BusinessUnderstandingResponse>>(
+      `/projects/${id}/business-understanding`,
+      data
+    );
+
+    console.log('📥 Business Understanding Response:', response.data);
+    console.log('✅ Business Understanding gespeichert');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Business Understanding Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Speichern von Business Understanding');
+    }
+    throw error;
+  }
 }
 
-function patchDataCharacteristics(id: number, data: UpdateDataCharacteristicsRequest) {
-  return axios.patch(`/api/projects/${id}/data-characteristics`, data).then(res => res.data);
+/**
+ * Aktualisiert Data Characteristics eines Projekts
+ */
+async function patchDataCharacteristics(
+  id: number,
+  data: UpdateDataCharacteristicsRequest
+): Promise<DataCharacteristicsResponse> {
+  try {
+    console.log(`📤 PATCH Data Characteristics (ID: ${id}):`, data);
+
+    const response = await apiClient.patch<ApiResponse<DataCharacteristicsResponse>>(
+      `/projects/${id}/data-characteristics`,
+      data
+    );
+
+    console.log('📥 Data Characteristics Response:', response.data);
+    console.log('✅ Data Characteristics gespeichert');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Data Characteristics Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Speichern von Data Characteristics');
+    }
+    throw error;
+  }
 }
 
-function patchAnalysisConfig(id: number, data: UpdateAnalysisConfigRequest) {
-  return axios.patch(`/api/projects/${id}/analysis-config`, data).then(res => res.data);
+/**
+ * Aktualisiert Analysis Config eines Projekts
+ */
+async function patchAnalysisConfig(
+  id: number,
+  data: UpdateAnalysisConfigRequest
+): Promise<AnalysisConfigResponse> {
+  try {
+    console.log(`📤 PATCH Analysis Config (ID: ${id}):`, data);
+
+    const response = await apiClient.patch<ApiResponse<AnalysisConfigResponse>>(
+      `/projects/${id}/analysis-config`,
+      data
+    );
+
+    console.log('📥 Analysis Config Response:', response.data);
+    console.log('✅ Analysis Config gespeichert');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Analysis Config Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Speichern von Analysis Config');
+    }
+    throw error;
+  }
 }
 
-function patchDeploymentConfig(id: number, data: UpdateDeploymentConfigRequest) {
-  return axios.patch(`/api/projects/${id}/deployment-config`, data).then(res => res.data);
+/**
+ * Aktualisiert Deployment Config eines Projekts
+ */
+async function patchDeploymentConfig(
+  id: number,
+  data: UpdateDeploymentConfigRequest
+): Promise<DeploymentConfigResponse> {
+  try {
+    console.log(`📤 PATCH Deployment Config (ID: ${id}):`, data);
+
+    const response = await apiClient.patch<ApiResponse<DeploymentConfigResponse>>(
+      `/projects/${id}/deployment-config`,
+      data
+    );
+
+    console.log('📥 Deployment Config Response:', response.data);
+    console.log('✅ Deployment Config gespeichert');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Deployment Config Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Speichern von Deployment Config');
+    }
+    throw error;
+  }
 }
 
-function patchUtilizationConfig(id: number, data: UpdateUtilizationConfigRequest) {
-  return axios.patch(`/api/projects/${id}/utilization-config`, data).then(res => res.data);
+/**
+ * Aktualisiert Utilization Config eines Projekts
+ */
+async function patchUtilizationConfig(
+  id: number,
+  data: UpdateUtilizationConfigRequest
+): Promise<UtilizationConfigResponse> {
+  try {
+    console.log(`📤 PATCH Utilization Config (ID: ${id}):`, data);
+
+    const response = await apiClient.patch<ApiResponse<UtilizationConfigResponse>>(
+      `/projects/${id}/utilization-config`,
+      data
+    );
+
+    console.log('📥 Utilization Config Response:', response.data);
+    console.log('✅ Utilization Config gespeichert');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Utilization Config Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Speichern von Utilization Config');
+    }
+    throw error;
+  }
 }
 
-function completeWizard(id: number) {
-  return axios.post(`/api/projects/${id}/complete-wizard`).then(res => res.data);
+/**
+ * Schließt den Wizard ab und startet die Projektplan-Berechnung
+ */
+async function completeWizard(id: number): Promise<CompleteWizardResponse> {
+  try {
+    console.log(`📤 POST Complete Wizard (ID: ${id})`);
+
+    const response = await apiClient.post<ApiResponse<CompleteWizardResponse>>(
+      `/projects/${id}/complete-wizard`
+    );
+
+    console.log('📥 Complete Wizard Response:', response.data);
+    console.log('✅ Wizard abgeschlossen & Projektplan erstellt');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Complete Wizard Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Abschließen des Wizards');
+    }
+    throw error;
+  }
 }
+
+
+
+/**
+ * Holt vollständige Dashboard-Daten für ein Projekt
+ */
+async function getDashboardData(id: number): Promise<DashboardData> {
+  try {
+    console.log(`📤 GET Dashboard Data (ID: ${id})`);
+
+    const response = await apiClient.get<ApiResponse<DashboardData>>(
+      `/dashboard/${id}`
+    );
+
+    console.log('📥 Dashboard Data Response:', response.data);
+    console.log('✅ Dashboard geladen');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Dashboard Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Laden des Dashboards');
+    }
+    throw error;
+  }
+}
+
 
 export default {
+  // Startseite
   getProjektListe,
-  getProjektById,
   getStatistiken,
-  postEvaluation,
-  getTimeline,
   getZuletztBearbeitet,
+
+  // Dashboard
+  getProjektById,
+  getTimeline,
+  postEvaluation,
   patchProjektStatus,
   patchTaskStatus,
   patchTemplatePhase,
+  getDashboardData,
+
+  // Wizard
   createProjekt,
   patchBusinessUnderstanding,
   patchDataCharacteristics,
@@ -95,4 +401,5 @@ export default {
   patchDeploymentConfig,
   patchUtilizationConfig,
   completeWizard
+
 };

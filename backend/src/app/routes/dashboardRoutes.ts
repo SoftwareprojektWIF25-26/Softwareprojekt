@@ -28,15 +28,15 @@ function mapDashboardToProjekt(dashboard: Awaited<ReturnType<DashboardService['g
  * GET /api/dashboard/:id
  * Frontend: getProjektById(id)
  */
-router.get('/:id', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+router.get('/:id', async (req, res, next) => {
     try {
         const { id } = req.params;
-
         const dashboard = await dashboardService.getProjectDashboard(id);
 
-        const projekt = mapDashboardToProjekt(dashboard);
-
-        res.json(projekt); // Wichtig: direkt Projekt-Objekt, kein Wrapper
+        res.json({
+            success: true,
+            data: dashboard  // ← Vollständiges Objekt!
+        });
     } catch (error) {
         console.error('Error in GET /api/dashboard/:id', error);
         next(error);

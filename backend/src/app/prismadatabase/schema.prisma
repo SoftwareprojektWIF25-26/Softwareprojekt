@@ -212,6 +212,8 @@ enum VolumeUnit {
   GB
   TB
   PB
+  MB
+  KB
 }
 
 enum DataPreparationStep {

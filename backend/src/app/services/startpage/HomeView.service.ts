@@ -11,7 +11,7 @@ interface StartPageFilters {
     sortOrder: 'asc' | 'desc';
 }
 
-export class StartPageService {
+export class HomeViewService {
     /**
      * Hauptfunktion: Lädt alle Daten für die Startseite
      * (Keine Projekt-ID nötig, da wir EINE LISTE laden)
