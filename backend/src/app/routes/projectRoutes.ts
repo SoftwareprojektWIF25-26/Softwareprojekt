@@ -247,4 +247,31 @@ router.patch(
     }
 );
 
+/**
+ * PATCH /api/projects/:id/deployment-config
+ */
+router.patch(
+    '/:id/deployment-config',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            // Service-Methode muss auch existieren (siehe unten)
+            const result = await projectService.updateDeploymentConfig(req.params.id, req.body);
+            res.json({ success: true, data: result });
+        } catch (error) { next(error); }
+    }
+);
+/**
+ * PATCH /api/projects/:id/utilization-config
+ */
+router.patch(
+    '/:id/utilization-config',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            // Service-Methode muss auch existieren
+            const result = await projectService.updateUtilizationConfig(req.params.id, req.body);
+            res.json({ success: true, data: result });
+        } catch (error) { next(error); }
+    }
+);
+
 export default router;

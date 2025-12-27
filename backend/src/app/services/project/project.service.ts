@@ -13,7 +13,7 @@ const prisma = new PrismaClient();
 // ======================================================
 
 export interface CreateProjectRequest {
-    // workspaceId entfernt
+
     title: string;
     domain?: string;
 }
@@ -63,7 +63,7 @@ export class ProjectService {
 
     /**
      * POST /api/projects
-     * Erstellt ein neues Projekt (ohne Workspace-Zwang)
+     * Erstellt ein neues Projekt
      */
     async createProject(data: CreateProjectRequest) {
 
@@ -312,6 +312,55 @@ export class ProjectService {
 
         return dataCharacteristics;
     }
+    async updateUtilizationConfig(projectId: string, data: any) {
+        const id = this.parseId(projectId, 'Projekt-ID');
+        // ... Daten mappen ...
+        const config = await prisma.utilizationConfig.upsert({
+            where: { projectId: id },
+            create: { projectId: id, ...data, status: 'COMPLETED' }, // oder READY
+            update: { ...data, status: 'COMPLETED' }
+        });
+        return config;
+    }
+
+    /**
+     * PATCH /api/projects/:id/deployment-config
+     * Deployment Config Phase aktualisieren
+     */
+    async updateDeploymentConfig(projectId: string, data: any) {
+        const id = this.parseId(projectId, 'Projekt-ID');
+
+        // Sicheres Mapping der Felder, um ungewollte Daten zu filtern
+        const safeData: any = {
+            timelinessOfAnalytics: data.timelinessOfAnalytics,
+            addressedUsers: data.addressedUsers,
+            tests: data.tests,
+            toolsDeployment: data.toolsDeployment,
+            status: 'DRAFT' // oder 'COMPLETED', je nach Logik
+        };
+
+        // Arrays sicher übernehmen, falls vorhanden
+        if (Array.isArray(data.projectIssues)) {
+            safeData.projectIssues = data.projectIssues;
+        }
+
+        const deploymentConfig = await prisma.deploymentConfig.upsert({
+            where: { projectId: id },
+            create: { projectId: id, ...safeData },
+            update: safeData
+        });
+
+        // Wizard auf Schritt 4 setzen
+        await this.advanceWizardStep(id, 4);
+
+        // Nächste Phase (Utilization) freischalten
+        await this.unlockNextPhase(id, 'utilizationConfig');
+
+        return deploymentConfig;
+    }
+
+
+
 
 
     // ======================================================

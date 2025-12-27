@@ -32,13 +32,9 @@ function patchTemplatePhase(id: number, phase: string){
   return axios.patch(`/api/dashboard/${id}/template-phase/${phase}/status`, {phase: id}).then(res => res.data)
 }
 
-// --- NEU: PROJEKT ERSTELLEN ---
-// Nimmt die Daten aus dem Formular und sendet sie ans Backend.
-// Das Backend sollte daraufhin das neue Projekt mit seiner ID zurückgeben.
+// PROJEKT ERSTELLEN
 function createProjekt(projektData: Projekt): Promise<{ id: number }> {
-  // WICHTIG: Der Pfad '/api/projekte' ist nur ein Beispiel.
-  // Passe ihn an deine tatsächliche Backend-Route an.
-  return axios.post('/api/projekte', projektData).then(res => res.data);
+  return axios.post('/api/projects/create', projektData).then(res => res.data);
 }
 
 
@@ -52,5 +48,5 @@ export default {
   patchProjektStatus,
   patchTaskStatus,
   patchTemplatePhase,
-  createProjekt // <--- hier die neue Funktion exportieren
+  createProjekt
 }

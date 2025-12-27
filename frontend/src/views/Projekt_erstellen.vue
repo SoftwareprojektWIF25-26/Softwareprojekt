@@ -155,7 +155,7 @@ function goNext() {
 
       <!-- FOOTER BUTTONS -->
       <section class="wizard-footer">
-        <button type="button" class="btn-secondary" disabled>Zurück</button>
+        <button type="button" class=""  > </button>
         <div class="footer-actions">
           <button type="button" class="btn-ghost">Entwurf speichern</button>
           <button type="button" class="btn-primary" @click="goNext">
