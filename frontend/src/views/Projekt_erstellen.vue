@@ -1,15 +1,69 @@
 <script setup lang="ts">
-import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import { useRouter } from "vue-router";
+import api from "@/api"; // API importieren
+import ProjektSteckbrief from "@/components/ProjektSteckbrief.vue";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
 
-function goNext() {
-  router.push({ name: "projekt-erstellen-data" });
+async function goNext() {
+  // 0. Einfache Validierung
+  if (!draft.projekt.Titel) {
+    alert("Bitte gib einen Projekttitel ein.");
+    return;
+  }
+
+  try {
+    // ---------------------------------------------------------
+    // SCHRITT 1a: Projekt initial anlegen (POST /create)
+    // ---------------------------------------------------------
+    // Wir senden hier erst mal nur Titel & Domain, um die ID zu bekommen.
+    const createResponse = await api.createProjekt({
+      title: draft.projekt.Titel,
+      domain: draft.projekt.Domain
+    });
+
+    const newProjectId = createResponse.data.id;
+    console.log("Projekt erstellt mit ID:", newProjectId);
+
+    // WICHTIG: ID im Store speichern für die nächsten Schritte!
+    // Falls dein 'Projekt'-Interface im Frontend keine ID hat,
+    // füge sie in 'types/index.ts' hinzu oder nutze 'any' als Workaround.
+    (draft.projekt as any).id = newProjectId;
+
+
+    // ---------------------------------------------------------
+    // SCHRITT 1b: Details speichern (PATCH /business-understanding)
+    // ---------------------------------------------------------
+    // Wir mappen die deutschen Frontend-Felder auf die englischen Backend-Felder
+    const businessData = {
+      businessGoal: draft.projekt.Geschaeftsziel,
+      formOfFinalProduct: draft.projekt.FormFinaleProdukt,
+      teamSize: draft.projekt.Teamgroesse,
+      timelineValue: draft.projekt.Zeitraum ? 12 : undefined, // Beispiel! Backend erwartet Zahl?
+      timelineUnit: 'MONTHS', // Hartcodiert oder auch aus Formular
+      estimatedCost: draft.projekt.Kosten,
+      // toolsBusinessUnderstanding: ... falls du das Feld hast
+    };
+
+    await api.patchBusinessUnderstanding(newProjectId, businessData);
+    console.log("Business Understanding gespeichert.");
+
+
+    // ---------------------------------------------------------
+    // SCHRITT 2: Weiterleiten
+    // ---------------------------------------------------------
+    router.push({ name: "projekt-erstellen-data" });
+
+  } catch (error: any) {
+    console.error("Fehler beim Speichern:", error);
+    const msg = error.response?.data?.errors?.[0]?.msg || "Unbekannter Fehler";
+    alert("Speichern fehlgeschlagen: " + msg);
+  }
 }
 </script>
+
 
 <template>
   <div class="wizard-page">

@@ -55,6 +55,20 @@ export interface UpdateDataCharacteristicsRequest {
     toolsData?: string;
 }
 
+export interface UpdateDeploymentConfigRequest {
+    timelinessOfAnalytics?: any; // Oder spezifischer Enum Typ falls vorhanden
+    addressedUsers?: string;
+    tests?: string;
+    projectIssues?: string[]; // Array von Strings/Enums
+    toolsDeployment?: string;
+}
+
+export interface UpdateUtilizationConfigRequest {
+    monitoring?: string;
+    maintenance?: string;
+    toolsUtilization?: string;
+}
+
 // ======================================================
 // Service Class
 // ======================================================
@@ -312,6 +326,7 @@ export class ProjectService {
 
         return dataCharacteristics;
     }
+
     async updateUtilizationConfig(projectId: string, data: any) {
         const id = this.parseId(projectId, 'Projekt-ID');
         // ... Daten mappen ...
