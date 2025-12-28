@@ -1,11 +1,11 @@
 <script setup lang="ts">
-
 import { ref, onMounted, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router"; // useRouter hinzu
 import api from "@/api";
 import type { DashboardData } from "@/types";
 
 const route = useRoute();
+const router = useRouter(); // Router Instanz
 const dashboard = ref<DashboardData | null>(null);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
@@ -14,6 +14,11 @@ const error = ref<string | null>(null);
 const project = computed(() => dashboard.value?.project);
 const configs = computed(() => dashboard.value?.configurations);
 const progress = computed(() => dashboard.value?.projectPlanProgress);
+
+// Navigation zurück zur Startseite
+function goBack() {
+  router.push({ name: 'home' });
+}
 
 onMounted(async () => {
   try {
@@ -31,24 +36,32 @@ onMounted(async () => {
 <template>
   <!-- Loading -->
   <div v-if="isLoading" class="loading">
+    <div class="spinner"></div>
     <p>Lade Dashboard...</p>
   </div>
 
   <!-- Error -->
   <div v-else-if="error" class="error">
     <p>❌ {{ error }}</p>
+    <button class="btn-secondary" @click="goBack">Zurück zur Übersicht</button>
   </div>
 
   <!-- Dashboard -->
   <div v-else-if="dashboard" class="dashboard">
 
-    <!-- Header -->
+    <!-- Header mit Back-Button -->
     <header class="dashboard-header">
-      <div>
-        <h1>{{ project?.title }}</h1>
-        <p class="domain">{{ project?.domain }}</p>
+      <div class="header-left">
+        <button class="back-btn" @click="goBack" title="Zurück zur Übersicht">
+          ← Übersicht
+        </button>
+        <div class="title-group">
+          <h1>{{ project?.title }}</h1>
+          <p class="domain">{{ project?.domain || 'Keine Domain' }}</p>
+        </div>
       </div>
-      <div class="status-badge" :class="`status-${project?.status.toLowerCase()}`">
+
+      <div class="status-badge" :class="`status-${project?.status}`">
         {{ project?.status }}
       </div>
     </header>
@@ -91,21 +104,26 @@ onMounted(async () => {
           </span>
         </summary>
         <div class="config-content" v-if="configs?.businessUnderstanding">
-          <div class="field">
-            <strong>Geschäftsziel:</strong>
-            <p>{{ configs.businessUnderstanding.businessGoal || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Form des Produkts:</strong>
-            <p>{{ configs.businessUnderstanding.formOfFinalProduct || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Team-Rollen:</strong>
-            <p>{{ configs.businessUnderstanding.projectTeamRoles?.join(', ') || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Teamgröße:</strong>
-            <p>{{ configs.businessUnderstanding.teamSize || '– keine Angabe –' }}</p>
+          <div class="field-grid">
+            <div class="field">
+              <strong>Geschäftsziel</strong>
+              <p>{{ configs.businessUnderstanding.businessGoal || '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Produkt-Form</strong>
+              <p>{{ configs.businessUnderstanding.formOfFinalProduct || '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Team-Rollen</strong>
+              <div class="tags">
+                <span v-for="role in configs.businessUnderstanding.projectTeamRoles" :key="role" class="tag">{{ role }}</span>
+                <span v-if="!configs.businessUnderstanding.projectTeamRoles?.length">–</span>
+              </div>
+            </div>
+            <div class="field">
+              <strong>Teamgröße</strong>
+              <p>{{ configs.businessUnderstanding.teamSize || '–' }} Personen</p>
+            </div>
           </div>
         </div>
       </details>
@@ -119,25 +137,25 @@ onMounted(async () => {
           </span>
         </summary>
         <div class="config-content" v-if="configs?.dataCharacteristics">
-          <div class="field">
-            <strong>Datenzugriff:</strong>
-            <p>{{ configs.dataCharacteristics.dataAccess?.join(', ') || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Datenquellen:</strong>
-            <p>{{ configs.dataCharacteristics.dataSources?.join(', ') || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Velocity:</strong>
-            <p>{{ configs.dataCharacteristics.velocity || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Veracity:</strong>
-            <p>{{ configs.dataCharacteristics.veracity || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Volume:</strong>
-            <p>{{ configs.dataCharacteristics.volumeValue }} {{ configs.dataCharacteristics.volumeUnit }}</p>
+          <div class="field-grid">
+            <div class="field">
+              <strong>Datenzugriff</strong>
+              <div class="tags">
+                <span v-for="acc in configs.dataCharacteristics.dataAccess" :key="acc" class="tag">{{ acc }}</span>
+              </div>
+            </div>
+            <div class="field">
+              <strong>Velocity</strong>
+              <p>{{ configs.dataCharacteristics.velocity || '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Volumen</strong>
+              <p>{{ configs.dataCharacteristics.volumeValue }} {{ configs.dataCharacteristics.volumeUnit }}</p>
+            </div>
+            <div class="field">
+              <strong>Datenquellen</strong>
+              <p>{{ configs.dataCharacteristics.dataSources?.join(', ') || '–' }}</p>
+            </div>
           </div>
         </div>
       </details>
@@ -151,17 +169,21 @@ onMounted(async () => {
           </span>
         </summary>
         <div class="config-content" v-if="configs?.analysisConfig">
-          <div class="field">
-            <strong>Data Science Ziele:</strong>
-            <p>{{ configs.analysisConfig.dataScienceGoals || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Analytics Type:</strong>
-            <p>{{ configs.analysisConfig.typeOfAnalytics || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Evaluation Metrics:</strong>
-            <p>{{ configs.analysisConfig.evaluationMetrics?.join(', ') || '– keine Angabe –' }}</p>
+          <div class="field-grid">
+            <div class="field">
+              <strong>Analytics Typ</strong>
+              <p>{{ configs.analysisConfig.typeOfAnalytics || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Data Science Ziele</strong>
+              <p>{{ configs.analysisConfig.dataScienceGoals || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Metriken</strong>
+              <div class="tags">
+                <span v-for="m in configs.analysisConfig.evaluationMetrics" :key="m" class="tag">{{ m }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </details>
@@ -175,21 +197,21 @@ onMounted(async () => {
           </span>
         </summary>
         <div class="config-content" v-if="configs?.deploymentConfig">
-          <div class="field">
-            <strong>Timeliness:</strong>
-            <p>{{ configs.deploymentConfig.timelinessOfAnalytics || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Zielnutzer:</strong>
-            <p>{{ configs.deploymentConfig.addressedUsers || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Tests:</strong>
-            <p>{{ configs.deploymentConfig.tests || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Projekt-Issues:</strong>
-            <p>{{ configs.deploymentConfig.projectIssues?.join(', ') || '– keine Angabe –' }}</p>
+          <div class="field-grid">
+            <div class="field">
+              <strong>Timeliness</strong>
+              <p>{{ configs.deploymentConfig.timelinessOfAnalytics || '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Nutzergruppe</strong>
+              <p>{{ configs.deploymentConfig.addressedUsers || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Herausforderungen</strong>
+              <div class="tags">
+                <span v-for="issue in configs.deploymentConfig.projectIssues" :key="issue" class="tag error-tag">{{ issue }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </details>
@@ -203,166 +225,268 @@ onMounted(async () => {
           </span>
         </summary>
         <div class="config-content" v-if="configs?.utilizationConfig">
-          <div class="field">
-            <strong>Monitoring:</strong>
-            <p>{{ configs.utilizationConfig.monitoring || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Wartung:</strong>
-            <p>{{ configs.utilizationConfig.maintenance || '– keine Angabe –' }}</p>
-          </div>
-          <div class="field">
-            <strong>Tools:</strong>
-            <p>{{ configs.utilizationConfig.toolsUtilization || '– keine Angabe –' }}</p>
+          <div class="field-grid">
+            <div class="field full-width">
+              <strong>Monitoring Strategie</strong>
+              <p>{{ configs.utilizationConfig.monitoring || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Wartung</strong>
+              <p>{{ configs.utilizationConfig.maintenance || '–' }}</p>
+            </div>
           </div>
         </div>
       </details>
-    </section>
 
+    </section>
   </div>
 </template>
 
 <style scoped>
 .dashboard {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  padding-top: 80px; /* Header Offset */
 }
 
+/* HEADER */
 .dashboard-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 2rem;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 1rem;
 }
 
-.dashboard-header h1 {
-  font-size: 2rem;
-  color: #0070c9;
-  margin: 0 0 0.5rem 0;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.back-btn {
+  background: none;
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-background-soft);
+}
+
+.title-group h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--color-primary);
 }
 
 .domain {
-  color: #888;
-  font-size: 0.9rem;
+  margin: 0;
+  color: var(--color-text-light);
+  font-size: 1rem;
 }
 
+/* BADGES */
 .status-badge {
   padding: 0.5rem 1rem;
   border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.status-draft { background: #f0f0f0; color: #666; }
-.status-active { background: #e3f2fd; color: #1976d2; }
-.status-completed { background: #e8f5e9; color: #2e7d32; }
+.status-PLANNING { background: var(--color-info); color: white; }
+.status-IN_PROGRESS { background: var(--color-warning); color: white; }
+.status-COMPLETED { background: var(--color-success); color: white; }
+.status-ON_HOLD { background: var(--color-error); color: white; }
+.status-CANCELLED { background: grey; color: white; }
 
+/* PROGRESS */
 .progress-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
 }
 
 .progress-card {
-  background: #f8f8f8;
+  background: white;
   padding: 1.5rem;
   border-radius: 12px;
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .progress-card h3 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
+  color: var(--color-text);
 }
 
 .progress-bar {
   height: 8px;
-  background: #ddd;
+  background: var(--color-background-mute);
   border-radius: 999px;
   overflow: hidden;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .progress-fill {
   height: 100%;
-  background: #0070c9;
-  transition: width 0.3s;
+  background: var(--color-primary);
+  transition: width 0.5s ease-out;
 }
 
 .progress-fill.completed {
-  background: #4caf50;
+  background: var(--color-success);
 }
 
+/* CONFIGURATION DETAILS */
 .config-section h2 {
   font-size: 1.5rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
 }
 
 .config-card {
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   margin-bottom: 1rem;
   overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.config-card[open] {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .config-card summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 1.5rem;
+  padding: 1.25rem 1.5rem;
   cursor: pointer;
-  background: #fafafa;
+  background: var(--color-background-soft);
+  list-style: none; /* Remove default triangle in some browsers */
+}
+
+.config-card summary::-webkit-details-marker {
+  display: none;
 }
 
 .config-card summary:hover {
-  background: #f5f5f5;
+  background: #f0f0f0;
 }
 
 .config-card h3 {
   margin: 0;
   font-size: 1.1rem;
+  font-weight: 600;
 }
 
+/* STATUS INDICATORS IN CARDS */
 .status-indicator {
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 600;
+  text-transform: uppercase;
 }
-
-.status-indicator.todo { background: #f0f0f0; color: #666; }
+.status-indicator.draft { background: #e0e0e0; color: #666; }
 .status-indicator.in_progress { background: #fff3cd; color: #856404; }
 .status-indicator.completed { background: #d4edda; color: #155724; }
-.status-indicator.blocked { background: #f8d7da; color: #721c24; }
 
+/* FIELD GRID */
 .config-content {
   padding: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.field-grid {
   display: grid;
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.field.full-width {
+  grid-column: 1 / -1;
 }
 
 .field strong {
   display: block;
-  color: #0070c9;
+  color: var(--color-text-light);
   font-size: 0.85rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .field p {
   margin: 0;
-  color: #333;
+  color: var(--color-text);
+  font-size: 1rem;
   line-height: 1.5;
 }
 
-.loading, .error {
-  text-align: center;
-  padding: 4rem 2rem;
-  font-size: 1.1rem;
+/* TAGS */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  background: var(--color-background-mute);
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+}
+
+.tag.error-tag {
+  background: #fff5f5;
+  color: #c62828;
+  border-color: #ffcdd2;
+}
+
+/* LOADING */
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: var(--color-text-light);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .error {
-  color: #d32f2f;
+  text-align: center;
+  padding: 4rem;
+  color: var(--color-error);
 }
 </style>

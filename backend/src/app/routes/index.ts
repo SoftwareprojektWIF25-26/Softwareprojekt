@@ -2,7 +2,7 @@
 import { Router } from 'express';
 import projectRoutes from './projectRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
-import startpageRoutes from './HomeViewRoutes.ts';
+import startpageRoutes from './homeview_routes.ts';
 import calculationRoutes from './calcRoutes.js';
 import configRoutes from './configRoutes.js';
 

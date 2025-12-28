@@ -42,20 +42,7 @@ apiClient.interceptors.response.use(
   }
 );
 
-// ===== HELPER FUNCTIONS =====
 
-/**
- * Extrahiert Daten aus der Backend-Response-Struktur
- * Wirft einen Error wenn success = false
- * @param response - Axios Response mit ApiResponse<T> Struktur
- * @returns Die unwrapped Daten vom Typ T
- */
-function unwrapResponse<T>(response: { data: ApiResponse<T> }): T {
-  if (!response.data.success) {
-    throw new Error(response.data.message || 'API Request fehlgeschlagen');
-  }
-  return response.data.data;
-}
 
 // ===== STARTSEITE =====
 
@@ -67,7 +54,7 @@ async function getProjektListe(): Promise<ProjectListItem[]> {
     console.log('📤 GET Projekt Liste');
 
     // Backend liefert { projects, statistics, totalCount }
-    const response = await apiClient.get('/startpage');
+    const response = await apiClient.get('/homeview');
 
     console.log('📥 Projekt Liste Response:', response.data);
 
@@ -88,11 +75,11 @@ async function getProjektListe(): Promise<ProjectListItem[]> {
 }
 
 function getStatistiken() {
-  return apiClient.get('/startpage/statistics').then(res => res.data);
+  return apiClient.get('/homeview/statistics').then(res => res.data);
 }
 
 function getZuletztBearbeitet(): Promise<Project[]> {
-  return apiClient.get('/startpage/recent-projects').then(res => res.data);
+  return apiClient.get('/homeview/recent-projects').then(res => res.data);
 }
 
 // ===== DASHBOARD =====
@@ -375,6 +362,20 @@ async function getDashboardData(id: number): Promise<DashboardData> {
     }
     throw error;
   }
+}
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Extrahiert Daten aus der Backend-Response-Struktur
+ * Wirft einen Error wenn success = false
+ * @param response - Axios Response mit ApiResponse<T> Struktur
+ * @returns Die unwrapped Daten vom Typ T
+ */
+function unwrapResponse<T>(response: { data: ApiResponse<T> }): T {
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'API Request fehlgeschlagen');
+  }
+  return response.data.data;
 }
 
 
