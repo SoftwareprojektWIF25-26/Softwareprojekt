@@ -23,7 +23,7 @@ onMounted(() => {
 <style>
 /* CSS-Imports für Schriftarten und Variablen */
 @import '@/assets/Schriftarten/Schriftart.css';
-@import '@/assets/styles/variables.css';
+@import '@/assets/base.css';
 
 * {
   box-sizing: border-box;

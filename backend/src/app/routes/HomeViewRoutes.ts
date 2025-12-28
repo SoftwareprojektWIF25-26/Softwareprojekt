@@ -1,13 +1,13 @@
 // src/app/routes/HomeViewRoutes.ts
 import { Router, Request, Response, NextFunction } from 'express';
 import { query, validationResult } from 'express-validator';
-import { HomeViewService } from '../services/startpage/HomeView.service.ts'; // Pfad passt, weil routes & services unter app liegen
+import { HomeViewService } from '../services/homeview/HomeView.service.ts'; // Pfad passt, weil routes & services unter app liegen
 
 const router = Router();
 const startPageService = new HomeViewService();
 
 /**
- * GET /api/startpage
+ * GET /api/homeview
  * Frontend: getProjektListe()
  */
 router.get(
@@ -49,7 +49,7 @@ router.get(
 );
 
 /**
- * GET /api/startpage/statistics
+ * GET /api/homeview/statistics
  * Frontend: getStatistiken()
  */
 router.get(
@@ -74,7 +74,7 @@ router.get(
 );
 
 /**
- * GET /api/startpage/recent-projects
+ * GET /api/homeview/recent-projects
  * Frontend: getZuletztBearbeitet()
  */
 router.get(

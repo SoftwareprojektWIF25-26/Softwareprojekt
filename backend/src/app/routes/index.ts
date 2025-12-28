@@ -11,7 +11,7 @@ const router = Router();
 // Alle Routes montieren
 router.use('/projects', projectRoutes);
 router.use('/dashboard', dashboardRoutes);
-router.use('/startpage', startpageRoutes);
+router.use('/homeview', startpageRoutes);
 router.use('/calculation', calculationRoutes);
 router.use('/config', configRoutes);
 
