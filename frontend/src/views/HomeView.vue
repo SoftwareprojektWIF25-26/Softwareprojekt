@@ -203,10 +203,12 @@ function formatDate(date: Date | string): string {
 /* LAYOUT GRID */
 .home-container {
   display: grid;
-  grid-template-columns: 380px 1fr; /* Etwas breiter für bessere Lesbarkeit */
+  grid-template-columns: 380px 1fr;
+  /* KORREKTUR: Kein margin-top, da App.vue das bereits übernimmt.
+     Höhe wird explizit auf den verbleibenden Viewport begrenzt. */
   height: calc(100vh - 60px);
-  margin-top: 60px;
-  overflow: hidden;
+  width: 100%;
+  overflow: hidden; /* Verhindert Scrollen der gesamten Seite */
   background-color: var(--color-background-soft);
 }
 
@@ -216,15 +218,17 @@ function formatDate(date: Date | string): string {
   border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: 100%; /* Füllt die volle Höhe des Containers */
   box-shadow: 2px 0 10px rgba(0,0,0,0.05);
   z-index: 10;
+  overflow: hidden; /* Wichtig: Verhindert, dass die Sidebar selbst scrollt */
 }
 
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid var(--color-border);
   background: white;
+  flex-shrink: 0; /* Header darf nicht schrumpfen */
 }
 
 .sidebar-header h2 {
@@ -304,11 +308,14 @@ function formatDate(date: Date | string): string {
   border-radius: 4px;
 }
 
-/* LISTE */
+/* LISTE - SCROLLBEREICH */
 .project-scroll-area {
-  flex: 1;
-  overflow-y: auto;
+  flex: 1; /* Nimmt den gesamten restlichen Platz ein */
+  overflow-y: auto; /* NUR hier wird gescrollt */
   padding: 1rem;
+  /* Optional: Scrollbar-Styling für bessere Optik */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 .list-item-card {
@@ -395,6 +402,7 @@ function formatDate(date: Date | string): string {
   padding: 1.5rem;
   border-top: 1px solid var(--color-border);
   background: white;
+  flex-shrink: 0; /* Footer bleibt unten fixiert */
 }
 
 .full-width {
@@ -409,6 +417,8 @@ function formatDate(date: Date | string): string {
   justify-content: center;
   background: #f8f9fa;
   position: relative;
+  height: 100%; /* Füllt die rechte Seite komplett aus */
+  overflow: hidden; /* Kein Scrollen im rechten Bereich */
 }
 
 .welcome-content {
@@ -457,3 +467,4 @@ function formatDate(date: Date | string): string {
   to { transform: rotate(360deg); }
 }
 </style>
+
