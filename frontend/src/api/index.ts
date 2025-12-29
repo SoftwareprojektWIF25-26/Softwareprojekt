@@ -3,7 +3,7 @@ import {Projekt} from "@/types";
 
 //Startseite
 function getProjektListe(){
-  return axios.get('/api/startpage').then(res => res.data)
+  return axios.get('/api/startpage').then(res => res.data).catch(()=>[])
 }
 
 function getStatistiken(){
@@ -11,7 +11,7 @@ function getStatistiken(){
 }
 
 function getZuletztBearbeitet(){
-  return axios.get('/api/startpage/recent-projects').then(res => res.data)
+  return axios.get('/api/startpage/recent-projects').then(res => res.data).catch(()=> [])
 }
 
 //Dashboard
@@ -19,7 +19,7 @@ function getProjektById(id: number): Promise<Projekt> {
   return axios.get(`/api/dashboard/${id}`).then(res => res.data)
 }
 function getTimeline(id: number){
-  return axios.get(`/api/dashboard/${id}/timeline`).then(res => res.data)
+  return axios.get<ProjectMetrics>(`/api/dashboard/${id}/timeline`).then(res => res.data)
 }
 
 function postEvaluation(id: number){
