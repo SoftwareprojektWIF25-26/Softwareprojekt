@@ -3,7 +3,7 @@ import {useRoute} from "vue-router";
 import {computed} from "vue";
 
 const route = useRoute();
-const titles: Record<String, String>={
+const titles: Record<string, string>={
   home: "Startseite",
   dashboard: "Dashboard",
   Projekt_erstellen: "Projekt erstellen",
@@ -24,7 +24,7 @@ const title = computed(() => titles[route.name as string]|| "");
   <div class="header-center">
     <p> {{title}}</p>
   </div>
-  
+
 </header>
 </template>
 
