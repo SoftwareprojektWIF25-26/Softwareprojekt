@@ -13,7 +13,7 @@ Component("assets", assets, ,"Schriftarten, Bilder, Grundstil")
 
 Boundary("state", "Navigation & State ") {
 Component("api", api,axios, Schnittstelle zum Backend)
-Component("stores", stores)
+Component("stores", stores, pinia)
 }
 
 Boundary("logic", "Logic ") {
@@ -30,6 +30,7 @@ Rel("views", "router", führt Navigation aus)
 Rel("views", "api","patch, post, get")
 Rel("views", "assets",)
 Rel("views", "types",verwendet Typdefinition)
+Rel("views", "stores", speichert Zwischenergebnisse von Eingaben)
 
 Rel("router", "views", lädt Seiten)
 
