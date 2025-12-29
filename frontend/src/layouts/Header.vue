@@ -66,7 +66,8 @@ const title = computed(() => titles[route.name as string] || "");
 .header-center p {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  transform: translate(-50%, -50%);
   font-family: 'Barlow', sans-serif;
   font-weight: 500;
   letter-spacing: 0.5px;
