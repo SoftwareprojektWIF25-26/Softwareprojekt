@@ -6,7 +6,7 @@ export interface Projekt{
 
   Geschaeftsziel?: string;
   Teamrollen: string[];
-  Teamgroesses?: number;
+  Teamgroesse?: number;
   Kosten?: number;
   Zeitrahmen: string;
   FormFinaleProdukt?: string;
@@ -39,4 +39,66 @@ export interface Projekt{
   Verwendungstools?: string;
   Ueberwachung?: string;
 
+}
+
+export interface CategoryScore {
+  readiness: number;
+  complexity: number;
+  uncertainty: number;
+}
+
+export interface ProjectPhase {
+  name: string;
+  startWeek: number;
+  durationWeeks: number;
+  effortPersonWeeks: number;
+  percentage: number;
+  baseEffort?: number;
+  bufferEffort?: number;
+  baseDuration?: number;
+  bufferDuration?: number;
+}
+
+export interface ProjectMetrics {
+  categoryScores: CategoryScore;
+  overallScore?: number;
+  effortPersonWeeks: number;
+  durationWeeks: number;
+  effortBreakdown: {
+    baseEffort: number;
+    bufferEffort: number;
+    bufferPercentage: number;
+    riskLevel: number;
+  };
+  projectSize: string;
+  storyPoints: number;
+  sprintCount: number;
+  phases: ProjectPhase[];
+}
+
+export interface BackendProjectPlan {
+  projectPlanId: number;
+  estimatedDuration: number;
+  estimatedEffort: number;
+  phases: {
+    id: number;
+    name: string;
+    phaseType: string;
+    orderIndex: number;
+    startDate: string;
+    endDate: string;
+    estimatedDuration: number;
+    tasks: {
+      id: number;
+      title: string;
+      status: string;
+      startDate: string;
+      endDate: string;
+      dependencies: {
+        toTaskId: number;
+        toTaskTitle: string;
+        type: string;
+      }[];
+    }[];
+  }[];
 }
