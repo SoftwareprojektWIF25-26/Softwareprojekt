@@ -294,10 +294,6 @@ h3{
   border-color: var(--color-primary);
 }
 
-/* Button Hover Effects */
-
-
-
 /* Main Content Offset (für fixed Header) */
 .main-content {
   margin-top: 60px;
@@ -314,6 +310,17 @@ h3{
 @media (min-width: 1024px) {
   .wizard-main {
     grid-template-columns: 1.5fr 1fr;
+  }
+}
+@media (min-width: 1400px) {
+  .wizard-main {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+@media (min-width: 1600px) {
+  .wizard-main {
+    grid-template-columns: 2.2fr 1fr;
   }
 }
 /* Wizard Header */
@@ -580,6 +587,11 @@ h3{
   font-size: 0.75rem;
   color: #00c864;
   animation: fadeInSave 0.3s ease-in;
+}
+
+@keyframes fadeInSave {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Footer */
