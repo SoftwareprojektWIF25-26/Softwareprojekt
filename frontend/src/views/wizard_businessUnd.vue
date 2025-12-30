@@ -5,9 +5,11 @@ import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
 import axios from "axios";
 import type { FormOfFinalProduct, TeamRole, TimelineUnit } from "@/types";
+import { useToast } from "vue-toastification";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
+const toast = useToast();
 
 const progress = computed(() => draft.businessProgress);
 const totalFields = 7; // businessGoal, formOfFinalProduct, teamRoles, teamSize, timeline, cost, tools
@@ -79,7 +81,7 @@ function goBack() {
 async function goNext() {
   // Validierung: Projekt muss existieren
   if (!draft.id) {
-    alert("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
+    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
     router.push({ name: "projekt-erstellen-data" });
     return;
   }
@@ -98,7 +100,7 @@ async function goNext() {
   } catch (error: unknown) {
     console.error("❌ Fehler beim Speichern:", error);
     const errorMessage = getErrorMessage(error);
-    alert(`Speichern fehlgeschlagen: ${errorMessage}`);
+    toast.error(`Speichern fehlgeschlagen: ${errorMessage}`);
   }
 }
 

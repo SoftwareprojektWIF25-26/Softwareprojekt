@@ -14,9 +14,11 @@ import type {
   VolumeUnit,
   DataPreparationStep
 } from "@/types";
+import { useToast } from "vue-toastification";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
+const toast = useToast();
 
 // Computed für den Fortschritt
 const progress = computed(() => draft.dataProgress);
@@ -117,13 +119,13 @@ function goBack() {
 async function goNext() {
   // Validierung
   if (!draft.id) {
-    alert("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
+    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
     router.push({ name: "projekt-erstellen" });
     return;
   }
 
   if (!draft.dataCharacteristics.dataSources?.length) {
-    alert("Bitte gib mindestens eine Datenquelle an.");
+    toast.error("Bitte gib mindestens eine Datenquelle an.");
     return;
   }
 
@@ -145,7 +147,7 @@ async function goNext() {
   } catch (error: unknown) {
     console.error("Fehler beim Speichern:", error);
     const errorMessage = getErrorMessage(error);
-    alert(`Speichern fehlgeschlagen: ${errorMessage}`);
+    toast.error(`Speichern fehlgeschlagen: ${errorMessage}`);
   }
 }
 

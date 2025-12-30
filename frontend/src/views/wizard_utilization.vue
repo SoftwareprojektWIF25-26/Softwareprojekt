@@ -5,9 +5,11 @@ import { useRouter } from "vue-router";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
 import axios from "axios";
+import { useToast } from "vue-toastification";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
+const toast = useToast();
 
 // Computed für den Fortschritt
 const progress = computed(() => draft.utilizationProgress);
@@ -34,7 +36,7 @@ function goBack() {
 async function finishWizard() {
   // Validierung
   if (!draft.id) {
-    alert("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
+    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
     router.push({ name: "projekt-erstellen" });
     return;
   }
@@ -69,7 +71,7 @@ async function finishWizard() {
   } catch (error: unknown) {
     console.error("❌ Fehler beim Abschließen:", error);
     const errorMessage = getErrorMessage(error);
-    alert(`Projekt konnte nicht abgeschlossen werden: ${errorMessage}`);
+    toast.error(`Projekt konnte nicht abgeschlossen werden: ${errorMessage}`);
   }
 }
 

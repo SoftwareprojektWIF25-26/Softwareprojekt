@@ -6,9 +6,11 @@ import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
 import axios from "axios";
 import type { AnalyticsType } from "@/types";
+import { useToast } from "vue-toastification";
 
 const draft = useProjectDraftStore();
 const router = useRouter();
+const toast = useToast();
 
 // Computed für den Fortschritt
 const progress = computed(() => draft.analysisProgress);
@@ -72,7 +74,7 @@ function goBack() {
 async function goNext() {
   // Validierung
   if (!draft.id) {
-    alert("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
+    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
     router.push({ name: "projekt-erstellen" });
     return;
   }
@@ -96,7 +98,7 @@ async function goNext() {
   } catch (error: unknown) {
     console.error("Fehler beim Speichern:", error);
     const errorMessage = getErrorMessage(error);
-    alert(`Speichern fehlgeschlagen: ${errorMessage}`);
+    toast.error(`Speichern fehlgeschlagen: ${errorMessage}`);
   }
 }
 
