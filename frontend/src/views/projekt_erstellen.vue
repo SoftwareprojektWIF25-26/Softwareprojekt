@@ -1,15 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
 import axios from "axios";
+import { useToast } from "vue-toastification";
 
+const toast = useToast();
 const draft = useProjectDraftStore();
 const router = useRouter();
 
+
 // Computed für Validierung
 const canProceed = computed(() => draft.title.trim().length > 0);
+const titleError = computed(() =>
+  attemptedSubmit.value && draft.title.trim().length === 0
+    ? "Projektname ist erforderlich."
+    : ""
+);
+const attemptedSubmit = ref(false);
 
 function getErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
@@ -25,8 +34,10 @@ function getErrorMessage(error: unknown): string {
 }
 
 async function createProject() {
+  attemptedSubmit.value = true;
+
   if (!canProceed.value) {
-    alert("Bitte gib einen Projektnamen ein.");
+    toast.error("Bitte gib einen Projektnamen ein.");
     return;
   }
 
@@ -74,7 +85,7 @@ async function createProject() {
       console.error("Request Method:", error.config?.method);
     }
 
-    alert(`Projekt konnte nicht erstellt werden: ${getErrorMessage(error)}`);
+    toast.error(`Projekt konnte nicht erstellt werden: ${getErrorMessage(error)}`);
   }
 }
 
@@ -132,7 +143,11 @@ onMounted(() => {
                   placeholder="z.B. Customer Churn Prediction, Sales Forecasting, Fraud Detection"
                   required
                   autofocus
+                  :class="{'has-error': titleError}"
                 />
+                <p v-if="titleError" class="field-error">
+                  {{ titleError }}
+                </p>
                 <p class="field-help">
                   Ein aussagekräftiger Name, der das Projekt beschreibt.
                 </p>
@@ -190,7 +205,6 @@ onMounted(() => {
             type="button"
             class="btn-primary"
             @click="createProject"
-            :disabled="!canProceed"
           >
             Projekt erstellen & Weiter →
           </button>
@@ -201,6 +215,15 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.field-error {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.has-error {
+  border-color: #d32f2f;
+}
 
 </style>
 
