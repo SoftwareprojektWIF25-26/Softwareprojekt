@@ -78,4 +78,11 @@ const title = computed(() => titles[route.name as string] || "");
 .logo {
   display: block;
 }
+.header-left a {
+  text-decoration: none;
+  background: transparent;
+  outline: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
 </style>
