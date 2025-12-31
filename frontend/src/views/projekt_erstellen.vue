@@ -215,15 +215,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.field-error {
-  color: #d32f2f;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-}
-
-.has-error {
-  border-color: #d32f2f;
-}
 
 </style>
 

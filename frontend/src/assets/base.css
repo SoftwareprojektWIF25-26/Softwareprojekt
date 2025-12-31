@@ -323,6 +323,11 @@ h3{
     grid-template-columns: 2.2fr 1fr;
   }
 }
+@media (max-width: 960px) {
+  .wizard-main {
+    grid-template-columns: 1fr;
+  }
+}
 /* Wizard Header */
 .wizard-step {
   font-size: clamp(0.75rem, 2vw, 0.85rem);
@@ -506,7 +511,7 @@ h3{
 
 .field-help {
   font-size: clamp(0.7rem, 1.8vw, 0.75rem);
-  color: #666;
+  color: var(--color-text);
   margin-top: 0.4rem;
   line-height: 1.3;
 }
@@ -747,4 +752,18 @@ h3{
     top: 0.4rem;
   }
 }
+.form-section {
+  margin-top: 1rem;
+}
+
+.field-error {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.has-error {
+  border-color: #d32f2f;
+}
+
 
