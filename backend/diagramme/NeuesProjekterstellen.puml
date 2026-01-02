@@ -1,0 +1,75 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+actor "User" as user
+participant "Browser/\nFrontend" as browser
+participant "Pinia\nStore"
+participant "Router" as router
+participant "Axios\n Api" as api
+participant "Project\nService" as service
+participant "Mapping\nService" as mapping
+participant "Calculation\nService" as calc
+database "PostgreSQL\nDatenbank" as db
+
+user -> browser: Button: Neues Projekt erstellen
+activate browser
+activate user
+browser -> router: Seite zum Projekt erstellen aufrufen
+activate router
+router --> browser
+browser --> user
+user -> browser: füllt 1. Seite Projektsteckbrief aus + Button Projekt erstellen
+browser -> api: createProjekt(title, domain)
+activate api
+api -> service: Post /projects/create
+activate service
+service -> db: project.create(title, domain, wizardstep, wizardCompleted, status)
+activate db
+db --> service: project
+service -> db: initializeTemplatePhases(project.id)
+db --> service
+service --> api: Projekt
+api --> browser: Projekt
+browser -> router: nächste Seite Projektsteckbrief aufrufen
+router --> browser
+browser --> user:
+user -> browser: füllt Steckbrief vollständig aus + Button abschließen
+browser ->> "Pinia\nStore": speichert Zwischenergebnisse
+"Pinia\nStore" --> browser
+browser -> api: completeWizard(id)
+api -> service: Post projects/${id}/complete-wizard
+service -> db: project.findUnique(id)
+db --> service: project
+service ->> mapping: mapToCalculationInputs()
+activate mapping
+mapping --> service: input
+service ->> mapping: mappingService.determineProjectType()
+mapping --> service: ProjectType
+deactivate mapping
+service ->> calc: calculationService.calculate(input, weights, ProjectType, Teamsize)
+activate calc
+calc --> service: ProjektMetric
+deactivate calc
+service -> db: project.update(project.id)
+db --> service: project
+service -> service: createProjectPlanFromMetrics(id, metrics)
+service -> db:projectPlan.create(project.id)
+db --> service: projectPlan
+service -> db:projectPhase.create(projectplan.id)
+db --> service: projectPhase
+service -> service: createStandardTasksForPhase(projectPlan.id, projectPhase.id, index + 1)
+service -> db: phaseSteps.create(projectPlan.id, projectPhase.id)
+db --> service
+service -> db: projectPlan.findUnique(project.id)
+db --> service: projectPlan
+deactivate db
+service --> api: project.id, success message, metrics
+deactivate service
+api --> browser: response
+deactivate api
+browser ->> "Pinia\nStore": Zwischenergebnisse löschen
+"Pinia\nStore" --> browser
+browser -> router: Dashboard aufrufen
+router --> browser
+deactivate router
+browser --> user
+@enduml
