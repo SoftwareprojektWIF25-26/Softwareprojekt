@@ -303,44 +303,4 @@ onMounted(() => {
 
 <style scoped>
 
-.checkbox-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.75rem;
-}
-
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s;
-  border: 1px solid #333;
-}
-
-.checkbox-label:hover {
-  background: #222;
-  border-color: #444;
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: auto;
-  margin: 0;
-}
-
-.checkbox-label span {
-  font-size: 0.85rem;
-}
-
-@media (max-width: 960px) {
-  .wizard-main {
-    grid-template-columns: 1fr;
-  }
-
-  .checkbox-grid {
-    grid-template-columns: 1fr;
-  }
-}
 </style>
