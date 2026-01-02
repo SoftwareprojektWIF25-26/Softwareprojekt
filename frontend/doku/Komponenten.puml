@@ -13,7 +13,7 @@ Component("assets", assets, ,"Schriftarten, Bilder, Grundstil")
 
 Boundary("state", "Navigation & State ") {
 Component("api", api,axios, Schnittstelle zum Backend)
-Component("stores", stores)
+Component("stores", stores, Pinia ,speichert Zwischenergebnisse)
 }
 
 Boundary("logic", "Logic ") {
@@ -24,21 +24,22 @@ Component("types", types,, Interfaces für Objekte)
 System("backend", "Backend", "REST-Endpunkte für CRUD")
 ContainerDb("datenbank", "Datenbank", prisma)
 
-Rel("views", "layouts",)
+Rel("views", "layouts", nutzt)
 Rel("views", "components",verwendet Komponenten)
 Rel("views", "router", führt Navigation aus)
 Rel("views", "api","patch, post, get")
-Rel("views", "assets",)
+Rel("views", "assets", nutzt)
 Rel("views", "types",verwendet Typdefinition)
+Rel("views", "stores", nutzt)
 
 Rel("router", "views", lädt Seiten)
 
 Rel("components", "api","patch, post, get")
 Rel("components", "types", verwendet Typdefinition)
-Rel("components", "assets",)
+Rel("components", "assets", nutzt)
 Rel("components", "router", führt Navigation aus)
 
-Rel("user", "views",nutzt)
+Rel("user", "views",interagiert mit)
 Rel("api", "backend", HTTP Request)
 Rel("backend", "datenbank",)
 
