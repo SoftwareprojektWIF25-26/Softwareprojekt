@@ -159,6 +159,35 @@ async function createProjekt(projektData: CreateProjectRequest): Promise<Project
     throw error;
   }
 }
+/**
+ * Aktualisiert ein bestehendes Projekt (Basisdaten wie Titel, Domain)
+ * @param id - Projekt-ID
+ * @param data - Zu aktualisierende Daten
+ */
+async function updateProjekt(id: number, data: { title?: string, domain?: string }): Promise<Project> {
+  try {
+    console.log(`📤 UPDATE Projekt Request (ID: ${id}):`, data);
+
+    const response = await apiClient.patch<ApiResponse<Project>>(
+      `/projects/${id}`, // Entspricht deiner Backend-Route: PATCH /api/projects/:id
+      data
+    );
+
+    console.log('📥 UPDATE Projekt Response:', response.data);
+
+    // unwrapResponse validiert success und extrahiert data
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Update Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Aktualisieren des Projekts');
+    }
+    throw error;
+  }
+}
+
 
 /**
  * Aktualisiert Business Understanding eines Projekts
@@ -396,6 +425,7 @@ export default {
 
   // Wizard
   createProjekt,
+  updateProjekt,
   patchBusinessUnderstanding,
   patchDataCharacteristics,
   patchAnalysisConfig,

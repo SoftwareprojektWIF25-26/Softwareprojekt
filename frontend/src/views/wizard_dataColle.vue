@@ -1,6 +1,6 @@
 <!-- views/ProjektErstellenDataView.vue -->
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
@@ -24,11 +24,7 @@ const toast = useToast();
 const progress = computed(() => draft.dataProgress);
 const totalFields = 11;
 
-const titleError = computed(() =>
-  attemptedSubmit.value && draft.title.trim().length === 0
-    ? "Projektname ist erforderlich."
-    : ""
-);
+
 
 // Enums für die Dropdowns
 const dataAccessTypes: DataAccessType[] = ['INTERNAL', 'EXTERNAL', 'HYBRID'];
@@ -91,16 +87,18 @@ const preparationLabels: Record<DataPreparationStep, string> = {
   TRANSFORMATION: 'Transformation'
 };
 
-// Computed für Data Sources (kommagetrennt)
+// State für den Klick auf "Weiter"
+const attemptedSubmit = ref(false);
+
+// State für den Klick auf "Weiter"
 const dataSourcesText = computed({
   get() {
-    return (draft.dataCharacteristics.dataSources || []).join(", ");
+    if (!draft.dataCharacteristics.dataSources) return "";
+
+    return draft.dataCharacteristics.dataSources.join(",");
   },
   set(val: string) {
-    draft.dataCharacteristics.dataSources = val
-      .split(",")
-      .map(s => s.trim())
-      .filter(Boolean);
+    draft.dataCharacteristics.dataSources = val.split(",");
   }
 });
 
@@ -123,16 +121,17 @@ function goBack() {
 }
 
 async function goNext() {
-  // Validierung
+  attemptedSubmit.value = true;
   if (!draft.id) {
     toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
     router.push({ name: "projekt-erstellen" });
     return;
   }
+  if (draft.dataCharacteristics.dataSources) {
+    draft.dataCharacteristics.dataSources = draft.dataCharacteristics.dataSources
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
 
-  if (!draft.dataCharacteristics.dataSources?.length) {
-    toast.error("Bitte gib mindestens eine Datenquelle an.");
-    return;
   }
 
   try {
@@ -159,10 +158,10 @@ async function goNext() {
 
 // hier wird aktueller Stataus des Wizard geladen
 onMounted(() => {
-  // ERST laden...
+
   draft.loadDraft();
 
-  // DANN validieren!
+
   if (!draft.id) {
     console.warn("⚠️ Keine Projekt-ID! Zurück zu Schritt 0");
     router.push({ name: "projekt-erstellen" });
@@ -222,23 +221,23 @@ onMounted(() => {
               <!-- Data Sources -->
               <div class="field field-full">
                 <label for="data-sources">
-                  Datenquellen <span class="required">*</span>
+                  Datenquellen
                 </label>
                 <textarea
                   id="data-sources"
                   rows="2"
                   v-model="dataSourcesText"
                   placeholder="z.B. PostgreSQL Datenbank, CSV Files, REST API, IoT Sensors"
-                  required
-                  :class="{'has-error': titleError}"
-                />
-                <p v-if="titleError" class="field-error">
-                  {{ titleError }}
-                </p>
-                <p class="field-help">Kommagetrennt. Mindestens eine Quelle erforderlich.</p>
-              </div>
 
-              <!-- Data Access (Multi-Select) -->
+                />
+
+
+                <p class="field-help"> Datenquellen durch Komma trennen </p>
+
+            </div>
+
+
+            <!-- Data Access (Multi-Select) -->
               <div class="field field-full">
                 <label>Datenzugriff</label>
                 <div class="checkbox-group">
@@ -463,6 +462,34 @@ onMounted(() => {
               <strong>Variety:</strong>
               <p>{{ varietyLabels[draft.dataCharacteristics.variety] }}</p>
             </div>
+
+            <!-- Neu: Variabilität -->
+            <div class="preview-item" v-if="draft.dataCharacteristics.variability">
+              <strong>Variabilität:</strong>
+              <p>{{ variabilityLabels[draft.dataCharacteristics.variability] }}</p>
+            </div>
+
+            <!-- Neu: Vorbereitungsschritte -->
+            <div class="preview-item" v-if="draft.dataCharacteristics.dataPreparationSteps">
+              <strong>Vorbereitung:</strong>
+              <!-- Annahme: Es ist ein einzelner Wert (Enum), kein Array. Falls Array, Logik anpassen wie bei dataAccess -->
+              <p>{{ preparationLabels[draft.dataCharacteristics.dataPreparationSteps] }}</p>
+            </div>
+
+            <!-- Neu: Datensicherheit -->
+            <div class="preview-item" v-if="draft.dataCharacteristics.dataSecurityConstraints">
+              <strong>Datensicherheit:</strong>
+              <p>{{ draft.dataCharacteristics.dataSecurityConstraints }}</p>
+            </div>
+
+            <!-- Neu: Tools -->
+            <div class="preview-item" v-if="draft.dataCharacteristics.toolsData">
+              <strong>Tools:</strong>
+              <p>{{ draft.dataCharacteristics.toolsData }}</p>
+            </div>
+
+
+
           </div>
         </aside>
       </section>
