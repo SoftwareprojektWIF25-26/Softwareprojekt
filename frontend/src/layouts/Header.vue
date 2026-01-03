@@ -7,7 +7,7 @@ const route = useRoute();
 const titles: Record<string, string> = {
   home: "Startseite",
   dashboard: "Dashboard",
-  "projekt-erstellen": "Projekt erstellen",
+  "projekt-erstellen": "Neues Projekt erstellen",
   "business-understanding": "Geschäftsverständnis",
   "data-collection": "Datensammlung",
   "analysis": "Analyse & Modellierung",
