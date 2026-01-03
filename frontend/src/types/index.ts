@@ -307,7 +307,12 @@ export interface ProjectPlanProgress {
   estimatedEffort: number;
   calculatedComplexity: number;
 }
-
+export interface BackendProjectPlan {
+  projectPlanId: number;
+  estimatedDuration: number | null;
+  estimatedEffort: number | null;
+  phases: BackendPhase[];
+}
 export interface GanttPhase {
   id: number;
   name: string;
@@ -329,6 +334,11 @@ export interface GanttTask {
   estimatedDuration: number;
   startDate: Date | null;
   endDate: Date | null;
+  dependencies:{
+    toTaskId: number;
+    totalTaskTitle: string;
+    type: string;
+  }
 }
 
 export interface TeamInfo {
@@ -392,5 +402,7 @@ export interface ProjectStatistics {
   ON_HOLD: number;
   CANCELLED: number;
 }
+
+
 
 
