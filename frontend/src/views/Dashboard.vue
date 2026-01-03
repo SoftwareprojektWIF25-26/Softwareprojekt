@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router"; // useRouter hinzu
 import api from "@/api";
 import type { DashboardData } from "@/types";
+import GANTDiagram from '@/components/GANTDiagram.vue'
 
 const route = useRoute();
 const router = useRouter(); // Router Instanz
@@ -14,7 +15,7 @@ const error = ref<string | null>(null);
 const project = computed(() => dashboard.value?.project);
 const configs = computed(() => dashboard.value?.configurations);
 const progress = computed(() => dashboard.value?.projectPlanProgress);
-
+const projectId = computed(() => Number(route.params.id))
 // Navigation zurück zur Startseite
 function goBack() {
   router.push({ name: 'home' });
@@ -53,7 +54,7 @@ onMounted(async () => {
     <header class="dashboard-header">
       <div class="header-left">
         <button class="back-btn" @click="goBack" title="Zurück zur Übersicht">
-          ← Übersicht
+          ← Startseite
         </button>
         <div class="title-group">
           <h1>{{ project?.title }}</h1>
@@ -239,6 +240,7 @@ onMounted(async () => {
       </details>
 
     </section>
+    <GANTDiagram :project-id="projectId" />
   </div>
 </template>
 

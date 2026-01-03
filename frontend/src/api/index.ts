@@ -16,8 +16,9 @@ import {
   DeploymentConfigResponse,
   UtilizationConfigResponse,
   CompleteWizardResponse,
-  DashboardData
-} from '@/types';
+  DashboardData,
+  BackendProjectPlan,
+} from '@/types'
 
 
 // Axios Instance mit Base-Config
@@ -88,8 +89,24 @@ function getProjektById(id: number): Promise<FullProject> {
   return apiClient.get(`/dashboard/${id}`).then(res => res.data);
 }
 
-function getTimeline(id: number) {
-  return apiClient.get(`/dashboard/${id}/timeline`).then(res => res.data);
+async function getTimeline(id: number): Promise<BackendProjectPlan> {
+  try {
+    console.log('📤 GET Timeline Liste', id);
+
+    // Backend liefert { projects, statistics, totalCount }
+    const response = await apiClient.get(`/dashboard/${id}/timeline`)
+
+    console.log('📥 Timeline Response:', response.data);
+
+    return response.data;
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Timeline Error:', error.response?.data);
+      throw new Error('Fehler beim Laden der Timeline');
+    }
+    throw error;
+  }
 }
 
 function postEvaluation(id: number) {
