@@ -126,7 +126,7 @@ onMounted(() => {
     <main class="wizard-container">
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 3 von 5</p>
-        <h1>Projekt anlegen – Analysis & Modeling</h1>
+        <h1>{{ draft.title || 'Projekt' }} – Analysis & Modeling</h1>
         <p class="wizard-subtitle">
           Beschreibe die Data Science Ziele, den Analytics-Typ und die Bewertungsmetriken.
           <span v-if="draft.lastSaved" class="auto-save-indicator">
@@ -146,16 +146,13 @@ onMounted(() => {
       <section class="wizard-main">
         <div class="form-card">
           <h2>Analysis Configuration</h2>
-          <p class="card-subtitle">
-            Definiere die analytischen Ziele und Metriken für dein Projekt.
-          </p>
 
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>3. Analysis & Modeling</h3>
+
                 <p class="section-description">
-                  Data Science Ziele, Analytics-Typ, Metriken und Tools.
+                  Definiere die analytischen Ziele und Metriken für dein Projekt: Data Science Ziele, Analytics-Typ, Metriken und Tools.
                 </p>
               </div>
               <div>
@@ -268,12 +265,12 @@ onMounted(() => {
 
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
-          Zurück
+          ← Zurück
         </button>
         <div class="footer-actions">
 
           <button type="button" class="btn-primary" @click="goNext">
-            Speichern & Weiter
+            Speichern & Weiter →
           </button>
         </div>
       </section>

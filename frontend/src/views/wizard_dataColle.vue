@@ -27,7 +27,7 @@ const totalFields = 11;
 
 
 // Enums für die Dropdowns
-const dataAccessTypes: DataAccessType[] = ['INTERNAL', 'EXTERNAL', 'HYBRID'];
+const dataAccessOptions: DataAccessType[] = ['INTERNAL', 'EXTERNAL', 'HYBRID'];
 const velocityOptions: DataVelocity[] = ['BATCH', 'DAILY', 'HOURLY', 'CONTINUOUS'];
 const veracityOptions: DataVeracity[] = ['POOR', 'MEDIUM', 'GOOD', 'EXCELLENT'];
 const varietyOptions: DataVariety[] = ['LOW', 'MEDIUM', 'HIGH'];
@@ -44,7 +44,11 @@ const preparationSteps: DataPreparationStep[] = [
   'DATA_CLEANING',
   'TRANSFORMATION'
 ];
-
+const dataAccessLabels: Record<DataAccessType, string> = {
+  INTERNAL: "intern",
+  EXTERNAL: "extern",
+  HYBRID: "hybrid",
+}
 // Labels für bessere UX
 const velocityLabels: Record<DataVelocity, string> = {
   BATCH: 'Batch (keine Echtzeit)',
@@ -180,7 +184,7 @@ onMounted(() => {
     <main class="wizard-container">
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 2 von 5</p>
-        <h1>Projekt anlegen – Data Collection, Exploration & Preparation</h1>
+        <h1>{{ draft.title || 'Projekt' }} – Data Collection, Exploration & Preparation</h1>
         <p class="wizard-subtitle">
           Beschreibe deine Datenquellen, deren Qualität, Umfang und Vorbereitungsschritte.
           <span v-if="draft.lastSaved" class="auto-save-indicator">
@@ -200,16 +204,13 @@ onMounted(() => {
       <section class="wizard-main">
         <div class="form-card">
           <h2>Data Characteristics</h2>
-          <p class="card-subtitle">
-            Fülle die Informationen zu deinen Daten aus. Die Vorschau aktualisiert sich automatisch.
-          </p>
 
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>2. Data Collection, Exploration & Preparation</h3>
+
                 <p class="section-description">
-                  Datenquellen, Qualität, Umfang und Vorbereitungsschritte.
+                  Fülle die Informationen zu deinen Daten aus:Datenquellen, Qualität, Umfang und Vorbereitungsschritte.
                 </p>
               </div>
               <div>
@@ -242,7 +243,7 @@ onMounted(() => {
                 <label>Datenzugriff</label>
                 <div class="checkbox-group">
                   <label
-                    v-for="type in dataAccessTypes"
+                    v-for="type in dataAccessOptions"
                     :key="type"
                     class="checkbox-label"
                   >
@@ -251,7 +252,7 @@ onMounted(() => {
                       :value="type"
                       v-model="draft.dataCharacteristics.dataAccess"
                     />
-                    <span>{{ type }}</span>
+                    <span>{{ dataAccessLabels[type] }}</span>
                   </label>
                 </div>
               </div>
@@ -432,8 +433,13 @@ onMounted(() => {
 
             <div class="preview-item" v-if="draft.dataCharacteristics.dataAccess?.length">
               <strong>Datenzugriff:</strong>
-              <p>{{ draft.dataCharacteristics.dataAccess.join(', ') }}</p>
+              <p>
+                {{ draft.dataCharacteristics.dataAccess
+                .map((type: DataAccessType) => dataAccessLabels[type])
+                .join(', ') }}
+              </p>
             </div>
+
 
             <div class="preview-item" v-if="draft.dataCharacteristics.dataAvailability !== undefined">
               <strong>Verfügbarkeit:</strong>
@@ -496,12 +502,12 @@ onMounted(() => {
 
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
-          Zurück
+          ← Zurück
         </button>
         <div class="footer-actions">
 
           <button type="button" class="btn-primary" @click="goNext">
-            Speichern & Weiter
+            Speichern & Weiter →
           </button>
         </div>
       </section>
@@ -510,9 +516,5 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.checkbox-group {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
+
 </style>

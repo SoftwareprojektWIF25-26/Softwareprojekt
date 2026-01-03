@@ -98,7 +98,7 @@ onMounted(() => {
     <main class="wizard-container">
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 5 von 5</p>
-        <h1>Projekt anlegen – Utilization & Monitoring</h1>
+        <h1>{{ draft.title || 'Projekt' }} – Utilization & Monitoring</h1>
         <p class="wizard-subtitle">
           Beschreibe, wie das Projekt im Betrieb überwacht, gewartet und optimiert wird.
           <span v-if="draft.lastSaved" class="auto-save-indicator">
@@ -118,16 +118,12 @@ onMounted(() => {
       <section class="wizard-main">
         <div class="form-card">
           <h2>Utilization Configuration</h2>
-          <p class="card-subtitle">
-            Definiere, wie das System nach dem Go-Live betrieben wird.
-          </p>
 
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>5. Utilization & Monitoring</h3>
                 <p class="section-description">
-                  Monitoring, Wartung und Tools für den laufenden Betrieb.
+                  Definiere, wie das System nach dem Go-Live betrieben wird: Monitoring, Wartung und Tools für den laufenden Betrieb.
                 </p>
               </div>
               <div>
@@ -214,7 +210,7 @@ onMounted(() => {
 
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
-          Zurück
+          ← Zurück
         </button>
         <div class="footer-actions">
 

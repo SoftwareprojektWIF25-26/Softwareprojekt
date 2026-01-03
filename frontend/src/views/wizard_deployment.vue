@@ -119,7 +119,7 @@ onMounted(() => {
     <main class="wizard-container">
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 4 von 5</p>
-        <h1>Projekt anlegen – Deployment</h1>
+        <h1>{{ draft.title || 'Projekt' }} – Deployment</h1>
         <p class="wizard-subtitle">
           Beschreibe die Umsetzungsphase: Aktualität, Nutzer, Tests, Issues und Tools.
           <!-- Auto-Save Indicator in JEDER View -->
@@ -140,16 +140,14 @@ onMounted(() => {
       <section class="wizard-main">
         <div class="form-card">
           <h2>Deployment Configuration</h2>
-          <p class="card-subtitle">
-            Definiere wie und an wen die Analytics-Ergebnisse bereitgestellt werden.
-          </p>
+
 
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>4. Deployment</h3>
+
                 <p class="section-description">
-                  Aktualität, Zielgruppe, Tests, Issues und Deployment-Tools.
+                  Definiere wie und an wen die Analytics-Ergebnisse bereitgestellt werden: Aktualität, Zielgruppe, Tests, Issues und Deployment-Tools.
                 </p>
               </div>
               <div>
@@ -286,12 +284,12 @@ onMounted(() => {
 
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
-          Zurück
+          ← Zurück
         </button>
         <div class="footer-actions">
 
           <button type="button" class="btn-primary" @click="goNext">
-            Speichern & Weiter
+            Speichern & Weiter →
           </button>
         </div>
       </section>

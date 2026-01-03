@@ -148,16 +148,12 @@ onMounted(() => {
       <section class="wizard-main">
         <div class="form-card">
           <h2>Business Understanding</h2>
-          <p class="card-subtitle">
-            Fülle die Basisinformationen aus. Die Vorschau aktualisiert sich automatisch.
-          </p>
 
           <div class="form-section">
             <header class="section-header">
               <div>
-                <h3>1. Business Understanding</h3>
                 <p class="section-description">
-                  Geschäftsziel, Produktform, Team und Budget.
+                  Fülle die Basisinformationen aus: Geschäftsziel, Produktform, Team und Budget.
                 </p>
               </div>
               <div>
