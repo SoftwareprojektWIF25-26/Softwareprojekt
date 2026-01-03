@@ -33,6 +33,7 @@ function getErrorMessage(error: unknown): string {
   return "Unbekannter Fehler";
 }
 
+
 async function createProject() {
   attemptedSubmit.value = true;
 
@@ -42,57 +43,66 @@ async function createProject() {
   }
 
   try {
-    console.log("📤 CREATE Request:", {
-      title: draft.title.trim(),
-      domain: draft.domain.trim() || undefined
-    });
+    // PRÜFUNG: Haben wir schon eine ID?
+    if (draft.id) {
+      // === UPDATE FALL (PATCH) ===
+      console.log(`🔄 UPDATE Request für ID ${draft.id}:`, {
+        title: draft.title.trim(),
+        domain: draft.domain.trim() || undefined
+      });
 
-    // api.createProjekt gibt DIREKT Project zurück (unwrapResponse macht die Validierung!)
-    const project = await api.createProjekt({
-      title: draft.title.trim(),
-      domain: draft.domain.trim() || undefined
-    });
 
-    // ✅ Direkt mit project arbeiten
-    console.log("📥 Projekt erstellt:", project);
+      await api.updateProjekt(draft.id, {
+        title: draft.title.trim(),
+        domain: draft.domain.trim() || undefined
+      });
 
-    const id = project.id;
+      console.log("✅ Projekt aktualisiert:", draft.id);
 
-    if (!id || typeof id !== 'number') {
-      console.error("❌ Ungültige Projekt-ID:", project);
-      throw new Error(`Ungültige Projekt-ID: ${id}`);
+    } else {
+      // === CREATE FALL (POST) ===
+      console.log("📤 CREATE Request:", {
+        title: draft.title.trim(),
+        domain: draft.domain.trim() || undefined
+      });
+
+      const project = await api.createProjekt({
+        title: draft.title.trim(),
+        domain: draft.domain.trim() || undefined
+      });
+
+      console.log("📥 Projekt erstellt:", project);
+      const id = project.id;
+
+      if (!id || typeof id !== 'number') {
+        throw new Error(`Ungültige Projekt-ID: ${id}`);
+      }
+
+      // ID im Store speichern für künftige Updates
+      draft.setid(id);
     }
 
-    draft.setid(id);
-    console.log("✅ Projekt erstellt mit ID:", id);
-
-    // Draft speichern vor Navigation
+    // GEMEINSAMER ABSCHLUSS
     draft.saveDraft();
-
-    // Kurz warten, damit der Store aktualisiert ist
     await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Weiterleiten
     router.push({ name: "projekt-erstellen-business" });
 
   } catch (error: unknown) {
-    console.error("❌ Fehler beim Erstellen:", error);
-
-    if (axios.isAxiosError(error)) {
-      console.error("Response Status:", error.response?.status);
-      console.error("Response Data:", error.response?.data);
-      console.error("Request URL:", error.config?.url);
-      console.error("Request Method:", error.config?.method);
-    }
-
-    toast.error(`Projekt konnte nicht erstellt werden: ${getErrorMessage(error)}`);
+    console.error("❌ Fehler beim Speichern:", error);
+    toast.error(`Fehler: ${getErrorMessage(error)}`);
   }
 }
 
+//für automatisches Speichern
 onMounted(() => {
-  // WICHTIG: Neues Projekt → Draft löschen!
-  console.log("🆕 Neues Projekt - Draft wird gelöscht");
+if (!draft.id) {
+  console.log("🆕 Neues Projekt - Draft wird gelöscht (Reset)");
   draft.clearDraft();
+} else {
+  console.log("🔙 Bestehendes Projekt erkannt - Daten werden beibehalten (Edit Mode)");
+  // Optional: Draft sicherheitshalber neu laden, falls er nicht im RAM ist
+  // draft.loadDraft();
+}
 });
 
 
