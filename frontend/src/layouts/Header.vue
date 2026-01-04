@@ -12,7 +12,8 @@ const titles: Record<string, string> = {
   "data-collection": "Datensammlung",
   "analysis": "Analyse & Modellierung",
   "deployment": "Deployment",
-  "utilization": "Nutzung & Monitoring"
+  "utilization": "Nutzung & Monitoring",
+  Gant: "Gantt Diagramm"
 };
 
 const title = computed(() => titles[route.name as string] || "");

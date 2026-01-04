@@ -4,31 +4,22 @@ export function mapBackendToMetrics(
   backend: BackendProjectPlan
 ): ProjectMetrics {
 
-  const projectStart = new Date(
-    Math.min(
-      ...backend.phases.map(p => new Date(p.startDate).getTime())
-    )
-  )
+  let currentWeek = 0
 
-  const msPerWeek = 1000 * 60 * 60 * 24 * 7
+  const phases: PhaseMetrics[] = backend.phases.map((phase) => {
+   const baseEffort = phase.estimatedDuration ?? 1
 
-  const weeksBetween = (start: Date, end: Date) =>
-    Math.max(1, Math.ceil((end.getTime() - start.getTime()) / msPerWeek))
-
-  const phases: PhaseMetrics[] = backend.phases.map(phase => {
-    const start = new Date(phase.startDate)
-    const end = new Date(phase.endDate)
-
-    const durationWeeks = weeksBetween(start, end)
-    const startWeek = weeksBetween(projectStart, start) - 1
-
-    const baseEffort = phase.estimatedDuration ?? durationWeeks
+    const startWeek = currentWeek
+const effortPersonWeeks = baseEffort
+    currentWeek = startWeek + effortPersonWeeks
+const durationWeeks= Math.max(1, effortPersonWeeks)
+    console.log(`[mapBackendToMetrics] Phase ${phase.name}`, { startWeek, durationWeeks, baseEffort, startDate: phase.startDate, endDate: phase.endDate })
 
     return {
       name: phase.name,
       startWeek,
       durationWeeks,
-      effortPersonWeeks: baseEffort,
+      effortPersonWeeks,
       percentage: 0,
       baseEffort,
       bufferEffort: 0,
@@ -38,9 +29,7 @@ export function mapBackendToMetrics(
   })
 
   const totalEffort = phases.reduce((sum, p) => sum + p.effortPersonWeeks, 0)
-  const totalDuration = Math.max(
-    ...phases.map(p => p.startWeek + p.durationWeeks)
-  )
+  const totalDuration = Math.max(...phases.map((p) => p.startWeek + p.durationWeeks))
 
   return {
     categoryScores: {

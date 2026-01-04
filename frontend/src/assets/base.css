@@ -172,13 +172,7 @@ h3{
   color: var(--color-text);
   margin-bottom: 1rem;
 }
-.grauer-kasten {
-  border: 1px solid dimgrey;
-  background-color: lightgrey;
-  color: var(--color-text);
-  padding: 1rem;
-  border-radius: 0.5rem;
-}
+
 
 /* ===================================================
    DASHBOARD & HOMEVIEW EXTENSIONS
@@ -680,7 +674,7 @@ h3{
 .checkbox-group,
 .checkbox-grid {
   display: grid;
-  gap: 1rem; /* Mehr Abstand zwischen den Boxen */
+  gap: 1rem;
   grid-template-columns: 1fr;
 }
 
@@ -696,15 +690,15 @@ h3{
 }
 .checkbox-label {
   display: flex;
-  align-items: center; /* Zentriert Box und Text vertikal */
-  gap: 1rem; /* Mehr Abstand zwischen Checkbox und Text */
-  padding: 1rem 1.25rem; /* Größere Klickfläche */
-  border-radius: 12px; /* Etwas rundere Ecken */
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Subtilerer Border */
-  background-color: rgba(255, 255, 255, 0.02); /* Ganz leichter Hintergrund */
-  user-select: none; /* Verhindert Text-Markierung beim schnellen Klicken */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.02);
+  user-select: none;
   height: fit-content;
 }
 
@@ -712,21 +706,21 @@ h3{
 .checkbox-label:hover {
   background: rgba(0, 112, 201, 0.08);
   border-color: rgba(0, 112, 201, 0.4);
-  transform: translateY(-1px); /* Leichter 3D-Effekt */
+  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: 1.25rem; /* Größere Checkbox */
+  width: 1.25rem;
   height: 1.25rem;
   margin: 0;
   cursor: pointer;
-  accent-color: #0070c9; /* Apple-Blue als Akzent */
-  flex-shrink: 0; /* Verhindert, dass die Box gequetscht wird bei langem Text */
+  accent-color: #0070c9;
+  flex-shrink: 0;
   }
 .checkbox-label span {
-  margin-left: 0.75rem; /* Abstand zwischen Checkbox und Text */
-  line-height: 1.25rem; /* Damit der Text mittig zur Checkbox ist */
+  margin-left: 0.75rem;
+  line-height: 1.25rem;
 }
 
 /* Input Groups */

@@ -10,6 +10,7 @@ import WizardDataColle from "@/views/wizard_dataColle.vue";
 import WizardAnalysis from "@/views/wizard_analysis.vue";
 import WizardDeployment from "@/views/wizard_deployment.vue";
 import WizardUtilization from "@/views/wizard_utilization.vue";
+import GANTDiagram from '@/components/GANTDiagram.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,7 +18,7 @@ const router = createRouter({
     { path: "/", name: "home", component: HomeView },
 
     { path: "/dashboard/:id", name: "dashboard", component: Dashboard, props: true },
-
+    {path: "/dashboard/:id/Gant", name: "Gant", component: GANTDiagram, props: true },
     // Wizard (Basis + Steps)
     { path: "/projekt/erstellen", name: "projekt-erstellen", component: projekt_erstellen },
     { path: '/projekt/erstellen/business-understanding', name: 'projekt-erstellen-business',component: WizardBusinessUnd},

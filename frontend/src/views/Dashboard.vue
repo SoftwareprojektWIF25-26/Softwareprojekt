@@ -1,9 +1,8 @@
-<script setup lang="ts">
+<script setup lang="ts" xmlns="http://www.w3.org/1999/html">
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router"; // useRouter hinzu
 import api from "@/api";
 import type { DashboardData } from "@/types";
-import GANTDiagram from '@/components/GANTDiagram.vue'
 
 const route = useRoute();
 const router = useRouter(); // Router Instanz
@@ -15,12 +14,13 @@ const error = ref<string | null>(null);
 const project = computed(() => dashboard.value?.project);
 const configs = computed(() => dashboard.value?.configurations);
 const progress = computed(() => dashboard.value?.projectPlanProgress);
-const projectId = computed(() => Number(route.params.id))
 // Navigation zurück zur Startseite
 function goBack() {
   router.push({ name: 'home' });
 }
-
+function gotoGant(){
+  router.push({ name: 'Gant' });
+}
 onMounted(async () => {
   try {
     const projektId = Number(route.params.id);
@@ -56,6 +56,7 @@ onMounted(async () => {
         <button class="back-btn" @click="goBack" title="Zurück zur Übersicht">
           ← Startseite
         </button>
+
         <div class="title-group">
           <h1>{{ project?.title }}</h1>
           <p class="domain">{{ project?.domain || 'Keine Domain' }}</p>
@@ -94,8 +95,10 @@ onMounted(async () => {
 
     <!-- Configurations -->
     <section class="config-section">
+      <div class="header-row">
       <h2>Projektkonfiguration</h2>
-
+      <button @click="gotoGant" class="btn-primary"> Gantt Diagramm</button>
+      </div>
       <!-- Business Understanding -->
       <details class="config-card" open>
         <summary>
@@ -240,7 +243,7 @@ onMounted(async () => {
       </details>
 
     </section>
-    <GANTDiagram :project-id="projectId" />
+
   </div>
 </template>
 
@@ -490,5 +493,12 @@ onMounted(async () => {
   text-align: center;
   padding: 4rem;
   color: var(--color-error);
+}
+.header-row {
+  display: flex;
+  align-items: center;      
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 </style>
