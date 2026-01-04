@@ -33,6 +33,7 @@ build/
 
 # IDE
 .idea/
+!.idea/runConfigurations/
 .vscode/*
 !.vscode/extensions.json
 *.swp
