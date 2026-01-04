@@ -403,8 +403,15 @@ model ProjectPhase {
   description String?
   orderIndex  Int // 1=Business Understanding, 2=Data Collection, etc.
 
-  estimatedDuration Int? // in Tagen
-  estimatedEffort   Float? // in Person-Tagen
+  estimatedDuration Int?   // in Tagen (Gesamt)
+  estimatedEffort   Float? // in Person-Wochen (Gesamt)
+
+  // NEU: Puffer-Tracking für Gantt-Visualisierung
+  baseEffort        Float? // Basis-Aufwand in Person-Wochen
+  bufferEffort      Float? // Puffer-Aufwand in Person-Wochen
+  baseDuration      Int?   // Basis-Dauer in Tagen
+  bufferDuration    Int?   // Puffer-Dauer in Tagen
+
   startDate         DateTime?
   endDate           DateTime?
 

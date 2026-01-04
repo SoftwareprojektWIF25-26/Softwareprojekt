@@ -496,7 +496,11 @@ export class ProjectService {
                     description: `${phase.name} - ${Math.round(phase.percentage * 100)}% des Gesamtaufwands`,
                     orderIndex: index + 1,
                     estimatedDuration: Math.round(phase.durationWeeks * 7),
-                    estimatedEffort: phase.effortPersonWeeks
+                    estimatedEffort: phase.effortPersonWeeks,
+                    baseEffort: phase.baseEffort,
+                    bufferEffort: phase.bufferEffort,
+                    baseDuration: phase.baseDuration,
+                    bufferDuration: phase.bufferDuration
                 }
             });
 

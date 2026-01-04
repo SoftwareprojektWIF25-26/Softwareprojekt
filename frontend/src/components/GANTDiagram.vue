@@ -14,16 +14,16 @@ const labelWidth = 220
 const containerPadding = 40
 function exportToCSV() {
   const headers = ['Phase', 'Start (Woche)', 'Dauer (Wochen)', 'Gesamt-Aufwand (PW)']
-  const rows = phases.value.map(p => [
+  const rows = phases.value.map((p) => [
     p.name,
     p.startWeek + 1,
     p.durationWeeks,
-    p.effortPersonWeeks.toFixed(1).replace('.', ',')
+    p.effortPersonWeeks.toFixed(1).replace('.', ','),
   ])
   const csvContent =
     '\uFEFF' + // UTF-8 BOM für Excel
     [headers, ...rows]
-      .map(r => r.join(';')) // Semikolon!
+      .map((r) => r.join(';')) // Semikolon!
       .join('\n')
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -44,11 +44,13 @@ const totalEffortWeeks = computed(() => {
   return phases.value.reduce((sum, p) => sum + (p.effortPersonWeeks ?? 0), 0)
 })
 const baseandpuffer = computed(() => {
-  return phases.value.reduce((sum, p) => sum + (p.baseEffort ?? 0) + (p.bufferDuration ?? 0),0)
+  const base = phases.value.reduce((sum, p) => sum + (p.baseEffort ?? 0), 0)
+  const buffer = phases.value.reduce((sum, p) => sum + (p.bufferEffort ?? 0), 0)
+  return base + buffer
 })
 const pufferWeeks = computed(() => {
-  const buffer = phases.value.reduce((sum, p) => sum + (p.bufferDuration ?? 0), 0)
-  return buffer > 0 ? `${buffer} Wochen` : '–'
+  const buffer = phases.value.reduce((sum, p) => sum + (p.bufferEffort ?? 0), 0)
+  return buffer > 0 ? `${buffer.toFixed(1)} PW` : '–'
 })
 const updateContainerWidth = () => {
   if (timelineContainer.value) {
@@ -56,8 +58,8 @@ const updateContainerWidth = () => {
   }
 }
 
-function goBack(){
-  router.push({name: 'dashboard'})
+function goBack() {
+  router.push({ name: 'dashboard' })
 }
 //header anpassen an Anzahl der Wochen
 const headerUnit = computed(() => {
@@ -94,22 +96,27 @@ onMounted(async () => {
 
     let currentWeek = 0
     phases.value = metrics.phases.map((p) => {
-      const durationWeeks = p.durationWeeks ?? 1
-      const startWeek = p.startDate ? (p.startWeek ?? 0) : currentWeek
+      console.log('Phase:', p.name, {
+        baseEffort: p.baseEffort,
+        bufferEffort: p.bufferEffort,
+        baseDuration: p.baseDuration,
+        bufferDuration: p.bufferDuration,
+      })
       const phase = {
         ...p,
-        startWeek,
-        durationWeeks,
+        startWeek: currentWeek,
+        durationWeeks: p.durationWeeks ?? 1,
         effortPersonWeeks: p.effortPersonWeeks ?? 0,
+        baseEffort: p.baseEffort ?? 0,
+        bufferEffort: p.bufferEffort ?? 0,
       }
-      currentWeek = startWeek + durationWeeks
+      currentWeek += phase.durationWeeks
       return phase
     })
   } catch (e) {
     console.error('Timeline konnte nicht geladen werden', e)
   }
 })
-
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateContainerWidth)
@@ -120,10 +127,8 @@ onUnmounted(() => {
   <div style="padding: 40px">
     <h1>Projekt-Gantt-Chart</h1>
     <div class="action-bar">
-    <button class="btn-primary" @click="goBack">
-      ← Zurück
-    </button>
-    <button class="btn-secondary" @click="exportToCSV">Download</button>
+      <button class="btn-primary" @click="goBack">← Zurück</button>
+      <button class="btn-secondary" @click="exportToCSV">Download</button>
     </div>
     <div class="form-card">
       <div style="margin-top: 16px; display: flex; gap: 20px; align-items: center; font-size: 14px">
@@ -138,7 +143,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-  <!-- Timeline Container -->
+    <!-- Timeline Container -->
     <div class="timeline-scroll">
       <!-- Header -->
       <div class="timeline-header">
@@ -159,8 +164,8 @@ onUnmounted(() => {
       <div v-for="(phase, i) in phases" :key="i" class="timeline-row">
         <!-- Label -->
         <div class="timeline-label">
-        <div class="phase-name">{{ phase.name }}</div>
-        <div class="phase-pw">{{ phase.effortPersonWeeks }} PW</div>
+          <div class="phase-name">{{ phase.name }}</div>
+          <div class="phase-pw">{{ phase.effortPersonWeeks }} PW</div>
         </div>
         <!-- Timeline -->
         <div class="timeline-body">
@@ -174,35 +179,47 @@ onUnmounted(() => {
             ></div>
           </div>
 
-          <!-- Phase Bar -->
+          <!-- Phase Bars: Basis + Puffer -->
+          <!-- Basis-Balken (blau) -->
           <div
-            class="GanttBalken"
-            :class="phase.type"
+            v-if="phase.baseEffort > 0"
+            class="GanttBalken basis"
             :style="{
-              left: (phase.startWeek / totalWeeks)*100 + '%',
-              width: (phase.effortPersonWeeks / totalWeeks) *100 + '%',
+              left: (phase.startWeek / totalWeeks) * 100 + '%',
+              width: (phase.baseEffort / totalWeeks) * 100 + '%',
             }"
           >
             {{ phase.name }}
+          </div>
+
+          <!-- Puffer-Balken (grün) -->
+          <div
+            v-if="phase.bufferEffort > 0"
+            class="GanttBalken puffer"
+            :style="{
+              left: ((phase.startWeek + phase.baseDuration / 7) / totalWeeks) * 100 + '%',
+              width: (phase.bufferEffort / totalWeeks) * 100 + '%',
+            }"
+          >
+            Puffer
           </div>
         </div>
       </div>
     </div>
 
-
-  <div class="form-card">
-    <h2>Aufwands-Zusammenfassung</h2>
-    <div class="labels">
-      <div>Basisaufwand</div>
-      <div>Puffer</div>
-      <div>Gesamtaufwand</div>
+    <div class="form-card">
+      <h2>Aufwands-Zusammenfassung</h2>
+      <div class="labels">
+        <div>Basisaufwand</div>
+        <div>Puffer</div>
+        <div>Gesamtaufwand</div>
+      </div>
+      <div class="weeks">
+        <div class="basis">{{ totalWeeks }}</div>
+        <div class="puffer">{{ pufferWeeks }}</div>
+        <div>{{ baseandpuffer }}</div>
+      </div>
     </div>
-    <div class="weeks">
-      <div class="basis">{{ totalWeeks }}</div>
-      <div class="puffer">{{ pufferWeeks }}</div>
-      <div>{{ baseandpuffer }}</div>
-    </div>
-  </div>
   </div>
 </template>
 
@@ -217,7 +234,7 @@ onUnmounted(() => {
   justify-content: space-around;
   width: 100%;
 }
-.labels{
+.labels {
   font-weight: bold;
   display: flex;
   justify-content: space-around;
@@ -232,13 +249,13 @@ onUnmounted(() => {
   font-size: 20px;
   font-weight: bold;
 }
-.weeks .basis{
+.weeks .basis {
   color: #3b82f6;
 }
-.weeks .puffer{
+.weeks .puffer {
   color: #10b981;
 }
-.labels div{
+.labels div {
   flex: 1;
   text-align: center;
   padding: 4px 0;
@@ -246,8 +263,6 @@ onUnmounted(() => {
 
 .timeline-scroll {
   overflow-x: auto; /* scroll bei Überlauf */
-
-
 }
 
 /* Header */
@@ -282,7 +297,6 @@ onUnmounted(() => {
   color: #6b7280; /* dezentes Grau */
   margin-top: 2px;
 }
-
 
 .timeline-weeks {
   flex-grow: 1;
@@ -358,5 +372,4 @@ onUnmounted(() => {
   gap: 12px;
   margin-bottom: 24px; /* ← DAS ist der Abstand */
 }
-
 </style>

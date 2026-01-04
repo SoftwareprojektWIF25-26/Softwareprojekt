@@ -238,6 +238,11 @@ export class DashboardService {
                 startDate: phase.startDate,
                 endDate: phase.endDate,
                 estimatedDuration: phase.estimatedDuration,
+                estimatedEffort: phase.estimatedEffort,
+                baseEffort: phase.baseEffort,
+                bufferEffort: phase.bufferEffort,
+                baseDuration: phase.baseDuration,
+                bufferDuration: phase.bufferDuration,
                 tasks: phase.tasks.map(task => ({
                     id: task.id,
                     title: task.title || this.getTaskTitle(task.taskType),
