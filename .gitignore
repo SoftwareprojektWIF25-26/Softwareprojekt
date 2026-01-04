@@ -3,3 +3,54 @@ key.json
 *.json
 !package.json
 !tsconfig.json
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+**/.env
+
+# Build outputs
+dist/
+build/
+**/dist/
+**/build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+.vitest/
+
+# Prisma
+**/prisma/migrations/
+!**/prisma/schema.prisma
+
+# Docker
+docker-compose.override.yml
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
