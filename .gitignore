@@ -32,7 +32,7 @@ build/
 **/build/
 
 # IDE
-.idea/
+.idea/*
 !.idea/runConfigurations/
 .vscode/*
 !.vscode/extensions.json

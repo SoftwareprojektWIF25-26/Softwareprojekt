@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Full Stack Start (DEV)" type="CompoundRunConfigurationType">
+    <toRun name="Docker Database" type="docker-deploy" />
+    <toRun name="Backend dev" type="js.build_tools.npm" />
+    <toRun name="Frontend Dev" type="js.build_tools.npm" />
+    <method v="2" />
+  </configuration>
+</component>
