@@ -1,8 +1,19 @@
 # Google Cloud Keys
 key.json
-*.json
+**/key.json
+
+# Specific JSON files to ignore
+package-lock.json
+**/package-lock.json
+
+# BUT keep these important JSONs:
 !package.json
-!tsconfig.json
+!**/package.json
+!tsconfig*.json
+!**/tsconfig*.json
+!.prettierrc.json
+!**/.prettierrc.json
+!.vscode/extensions.json
 
 # Dependencies
 node_modules/
@@ -22,7 +33,8 @@ build/
 
 # IDE
 .idea/
-.vscode/
+.vscode/*
+!.vscode/extensions.json
 *.swp
 *.swo
 *~
