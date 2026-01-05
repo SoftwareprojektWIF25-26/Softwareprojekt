@@ -199,7 +199,7 @@ onMounted(() => {
             </div>
 
             <div class="preview-summary">
-              <h3>🎉 Wizard fast abgeschlossen!</h3>
+              <h3> Wizard fast abgeschlossen!</h3>
               <p>
                 Klicke auf "Abschließen", um dein Projekt zu speichern und zum Dashboard zu gelangen.
               </p>
@@ -215,7 +215,7 @@ onMounted(() => {
         <div class="footer-actions">
 
           <button type="button" class="btn-primary" @click="finishWizard">
-            🚀 Abschließen
+             Abschließen
           </button>
         </div>
       </section>

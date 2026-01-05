@@ -128,6 +128,25 @@ onMounted(async () => {
               <strong>Teamgröße</strong>
               <p>{{ configs.businessUnderstanding.teamSize || '–' }} Personen</p>
             </div>
+            <!-- Ergänzung für Business Understanding -->
+            <div class="field">
+              <strong>Geschätzte Kosten</strong>
+              <p>{{ configs.businessUnderstanding.estimatedCost ? configs.businessUnderstanding.estimatedCost + ' €' : '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Projektdauer</strong>
+              <p>
+                {{ configs.businessUnderstanding.timelineValue || '–' }}
+                {{ configs.businessUnderstanding.timelineUnit || '' }}
+              </p>
+            </div>
+            <div class="field full-width">
+              <strong>Tools</strong>
+              <p>{{ configs.businessUnderstanding.toolsBusinessUnderstanding || '–' }}</p>
+            </div>
+
+
+
           </div>
         </div>
       </details>
@@ -160,6 +179,36 @@ onMounted(async () => {
               <strong>Datenquellen</strong>
               <p>{{ configs.dataCharacteristics.dataSources?.join(', ') || '–' }}</p>
             </div>
+            <!-- Ergänzung für Data Collection -->
+            <div class="field">
+              <strong>Datenverfügbarkeit</strong>
+              <p>{{ configs.dataCharacteristics.dataAvailability ? 'Ja' : 'Nein' }}</p>
+            </div>
+            <div class="field">
+              <strong>Veracity (Qualität)</strong>
+              <p>{{ configs.dataCharacteristics.veracity || '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Variety (Vielfalt)</strong>
+              <p>{{ configs.dataCharacteristics.variety || '–' }}</p>
+            </div>
+            <div class="field">
+              <strong>Variability</strong>
+              <p>{{ configs.dataCharacteristics.variability || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Security & Privacy</strong>
+              <p>{{ configs.dataCharacteristics.dataSecurityConstraints || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Data Prep Steps</strong>
+              <p>{{ configs.dataCharacteristics.dataPreparationSteps || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Tools</strong>
+              <p>{{ configs.dataCharacteristics.toolsData || '–' }}</p>
+            </div>
+
           </div>
         </div>
       </details>
@@ -188,6 +237,12 @@ onMounted(async () => {
                 <span v-for="m in configs.analysisConfig.evaluationMetrics" :key="m" class="tag">{{ m }}</span>
               </div>
             </div>
+            <!-- Ergänzung für Analysis -->
+            <div class="field full-width">
+              <strong>Tools</strong>
+              <p>{{ configs.analysisConfig.toolsAnalysis || '–' }}</p>
+            </div>
+
           </div>
         </div>
       </details>
@@ -216,6 +271,16 @@ onMounted(async () => {
                 <span v-for="issue in configs.deploymentConfig.projectIssues" :key="issue" class="tag error-tag">{{ issue }}</span>
               </div>
             </div>
+            <!-- Ergänzung für Deployment -->
+            <div class="field full-width">
+              <strong>Tests</strong>
+              <p>{{ configs.deploymentConfig.tests || '–' }}</p>
+            </div>
+            <div class="field full-width">
+              <strong>Tools</strong>
+              <p>{{ configs.deploymentConfig.toolsDeployment || '–' }}</p>
+            </div>
+
           </div>
         </div>
       </details>
@@ -237,6 +302,11 @@ onMounted(async () => {
             <div class="field full-width">
               <strong>Wartung</strong>
               <p>{{ configs.utilizationConfig.maintenance || '–' }}</p>
+            </div>
+            <!-- Ergänzung für Utilization -->
+            <div class="field full-width">
+              <strong>Tools</strong>
+              <p>{{ configs.utilizationConfig.toolsUtilization || '–' }}</p>
             </div>
           </div>
         </div>
@@ -496,7 +566,7 @@ onMounted(async () => {
 }
 .header-row {
   display: flex;
-  align-items: center;      
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
