@@ -17,7 +17,7 @@ function exportToCSV() {
   const rows = phases.value.map((p) => [
     p.name,
     p.startWeek + 1,
-    p.durationWeeks,
+    p.totalDurationWeeks.toFixed(1),
     p.effortPersonWeeks.toFixed(1).replace('.', ','),
   ])
   const csvContent =
@@ -34,24 +34,31 @@ function exportToCSV() {
   URL.revokeObjectURL(url)
 }
 
-// Gesamtanzahl der Wochen
+// Gesamtanzahl der Wochen basierend auf tatsächlicher Dauer
 const totalWeeks = computed(() => {
   if (!phases.value.length) return 0
-  return Math.max(...phases.value.map((p) => p.startWeek + p.effortPersonWeeks ?? 1))
+  return Math.max(...phases.value.map((p) => p.startWeek + p.totalDurationWeeks))
 })
-const totalEffortWeeks = computed(() => {
+computed(() => {
   if (!phases.value || !phases.value.length) return 0
   return phases.value.reduce((sum, p) => sum + (p.effortPersonWeeks ?? 0), 0)
 })
 const baseandpuffer = computed(() => {
   const base = phases.value.reduce((sum, p) => sum + (p.baseEffort ?? 0), 0)
   const buffer = phases.value.reduce((sum, p) => sum + (p.bufferEffort ?? 0), 0)
-  return base + buffer
+  return (base + buffer).toFixed(1)
 })
+
+const baseEffortTotal = computed(() => {
+  const base = phases.value.reduce((sum, p) => sum + (p.baseEffort ?? 0), 0)
+  return base.toFixed(1)
+})
+
 const pufferWeeks = computed(() => {
   const buffer = phases.value.reduce((sum, p) => sum + (p.bufferEffort ?? 0), 0)
   return buffer > 0 ? `${buffer.toFixed(1)} PW` : '–'
 })
+
 const updateContainerWidth = () => {
   if (timelineContainer.value) {
     containerWidth.value = timelineContainer.value.clientWidth - labelWidth - containerPadding * 2
@@ -61,26 +68,28 @@ const updateContainerWidth = () => {
 function goBack() {
   router.push({ name: 'dashboard' })
 }
+
 //header anpassen an Anzahl der Wochen
 const headerUnit = computed(() => {
-  const weeks = totalEffortWeeks.value || 1
+  const weeks = totalWeeks.value || 1
 
-  if (weeks <= 8) return { label: 'W', step: 1 } // jede Woche
-  if (weeks <= 24) return { label: 'W', step: 2 } // jede 2 Wochen
-  if (weeks <= 52) return { label: 'M', step: 4 }
-  if (weeks <= 156) return { label: 'M', step: 12 } // viertel jährlich
-  if (weeks <= 312) return { label: 'M', step: 24 } // halb jährlich
-  return { label: 'M', step: 4 } // Monatsblöcke
+  if (weeks <= 8) return { label: 'W', step: 1 } // jede Woche (bis 2 Monate)
+  if (weeks <= 16) return { label: 'W', step: 2 } // jede 2 Wochen (bis 4 Monate)
+  if (weeks <= 52) return { label: 'M', step: 4 } // monatlich (bis 1 Jahr)
+  if (weeks <= 104) return { label: 'M', step: 8 } // alle 2 Monate (bis 2 Jahre)
+  if (weeks <= 156) return { label: 'M', step: 12 } // vierteljährlich (bis 3 Jahre)
+  return { label: 'M', step: 24 } // halbjährlich (über 3 Jahre)
 })
 
 const headerSteps = computed(() => {
   const step = headerUnit.value.step
   const steps: number[] = []
-  for (let i = 0; i < totalEffortWeeks.value; i += step) {
+  for (let i = 0; i < totalWeeks.value; i += step) {
     steps.push(i)
   }
   return steps
 })
+
 // Daten laden
 onMounted(async () => {
   updateContainerWidth()
@@ -102,15 +111,26 @@ onMounted(async () => {
         baseDuration: p.baseDuration,
         bufferDuration: p.bufferDuration,
       })
+
+      // Konvertiere Dauer von Tagen in Wochen
+      const baseDurationWeeks = (p.baseDuration ?? 0) / 7
+      const bufferDurationWeeks = (p.bufferDuration ?? 0) / 7
+      const totalDurationWeeks = baseDurationWeeks + bufferDurationWeeks
+
       const phase = {
         ...p,
         startWeek: currentWeek,
+        baseDurationWeeks,
+        bufferDurationWeeks,
+        totalDurationWeeks,
         durationWeeks: p.durationWeeks ?? 1,
         effortPersonWeeks: p.effortPersonWeeks ?? 0,
         baseEffort: p.baseEffort ?? 0,
         bufferEffort: p.bufferEffort ?? 0,
       }
-      currentWeek += phase.durationWeeks
+
+      // Nächste Phase beginnt nach Basis + Puffer Aufwand
+      currentWeek += phase.baseEffort + phase.bufferEffort
       return phase
     })
   } catch (e) {
@@ -144,7 +164,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Timeline Container -->
-    <div class="timeline-scroll">
+    <div class="timeline-scroll" ref="timelineContainer">
       <!-- Header -->
       <div class="timeline-header">
         <div class="timeline-label">Phase</div>
@@ -165,7 +185,7 @@ onUnmounted(() => {
         <!-- Label -->
         <div class="timeline-label">
           <div class="phase-name">{{ phase.name }}</div>
-          <div class="phase-pw">{{ phase.effortPersonWeeks }} PW</div>
+          <div class="phase-pw">{{ phase.effortPersonWeeks.toFixed(1) }} PW</div>
         </div>
         <!-- Timeline -->
         <div class="timeline-body">
@@ -192,12 +212,12 @@ onUnmounted(() => {
             {{ phase.name }}
           </div>
 
-          <!-- Puffer-Balken (grün) -->
+          <!-- Puffer-Balken (grün) - direkt nach Basis -->
           <div
             v-if="phase.bufferEffort > 0"
             class="GanttBalken puffer"
             :style="{
-              left: ((phase.startWeek + phase.baseDuration / 7) / totalWeeks) * 100 + '%',
+              left: ((phase.startWeek + phase.baseEffort) / totalWeeks) * 100 + '%',
               width: (phase.bufferEffort / totalWeeks) * 100 + '%',
             }"
           >
@@ -215,9 +235,9 @@ onUnmounted(() => {
         <div>Gesamtaufwand</div>
       </div>
       <div class="weeks">
-        <div class="basis">{{ totalWeeks }}</div>
+        <div class="basis">{{ baseEffortTotal }} PW</div>
         <div class="puffer">{{ pufferWeeks }}</div>
-        <div>{{ baseandpuffer }}</div>
+        <div>{{ baseandpuffer }} PW</div>
       </div>
     </div>
   </div>
@@ -358,6 +378,8 @@ onUnmounted(() => {
   white-space: nowrap;
   text-overflow: ellipsis;
   background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%);
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .GanttBalken.basis {
