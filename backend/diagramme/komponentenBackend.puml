@@ -1,87 +1,37 @@
 @startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 left to right direction
 
-!theme plain
-skinparam componentStyle uml2
-skinparam backgroundColor white
-skinparam handwritten false
-skinparam defaultFontName Arial
+System("Backend", "Backend", "<<system>>")
+ContainerDb("postgresql", "PostgreSQL", "<<system>>", "Datenbank")
 
-' Farben (passend zum blauen Stil des Bildes)
-!define COMPONENT_BG #90CAF9
-!define SYSTEM_BG #1565C0
-!define COMPONENT_BORDER #1565C0
-!define FONT_COLOR black
-!define SYSTEM_FONT_COLOR white
-
-skinparam component {
-    FontColor<<system>> white
-    BackgroundColor<<system>> #1565C0
-    BorderColor<<system>> #0D47A1
+Boundary("entry", "Entry Point & Routing") {
+    Component("index", "index.ts", "", "Server Start & Middleware")
+    Component("routes", "Routes", "", "API Endpunkte & Validierung")
 }
 
-skinparam interface {
-  BackgroundColor COMPONENT_BG
-  BorderColor COMPONENT_BORDER
+Boundary("logic", "Business Logic") {
+    Component("services", "Services", "", "Geschäftslogik & Berechnungen")
 }
 
-skinparam package {
-  BackgroundColor white
-  BorderColor #999999
-  BorderStyle dashed
-  FontColor #666666
+Boundary("data", "Data Access") {
+    Component("prisma", "Prisma", "", "ORM & SQL Abstraktion")
 }
 
-' Externe Akteure
-component [Frontend] as FE <<system>>
-component [PostgreSQL] as DB <<system>>
-
-' --- BACKEND STRUKTUR ---
-
-package "Entry Point & Routing" {
-    component [index.ts] as INDEX {
-        note bottom of INDEX : Server Start & Middleware
-    }
-
-    component [Routes] as ROUTER {
-        note bottom of ROUTER : API Endpunkte & Validierung
-    }
+Boundary("shared", "Shared Resources") {
+    Component("types", "Types", "", "Interfaces & Datenmodelle")
 }
 
-package "Business Logic" {
-    component [Services] as SERVICES {
-        note bottom of SERVICES : Geschäftslogik & Berechnungen
-    }
-}
+Rel("Backend", "index", "HTTP Request")
+Rel("index", "routes", "leitet weiter")
 
-package "Data Access" {
-    component [Prisma] as PRISMA {
-        note bottom of PRISMA : ORM & SQL Abstraktion
-    }
-}
+Rel("routes", "services", "ruft auf")
+Rel("routes", "types", "nutzt Typen")
 
-package "Shared Resources" {
-    component [Types] as SHARED {
-        note bottom of SHARED : Interfaces & Datenmodelle
-    }
-}
+Rel("services", "prisma", "fragt Daten ab")
+Rel("services", "types", "nutzt Typen")
 
-' --- VERBINDUNGEN (wie im Bild) ---
-
-' Frontend -> Entry
-FE -> INDEX : HTTP Request
-INDEX -> ROUTER : leitet weiter
-
-' Router -> Logic
-ROUTER --> SERVICES : ruft auf
-ROUTER ..> SHARED : nutzt Typen
-
-' Logic -> Data
-SERVICES --> PRISMA : fragt Daten ab
-SERVICES ..> SHARED : nutzt Typen
-
-' Data -> DB
-PRISMA -> DB : SQL Query
-PRISMA ..> SHARED : generiert Typen
+Rel("prisma", "postgresql", "SQL Query")
+Rel("prisma", "types", "generiert Typen")
 
 @enduml
