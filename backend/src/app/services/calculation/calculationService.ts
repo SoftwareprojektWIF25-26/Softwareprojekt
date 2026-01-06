@@ -326,69 +326,96 @@ export class ProjectCalculationService {
             // Gesamt-Aufwand = Basis + Puffer
             const phaseTotalEffort = phaseBaseEffort + phaseBufferEffort;
 
-            // Dauer berechnen (proportional zum Gesamt-Aufwand)
-            const phaseDuration = Math.max(
-                1,
-                Math.round(durationWeeks * phase.percentage)
-            );
+            // Dauer berechnen (proportional zum Gesamt-Aufwand) und SOFORT runden
+            const phaseDuration = Math.round(Math.max(
+                0.1,  // Mindestens 0.1 Wochen statt 1
+                durationWeeks * phase.percentage
+            ) * 10) / 10;  // ← WICHTIG: Rundung HIER, nicht später!
 
-            // Dauer-Aufteilung: Basis vs. Puffer
-            // Annahme: Puffer erhöht Dauer proportional zum Aufwand
-            const effortRatio = phaseTotalEffort > 0
-                ? phaseBaseEffort / phaseTotalEffort
-                : 1;
-            const baseDuration = Math.max(1, Math.round(phaseDuration * effortRatio));
-            const bufferDuration = phaseDuration - baseDuration;
+            // KORRIGIERT: Dauer-Aufteilung basierend auf Aufwandsverhältnis
+            // Nutze die GERUNDETE phaseDuration für Konsistenz
+            let baseDuration: number;
+            let bufferDuration: number;
+
+            if (phaseDuration < 1) {
+                // Bei sehr kurzen Phasen: proportional aufteilen
+                const effortRatio = phaseTotalEffort > 0
+                    ? phaseBaseEffort / phaseTotalEffort
+                    : 1;
+                baseDuration = Math.max(0, phaseDuration * effortRatio);
+                bufferDuration = Math.max(0, phaseDuration - baseDuration);
+            } else {
+                // Bei längeren Phasen: erlauben Dezimalstellen
+                const effortRatio = phaseTotalEffort > 0
+                    ? phaseBaseEffort / phaseTotalEffort
+                    : 1;
+                baseDuration = Math.max(0.1, phaseDuration * effortRatio);
+                bufferDuration = Math.max(0, phaseDuration - baseDuration);
+            }
 
             phases.push({
                 name: phase.name,
                 startWeek: currentWeek,
-                durationWeeks: phaseDuration,
+                durationWeeks: phaseDuration,  // Bereits gerundet
                 effortPersonWeeks: Math.round(phaseTotalEffort * 10) / 10,
                 percentage: phase.percentage,
 
-                // NEU: Aufschlüsselung für Gantt-Visualisierung
+                // NEU: Aufschlüsselung für Gantt-Visualisierung (in Wochen!)
                 baseEffort: Math.round(phaseBaseEffort * 10) / 10,
                 bufferEffort: Math.round(phaseBufferEffort * 10) / 10,
-                baseDuration: baseDuration,
-                bufferDuration: bufferDuration
+                baseDuration: Math.round(baseDuration * 10) / 10,  // in Wochen
+                bufferDuration: Math.round(bufferDuration * 10) / 10  // in Wochen
             });
 
-            currentWeek += phaseDuration;
+            currentWeek += phaseDuration;  // Bereits gerundet
         });
 
         // 4) Dauer normalisieren, damit Summe der Wochen = durationWeeks ist
         const totalCalculatedWeeks = phases.reduce((sum, p) => sum + p.durationWeeks, 0);
-        if (totalCalculatedWeeks !== durationWeeks) {
+        if (Math.abs(totalCalculatedWeeks - durationWeeks) > 0.1) {  // Toleranz von 0.1 Wochen
             const scaleFactor = durationWeeks / totalCalculatedWeeks;
             let adjustedTotal = 0;
 
             phases.forEach((phase, idx) => {
                 if (idx < phases.length - 1) {
                     const oldDuration = phase.durationWeeks;
-                    phase.durationWeeks = Math.max(
-                        1,
-                        Math.round(phase.durationWeeks * scaleFactor)
+                    const newDuration = Math.max(
+                        0.1,
+                        Math.round(phase.durationWeeks * scaleFactor * 10) / 10
                     );
+                    phase.durationWeeks = newDuration;
 
                     // Basis- und Puffer-Dauer auch skalieren
                     if (phase.baseDuration !== undefined && phase.bufferDuration !== undefined) {
-                        const durationScale = phase.durationWeeks / oldDuration;
-                        phase.baseDuration = Math.max(0, Math.round(phase.baseDuration * durationScale));
-                        phase.bufferDuration = phase.durationWeeks - phase.baseDuration;
+                        const durationScale = newDuration / oldDuration;
+                        phase.baseDuration = Math.max(0, Math.round(phase.baseDuration * durationScale * 10) / 10);
+                        phase.bufferDuration = Math.max(0, Math.round(phase.bufferDuration * durationScale * 10) / 10);
+
+                        // Sicherstellen dass baseDuration + bufferDuration = durationWeeks
+                        const sum = phase.baseDuration + phase.bufferDuration;
+                        if (Math.abs(sum - newDuration) > 0.01) {
+                            phase.bufferDuration = Math.max(0, Math.round((newDuration - phase.baseDuration) * 10) / 10);
+                        }
                     }
 
                     adjustedTotal += phase.durationWeeks;
                 } else {
                     // Letzte Phase bekommt den Rest
                     const oldDuration = phase.durationWeeks;
-                    phase.durationWeeks = Math.max(1, durationWeeks - adjustedTotal);
+                    const newDuration = Math.max(0.1, Math.round((durationWeeks - adjustedTotal) * 10) / 10);
+                    phase.durationWeeks = newDuration;
 
                     // Basis- und Puffer-Dauer auch anpassen
                     if (phase.baseDuration !== undefined && phase.bufferDuration !== undefined) {
-                        const durationScale = phase.durationWeeks / oldDuration;
-                        phase.baseDuration = Math.max(0, Math.round(phase.baseDuration * durationScale));
-                        phase.bufferDuration = phase.durationWeeks - phase.baseDuration;
+                        const durationScale = newDuration / oldDuration;
+                        phase.baseDuration = Math.max(0, Math.round(phase.baseDuration * durationScale * 10) / 10);
+                        phase.bufferDuration = Math.max(0, Math.round(phase.bufferDuration * durationScale * 10) / 10);
+
+                        // Sicherstellen dass baseDuration + bufferDuration = durationWeeks
+                        const sum = phase.baseDuration + phase.bufferDuration;
+                        if (Math.abs(sum - newDuration) > 0.01) {
+                            phase.bufferDuration = Math.max(0, Math.round((newDuration - phase.baseDuration) * 10) / 10);
+                        }
                     }
                 }
             });
@@ -396,7 +423,7 @@ export class ProjectCalculationService {
             // Start-Wochen neu berechnen
             currentWeek = 0;
             phases.forEach((phase) => {
-                phase.startWeek = currentWeek;
+                phase.startWeek = Math.round(currentWeek * 10) / 10;
                 currentWeek += phase.durationWeeks;
             });
         }

@@ -499,8 +499,8 @@ export class ProjectService {
                     estimatedEffort: phase.effortPersonWeeks,
                     baseEffort: phase.baseEffort,
                     bufferEffort: phase.bufferEffort,
-                    baseDuration: phase.baseDuration,
-                    bufferDuration: phase.bufferDuration
+                    baseDuration: Math.round((phase.baseDuration ?? 0) * 7),      // Wochen → Tage
+                    bufferDuration: Math.round((phase.bufferDuration ?? 0) * 7)   // Wochen → Tage
                 }
             });
 

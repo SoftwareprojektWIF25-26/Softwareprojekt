@@ -17,6 +17,8 @@ export function mapBackendToMetrics(backend: BackendProjectPlan): ProjectMetrics
       durationWeeks,
       effortPersonWeeks,
       baseEffort,
+      baseDuration: phase.baseDuration,
+      bufferDuration: phase.bufferDuration,
       startDate: phase.startDate,
       endDate: phase.endDate,
     })
@@ -29,8 +31,8 @@ export function mapBackendToMetrics(backend: BackendProjectPlan): ProjectMetrics
       percentage: 0,
       baseEffort: phase.baseEffort ?? baseEffort,
       bufferEffort: phase.bufferEffort ?? 0,
-      baseDuration: phase.baseDuration ?? durationWeeks,
-      bufferDuration: phase.bufferDuration ?? 0,
+      baseDuration: (phase.baseDuration ?? durationWeeks * 7) / 7, // Tage → Wochen
+      bufferDuration: (phase.bufferDuration ?? 0) / 7, // Tage → Wochen
     }
   })
 
