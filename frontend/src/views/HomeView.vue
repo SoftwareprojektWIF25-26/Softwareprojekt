@@ -47,6 +47,23 @@ const toggleStatus = (status: string) => {
   }
 };
 
+// Anzahl der Projekte pro Status
+const localStatistics = computed(() => {
+  const counts: Record<string, number> = {};
+
+  for (const option of statusOptions) {
+    counts[option.value] = 0;
+  }
+
+  for (const project of projects.value) {
+    if (counts[project.status] !== undefined) {
+      counts[project.status]++;
+    }
+  }
+
+  return counts;
+});
+
 // Daten laden
 onMounted(async () => {
   try {
@@ -132,7 +149,7 @@ function formatDate(date: Date | string): string {
 
               <!-- Anzahl anzeigen (aus Statistik oder berechnet) -->
               <span class="count-badge" v-if="statistics">
-                {{ statistics[option.value as keyof ProjectStatistics] || 0 }}
+                 {{ localStatistics[option.value] }}
               </span>
             </div>
           </div>
@@ -462,6 +479,7 @@ function formatDate(date: Date | string): string {
   margin-right: 10px;
   vertical-align: middle;
 }
+
 
 @keyframes spin {
   to { transform: rotate(360deg); }
