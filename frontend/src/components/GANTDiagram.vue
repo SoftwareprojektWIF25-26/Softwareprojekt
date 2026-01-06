@@ -12,6 +12,8 @@ const containerWidth = ref(800)
 const timelineContainer = ref<HTMLDivElement | null>(null)
 const labelWidth = 220
 const containerPadding = 40
+
+// Download Funktion
 function exportToCSV() {
   const headers = ['Phase', 'Start (Woche)', 'Dauer (Wochen)', 'Gesamt-Aufwand (PW)']
   const rows = phases.value.map((p) => [
@@ -43,17 +45,18 @@ computed(() => {
   if (!phases.value || !phases.value.length) return 0
   return phases.value.reduce((sum, p) => sum + (p.effortPersonWeeks ?? 0), 0)
 })
+//Gesamtaufwand - Puffer + Basisaufwand
 const baseandpuffer = computed(() => {
   const base = phases.value.reduce((sum, p) => sum + (p.baseEffort ?? 0), 0)
   const buffer = phases.value.reduce((sum, p) => sum + (p.bufferEffort ?? 0), 0)
   return (base + buffer).toFixed(1)
 })
-
+//Gesamtbasisaufwand
 const baseEffortTotal = computed(() => {
   const base = phases.value.reduce((sum, p) => sum + (p.baseEffort ?? 0), 0)
   return base.toFixed(1)
 })
-
+// Anzahl Pufferwochen
 const pufferWeeks = computed(() => {
   const buffer = phases.value.reduce((sum, p) => sum + (p.bufferEffort ?? 0), 0)
   return buffer > 0 ? `${buffer.toFixed(1)} PW` : '–'

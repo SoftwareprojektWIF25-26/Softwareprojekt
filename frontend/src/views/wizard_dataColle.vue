@@ -32,7 +32,7 @@ const velocityOptions: DataVelocity[] = ['BATCH', 'DAILY', 'HOURLY', 'CONTINUOUS
 const veracityOptions: DataVeracity[] = ['POOR', 'MEDIUM', 'GOOD', 'EXCELLENT'];
 const varietyOptions: DataVariety[] = ['LOW', 'MEDIUM', 'HIGH'];
 const variabilityOptions: DataVariability[] = ['NEVER', 'YEARLY', 'MONTHLY', 'WEEKLY', 'DAILY', 'HOURLY'];
-const volumeUnits: VolumeUnit[] = ['RECORDS', 'GB', 'TB', 'PB','MB', 'KB'];
+const volumeUnits: VolumeUnit[] = ['RECORDS', 'KB','MB', 'GB', 'TB', 'PB'];
 const preparationSteps: DataPreparationStep[] = [
   'JOINS',
   'DEDUPLICATION',
