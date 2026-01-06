@@ -155,10 +155,10 @@ model DataCharacteristics {
   volumeUnit  VolumeUnit @default(RECORDS) // Records, GB, TB, etc.
 
   // 2.9 Variability
-  variability DataVariability // z.B. "Never", "Weekly", "Daily"
+  variability DataVariability? // z.B. "Never", "Weekly", "Daily"
 
   // 2.10 Data Preparation Steps
-  dataPreparationSteps DataPreparationStep // z.B. ["Joins", "Deduplication", "Outlier Detection"]
+  dataPreparationSteps DataPreparationStep[] @default([]) // z.B. ["Joins", "Deduplication", "Outlier Detection"]
 
   // 2.11 Tools - Data
   toolsData String?
@@ -403,17 +403,17 @@ model ProjectPhase {
   description String?
   orderIndex  Int // 1=Business Understanding, 2=Data Collection, etc.
 
-  estimatedDuration Int?   // in Tagen (Gesamt)
+  estimatedDuration Int? // in Tagen (Gesamt)
   estimatedEffort   Float? // in Person-Wochen (Gesamt)
 
   // NEU: Puffer-Tracking für Gantt-Visualisierung
-  baseEffort        Float? // Basis-Aufwand in Person-Wochen
-  bufferEffort      Float? // Puffer-Aufwand in Person-Wochen
-  baseDuration      Int?   // Basis-Dauer in Tagen
-  bufferDuration    Int?   // Puffer-Dauer in Tagen
+  baseEffort     Float? // Basis-Aufwand in Person-Wochen
+  bufferEffort   Float? // Puffer-Aufwand in Person-Wochen
+  baseDuration   Int? // Basis-Dauer in Tagen
+  bufferDuration Int? // Puffer-Dauer in Tagen
 
-  startDate         DateTime?
-  endDate           DateTime?
+  startDate DateTime?
+  endDate   DateTime?
 
   createdAt DateTime @default(now())
 

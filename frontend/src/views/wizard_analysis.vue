@@ -28,7 +28,7 @@ const analyticsTypes: AnalyticsType[] = [
   'OTHER'
 ];
 
-// Deutsche Labels für bessere UX
+
 const analyticsLabels: Record<AnalyticsType, string> = {
   CLASSIFICATION: 'Classification (Klassifizierung)',
   REGRESSION: 'Regression (Vorhersage kontinuierlicher Werte)',

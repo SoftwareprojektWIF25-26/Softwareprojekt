@@ -1,40 +1,49 @@
-/* color palette from <https://github.com/vuejs/theme> */
+/* =========================================
+   COLOR PALETTE & CSS VARIABLES
+   ========================================= */
 :root {
+  /* Vue Theme Colors */
   --vt-c-white: #ffffff;
   --vt-c-white-soft: #f8f8f8;
   --vt-c-white-mute: #f2f2f2;
-
   --vt-c-black: #181818;
   --vt-c-black-soft: #222222;
   --vt-c-black-mute: #282828;
-
   --vt-c-indigo: #2c3e50;
 
+  /* Dividers */
   --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
   --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
   --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
   --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
 
+  /* Text Colors */
   --vt-c-text-light-1: var(--vt-c-indigo);
   --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
   --vt-c-text-dark-1: var(--vt-c-white);
   --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
-}
 
-/* semantic color variables for this project */
-:root {
+  /* Semantic Colors */
   --color-background: var(--vt-c-white);
   --color-background-soft: var(--vt-c-white-soft);
   --color-background-mute: var(--vt-c-white-mute);
-
   --color-border: var(--vt-c-divider-light-2);
   --color-border-hover: var(--vt-c-divider-light-1);
-
   --color-heading: var(--vt-c-text-light-1);
   --color-text: var(--vt-c-text-light-1);
+  --color-text-light: rgba(60, 60, 60, 0.66);
 
-  --section-gap: 160px;
+  /* Project Specific Colors */
   --color-primary: #0068b4;
+  --color-primary-dark: #004d85;
+  --color-primary-light: #e3f2fd;
+  --section-gap: 160px;
+
+  /* Status Colors */
+  --color-success: #4caf50;
+  --color-warning: #ff9800;
+  --color-error: #f44336;
+  --color-info: #2196f3;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,15 +51,16 @@
     --color-background: var(--vt-c-black);
     --color-background-soft: var(--vt-c-black-soft);
     --color-background-mute: var(--vt-c-black-mute);
-
     --color-border: var(--vt-c-divider-dark-2);
     --color-border-hover: var(--vt-c-divider-dark-1);
-
     --color-heading: var(--vt-c-text-dark-1);
     --color-text: var(--vt-c-text-dark-2);
   }
 }
 
+/* =========================================
+   BASE RESET
+   ========================================= */
 *,
 *::before,
 *::after {
@@ -63,29 +73,42 @@ body {
   min-height: 100vh;
   color: var(--color-text);
   background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
+  transition: color 0.5s, background-color 0.5s;
   line-height: 1.6;
-  font-family:
-    'Barlow',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-size: 15px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* =========================================
+   TYPOGRAPHY
+   ========================================= */
+h1 {
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--color-primary);
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+  color: var(--color-primary);
+  font-weight: 750;
+  margin-bottom: 1rem;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 1rem;
+}
+
+/* =========================================
+   BUTTONS
+   ========================================= */
 .btn-primary,
 .btn-secondary,
 .btn-ghost {
@@ -105,7 +128,6 @@ body {
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 112, 201, 0.4);
 }
@@ -116,29 +138,23 @@ body {
 
 .btn-secondary {
   background: transparent;
-  border: 2px solid transparent; /* nötig für border-image */
+  border: 2px solid transparent;
   border-radius: 50px;
   transition: all 0.2s;
   color: var(--color-text);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%);
+  border-color: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 112, 201, 0.4);
-}
-
-.btn-secondary:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.05);
-  transform: translateY(-2px);
 }
 
 .btn-secondary:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-
 
 .btn-ghost {
   background: transparent;
@@ -152,49 +168,9 @@ body {
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-
-h1{
-  font-size: 3rem;
-  font-weight: bold;
-  color: var(--color-primary);
-  margin-bottom: 1.5rem;
-;
-}
-h2{
-  font-size: 2rem;
-  color: var(--color-primary);
-  font-weight: 750;
-  margin-bottom: 1rem;
-}
-h3{
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-text);
-  margin-bottom: 1rem;
-}
-
-
-/* ===================================================
-   DASHBOARD & HOMEVIEW EXTENSIONS
-   ================================================ */
-
-/* Zusätzliche Variablen */
-:root {
-  --color-primary-dark: #004d85;
-  --color-primary-light: #e3f2fd;
-  --color-text-light: rgba(60, 60, 60, 0.66);
-
-  --color-success: #4caf50;
-  --color-warning: #ff9800;
-  --color-error: #f44336;
-  --color-info: #2196f3;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Status Badges */
+/* =========================================
+   STATUS BADGES
+   ========================================= */
 .status-badge {
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
@@ -229,7 +205,9 @@ h3{
   color: #c62828;
 }
 
-/* Progress Bars */
+/* =========================================
+   PROGRESS BARS
+   ========================================= */
 .progress-bar {
   height: 8px;
   background: var(--color-border);
@@ -251,7 +229,9 @@ h3{
   background: var(--color-warning);
 }
 
-/* Cards */
+/* =========================================
+   CARDS
+   ========================================= */
 .card {
   background: white;
   border: 1px solid var(--color-border);
@@ -266,7 +246,222 @@ h3{
   transform: translateY(-4px);
 }
 
-/* Filter Buttons */
+.form-card,
+.preview-card {
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-card:hover,
+.preview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.form-card h2,
+.preview-card h2 {
+  font-size: clamp(1.2rem, 3vw, 1.5rem);
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+}
+
+.card-subtitle {
+  font-size: clamp(0.8rem, 2vw, 0.9rem);
+  color: #888;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+/* =========================================
+   FORM ELEMENTS
+   ========================================= */
+.field label {
+  display: block;
+  font-size: clamp(0.8rem, 2vw, 0.9rem);
+  margin-bottom: 0.5rem;
+  color: black;
+  font-weight: 500;
+}
+
+.required {
+  color: #ff6b6b;
+  margin-left: 0.25rem;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+  padding: 0.75rem 1rem;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
+  transition: all 0.3s ease;
+  font-family: inherit;
+  background-color: #f5f7fa;
+}
+
+.field input:hover,
+.field select:hover,
+.field textarea:hover {
+  border-color: rgba(0, 112, 201, 0.3);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: #0070c9;
+  box-shadow: 0 0 0 3px rgba(0, 112, 201, 0.15), 0 4px 12px rgba(0, 112, 201, 0.1);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+.field-help {
+  font-size: clamp(0.7rem, 1.8vw, 0.75rem);
+  color: var(--color-text);
+  margin-top: 0.4rem;
+  line-height: 1.3;
+}
+
+.field-error {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.has-error {
+  border-color: #d32f2f;
+}
+
+/* Input Groups */
+.input-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.input-with-select {
+  flex: 1;
+}
+
+.unit-select {
+  flex: 0 0 clamp(100px, 20vw, 130px);
+}
+
+/* =========================================
+   MULTI-SELECT CHECKBOXES (Global)
+   ========================================= */
+.multi-select-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.select-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 3rem;
+}
+
+.select-card:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.select-card.selected,
+.select-card.active {
+  background-color: #eff6ff;
+  border-color: #3b82f6;
+  color: #1e40af;
+  font-weight: 500;
+}
+
+.select-card input[type="checkbox"],
+.select-card input[type="radio"] {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  margin: 0;
+}
+
+.select-card span {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  user-select: none;
+}
+
+/* =========================================
+   LEGACY CHECKBOX STYLES (für Kompatibilität)
+   ========================================= */
+.checkbox-group {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(255, 255, 255, 0.02);
+  user-select: none;
+  height: fit-content;
+}
+
+.checkbox-label:hover {
+  background: rgba(0, 112, 201, 0.08);
+  border-color: rgba(0, 112, 201, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #0070c9;
+  flex-shrink: 0;
+}
+
+.checkbox-label span {
+  margin-left: 0.75rem;
+  line-height: 1.25rem;
+}
+
+/* =========================================
+   FILTER BUTTONS
+   ========================================= */
 .filter-btn {
   padding: 0.5rem 1rem;
   border: 1px solid var(--color-border);
@@ -290,12 +485,23 @@ h3{
   border-color: var(--color-primary);
 }
 
-/* Main Content Offset (für fixed Header) */
-.main-content {
-  margin-top: 60px;
-  min-height: calc(100vh - 60px);
+/* =========================================
+   WIZARD SPECIFIC
+   ========================================= */
+.wizard-page {
+  min-height: 100vh;
+  color: var(--color-text);
+  padding: 0;
 }
-/* Main Grid */
+
+.wizard-container {
+  width: 100%;
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem);
+  animation: fadeIn 0.5s ease-in;
+}
+
 .wizard-main {
   display: grid;
   grid-template-columns: 1fr;
@@ -308,6 +514,7 @@ h3{
     grid-template-columns: 1.5fr 1fr;
   }
 }
+
 @media (min-width: 1400px) {
   .wizard-main {
     grid-template-columns: 2fr 1fr;
@@ -319,12 +526,7 @@ h3{
     grid-template-columns: 2.2fr 1fr;
   }
 }
-@media (max-width: 960px) {
-  .wizard-main {
-    grid-template-columns: 1fr;
-  }
-}
-/* Wizard Header */
+
 .wizard-step {
   font-size: clamp(0.75rem, 2vw, 0.85rem);
   color: #888;
@@ -349,7 +551,7 @@ h3{
   font-size: clamp(0.85rem, 2vw, 1rem);
   line-height: 1.5;
 }
-/* Progress Stepper */
+
 .wizard-steps {
   display: flex;
   flex-wrap: wrap;
@@ -401,118 +603,25 @@ h3{
   box-shadow: 0 0 12px rgba(0, 168, 255, 0.6);
   animation: pulse 2s infinite;
 }
-.wizard-page {
-  min-height: 100vh;
-  color: var(--color-text);
-  padding: 0;
+
+.wizard-footer {
+  margin-top: clamp(2rem, 5vw, 3rem);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
-.wizard-container {
-  width: 100%;
-  max-width: 1800px;
-  margin: 0 auto;
-  padding: clamp(1rem, 3vw, 2.5rem) clamp(1rem, 4vw, 3rem);
-  animation: fadeIn 0.5s ease-in;
-}
-.form-card,
-.preview-card {
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: clamp(1.25rem, 3vw, 2rem);
-  box-shadow:
-    0 4px 20px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+.footer-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.form-card:hover,
-.preview-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-/* Cards */
-.form-card h2,
-.preview-card h2 {
-  font-size: clamp(1.2rem, 3vw, 1.5rem);
-  margin-bottom: 0.5rem;
-  background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-weight: 600;
-}
-
-.card-subtitle {
-  font-size: clamp(0.8rem, 2vw, 0.9rem);
-  color: #888;
-  margin-bottom: 1.5rem;
-  line-height: 1.4;
-}
-
-/* Form Fields */
-.field label {
-  display: block;
-  font-size: clamp(0.8rem, 2vw, 0.9rem);
-  margin-bottom: 0.5rem;
-  color: black;
-  font-weight: 500;
-}
-
-.required {
-  color: #ff6b6b;
-  margin-left: 0.25rem;
-}
-
-.field input,
-.field select,
-.field textarea{
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--color-text);
-  padding: 0.75rem 1rem;
-  font-size: clamp(0.85rem, 2vw, 0.95rem);
-  transition: all 0.3s ease;
-  font-family: inherit;
-  background-color: #f5f7fa;
-}
-
-.field input:hover,
-.field select:hover,
-.field textarea:hover {
-  border-color: rgba(0, 112, 201, 0.3);
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-  outline: none;
-  border-color: #0070c9;
-  box-shadow:
-    0 0 0 3px rgba(0, 112, 201, 0.15),
-    0 4px 12px rgba(0, 112, 201, 0.1);
-}
-
-.field textarea {
-  resize: vertical;
-  min-height: 100px;
-  line-height: 1.5;
-}
-
-.field-help {
-  font-size: clamp(0.7rem, 1.8vw, 0.75rem);
-  color: var(--color-text);
-  margin-top: 0.4rem;
-  line-height: 1.3;
-}
-
-/* Preview Content */
+/* =========================================
+   PREVIEW CONTENT
+   ========================================= */
 .preview-content {
   display: flex;
   flex-direction: column;
@@ -577,41 +686,9 @@ h3{
   line-height: 1.5;
 }
 
-/* Auto-Save Indicator */
-.auto-save-indicator {
-  display: inline-block;
-  margin-left: 1rem;
-  padding: 0.25rem 0.75rem;
-  background: rgba(0, 200, 100, 0.15);
-  border: 1px solid rgba(0, 200, 100, 0.3);
-  border-radius: 999px;
-  font-size: 0.75rem;
-  color: #00c864;
-  animation: fadeInSave 0.3s ease-in;
-}
-
-@keyframes fadeInSave {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-/* Footer */
-.wizard-footer {
-  margin-top: clamp(2rem, 5vw, 3rem);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.footer-actions {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-/* Section Header */
+/* =========================================
+   SECTION LAYOUTS
+   ========================================= */
 .section-header {
   display: flex;
   flex-direction: column;
@@ -652,7 +729,6 @@ h3{
   }
 }
 
-/* Form Grid */
 .section-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -670,81 +746,83 @@ h3{
   grid-column: 1 / -1;
 }
 
-/* Checkboxes & Radio */
-.checkbox-group,
-.checkbox-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: 1fr;
+.form-section {
+  margin-top: 1rem;
 }
 
-@media (min-width: 640px) {
-  .checkbox-grid {
-    grid-template-columns: repeat(2, 1fr);
+/* =========================================
+   AUTO-SAVE INDICATOR
+   ========================================= */
+.auto-save-indicator {
+  display: inline-block;
+  margin-left: 1rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(0, 200, 100, 0.15);
+  border: 1px solid rgba(0, 200, 100, 0.3);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: #00c864;
+  animation: fadeInSave 0.3s ease-in;
+}
+
+/* =========================================
+   MAIN CONTENT OFFSET
+   ========================================= */
+.main-content {
+  margin-top: 60px;
+  min-height: calc(100vh - 60px);
+}
+
+/* =========================================
+   ANIMATIONS
+   ========================================= */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-.checkbox-group {
-  display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.02);
-  user-select: none;
-  height: fit-content;
-}
 
-
-.checkbox-label:hover {
-  background: rgba(0, 112, 201, 0.08);
-  border-color: rgba(0, 112, 201, 0.4);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.checkbox-label input[type="checkbox"] {
-  width: 1.25rem;
-  height: 1.25rem;
-  margin: 0;
-  cursor: pointer;
-  accent-color: #0070c9;
-  flex-shrink: 0;
+@keyframes fadeInSave {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
   }
-.checkbox-label span {
-  margin-left: 0.75rem;
-  line-height: 1.25rem;
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-/* Input Groups */
-.input-group {
-  display: flex;
-  gap: 0.75rem;
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
 }
 
-.input-with-select {
-  flex: 1;
-}
-
-.unit-select {
-  flex: 0 0 clamp(100px, 20vw, 130px);
-}
-
-/* Responsive Adjustments */
+/* =========================================
+   RESPONSIVE ADJUSTMENTS
+   ========================================= */
 @media (max-width: 1023px) {
   .wizard-main {
     grid-template-columns: 1fr;
   }
 
   .preview-card {
-    order: -1; /* Preview oben auf Mobile */
+    order: -1;
+  }
+}
+
+@media (max-width: 960px) {
+  .wizard-main {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -763,18 +841,3 @@ h3{
     top: 0.4rem;
   }
 }
-.form-section {
-  margin-top: 1rem;
-}
-
-.field-error {
-  color: #d32f2f;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-}
-
-.has-error {
-  border-color: #d32f2f;
-}
-
-

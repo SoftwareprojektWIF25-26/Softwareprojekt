@@ -1,4 +1,4 @@
-<!-- views/ProjektErstellenDeploymentView.vue -->
+<!-- views/DeploymentView.vue -->
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
@@ -30,7 +30,7 @@ const projectIssueTypes: ProjectIssueType[] = [
   'TEAM_COORDINATION'
 ];
 
-// Deutsche Labels
+
 const timelinessLabels: Record<TimelinessLevel, string> = {
   BATCH: 'Batch (einmalig/periodisch)',
   DAILY: 'Daily (täglich)',
@@ -208,11 +208,14 @@ onMounted(() => {
               <!-- Project Issues (Multi-Select) -->
               <div class="field field-full">
                 <label>Project Issues</label>
-                <div class="checkbox-grid">
+
+                <!-- NEU: .multi-select-grid -->
+                <div class="multi-select-grid">
                   <label
                     v-for="issue in projectIssueTypes"
                     :key="issue"
-                    class="checkbox-label"
+                    class="select-card"
+                    :class="{ selected: draft.deploymentConfig.projectIssues?.includes(issue) }"
                   >
                     <input
                       type="checkbox"
@@ -222,6 +225,7 @@ onMounted(() => {
                     <span>{{ issueLabels[issue] }}</span>
                   </label>
                 </div>
+
                 <p class="field-help">
                   Welche Herausforderungen/Probleme sind im Projekt bekannt?
                 </p>

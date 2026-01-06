@@ -44,6 +44,94 @@ router.get('/:id', async (req, res, next) => {
 });
 
 /**
+ * PATCH /api/dashboard/:id/details
+ * Aktualisiert Projekttitel und Domain
+ * Frontend: updateProjectDetails(id, { title, domain })
+ */
+router.patch(
+    '/:id/details',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const data = req.body as { title?: string; domain?: string };
+
+            const projectId = parseInt(id, 10);
+            if (isNaN(projectId)) {
+                res.status(400).json({
+                    success: false,
+                    message: 'Ungültige Projekt-ID'
+                });
+                return;
+            }
+
+            const result = await dashboardService.updateProjectDetails(projectId, data);
+
+            res.json({
+                success: true,
+                data: result,
+                message: 'Projektdetails erfolgreich aktualisiert'
+            });
+        } catch (error) {
+            console.error('Error in PATCH /api/dashboard/:id/details', error);
+            next(error);
+        }
+    }
+);
+
+
+
+
+
+
+/**
+ * PATCH /api/dashboard/:id/config/:configType
+ * Aktualisiert spezifische Konfigurationsbereiche (z.B. businessUnderstanding)
+ */
+router.patch(
+    '/:id/config/:configType',
+    async (req: Request<{ id: string; configType: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id, configType } = req.params;
+            const data = req.body;
+
+            // Validierung des configType
+            const validTypes = [
+                'businessUnderstanding',
+                'dataCharacteristics',
+                'analysisConfig',
+                'deploymentConfig',
+                'utilizationConfig'
+            ];
+
+            if (!validTypes.includes(configType)) {
+                res.status(400).json({
+                    success: false,
+                    message: `Ungültiger Config-Type. Erlaubt sind: ${validTypes.join(', ')}`
+                });
+                return;
+            }
+
+            const result = await dashboardService.updateProjectConfig(
+                id,
+                configType as any,
+                data
+            );
+
+            res.json({
+                success: true,
+                data: result,
+                message: 'Konfiguration erfolgreich aktualisiert'
+            });
+        } catch (error) {
+            console.error(`Error in PATCH /api/dashboard/${req.params.id}/config/${req.params.configType}`, error);
+            next(error);
+        }
+    }
+);
+
+
+
+/**
  * GET /api/dashboard/:id/timeline
  * Frontend: getTimeline(id)
  */

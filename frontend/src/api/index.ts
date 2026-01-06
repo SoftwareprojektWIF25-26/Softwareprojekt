@@ -83,7 +83,7 @@ function getZuletztBearbeitet(): Promise<Project[]> {
   return apiClient.get('/homeview/recent-projects').then(res => res.data);
 }
 
-// ===== DASHBOARD =====
+    // ===== DASHBOARD =====
 
 function getProjektById(id: number): Promise<FullProject> {
   return apiClient.get(`/dashboard/${id}`).then(res => res.data);
@@ -135,7 +135,39 @@ function patchTemplatePhase(id: number, phase: string) {
   return apiClient.patch(`/dashboard/${id}/template-phase/${phase}/status`, { phase: id }).then(res => res.data);
 }
 
-// ===== WIZARD FUNKTIONEN =====
+async function updateProjectDetails(id: number, data: { title?: string, domain?: string }) {
+  try {
+    const response = await apiClient.patch(`/dashboard/${id}/details`, data);
+    return response.data;
+  } catch (error) {
+    console.error('Fehler beim Ändern der Projektdetails:', error);
+    throw error;
+  }
+}
+
+
+
+/**
+ * Funktion für Veränderung der Daten eines bestehenden Projektes
+ */
+async function updateProjectConfig(
+  id: number,
+  configType: 'businessUnderstanding' | 'dataCharacteristics' | 'analysisConfig' | 'deploymentConfig' | 'utilizationConfig',
+  data: any
+) {
+  try {
+    const response = await apiClient.patch(`/dashboard/${id}/config/${configType}`, data);
+    return response.data;
+  } catch (error) {
+    console.error(`Fehler beim Update von ${configType}:`, error);
+    throw error;
+  }
+}
+
+
+
+
+    // ===== WIZARD FUNKTIONEN =====
 
 /**
  * Erstellt ein neues Projekt
@@ -443,7 +475,9 @@ export default {
 
   // Dashboard
   getProjektById,
+  updateProjectDetails,
   getTimeline,
+  updateProjectConfig,
   postEvaluation,
   patchProjektStatus,
   patchTaskStatus,

@@ -197,27 +197,33 @@ onMounted(() => {
                 </p>
               </div>
 
-              <!-- Team Roles (Multi-Checkbox) -->
+              <!-- Team Roles (Multi-Checkbox - FINAL) -->
               <div class="field field-full">
                 <label>Team-Rollen</label>
-                <div class="checkbox-grid">
+
+                <!-- NEU: .multi-select-grid -->
+                <div class="multi-select-grid">
                   <label
                     v-for="role in teamRoleOptions"
                     :key="role"
-                    class="checkbox-label"
+                    class="select-card"
+                    :class="{ selected: draft.businessUnderstanding.projectTeamRoles?.includes(role) }"
                   >
                     <input
                       type="checkbox"
                       :value="role"
                       v-model="draft.businessUnderstanding.projectTeamRoles"
                     />
+
                     <span>{{ roleLabels[role] }}</span>
                   </label>
                 </div>
+
                 <p class="field-help">
                   Welche Rollen sind im Projektteam vertreten?
                 </p>
               </div>
+
 
               <!-- Team Size -->
               <div class="field">

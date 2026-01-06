@@ -91,6 +91,7 @@ const preparationLabels: Record<DataPreparationStep, string> = {
   TRANSFORMATION: 'Transformation'
 };
 
+
 // State für den Klick auf "Weiter"
 const attemptedSubmit = ref(false);
 
@@ -238,14 +239,16 @@ onMounted(() => {
             </div>
 
 
-            <!-- Data Access (Multi-Select) -->
+              <!-- Data Access (Multi-Select - UPDATED) -->
               <div class="field field-full">
                 <label>Datenzugriff</label>
-                <div class="checkbox-group">
+
+                <div class="multi-select-grid">
                   <label
                     v-for="type in dataAccessOptions"
                     :key="type"
-                    class="checkbox-label"
+                    class="select-card"
+                    :class="{ selected: draft.dataCharacteristics.dataAccess?.includes(type) }"
                   >
                     <input
                       type="checkbox"
@@ -370,24 +373,31 @@ onMounted(() => {
                 </select>
               </div>
 
-              <!-- Data Preparation Steps -->
+              <!-- Data Preparation Steps (Multi-Select Update) -->
               <div class="field field-full">
-                <label for="prep-steps">Data Preparation Steps</label>
-                <select
-                  id="prep-steps"
-                  v-model="draft.dataCharacteristics.dataPreparationSteps"
-                >
-                  <option :value="undefined">Bitte wählen</option>
-                  <option
+                <label>Data Preparation Steps</label>
+
+                <!-- NEUE KLASSEN: .multi-select-grid statt .checkbox-grid -->
+                <div class="multi-select-grid">
+                  <label
                     v-for="step in preparationSteps"
                     :key="step"
-                    :value="step"
+                    class="select-card"
+                    :class="{ selected: Array.isArray(draft.dataCharacteristics.dataPreparationSteps)
+              && draft.dataCharacteristics.dataPreparationSteps.includes(step) }"
                   >
-                    {{ preparationLabels[step] }}
-                  </option>
-                </select>
+                    <input
+                      type="checkbox"
+                      :value="step"
+                      v-model="draft.dataCharacteristics.dataPreparationSteps"
+                    />
+                    <!-- KEIN .label-text mehr nötig, span reicht -->
+                    <span>{{ preparationLabels[step] }}</span>
+                  </label>
+                </div>
+
                 <p class="field-help">
-                  Hauptschritt der Datenaufbereitung (weitere können später ergänzt werden)
+                  Wählen Sie alle notwendigen Schritte der Datenaufbereitung aus.
                 </p>
               </div>
 
@@ -516,5 +526,6 @@ onMounted(() => {
 </template>
 
 <style scoped>
+
 
 </style>

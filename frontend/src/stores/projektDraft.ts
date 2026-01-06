@@ -57,7 +57,7 @@ export const useProjectDraftStore = defineStore("projectDraft", {
       volumeValue: undefined,
       volumeUnit: "RECORDS",
       variability: undefined,
-      dataPreparationSteps: undefined,
+      dataPreparationSteps: [],
       toolsData: ""
     },
 

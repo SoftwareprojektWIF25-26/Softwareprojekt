@@ -51,7 +51,7 @@ export interface UpdateDataCharacteristicsRequest {
     volumeValue?: number;
     volumeUnit?: 'RECORDS' | 'GB' | 'TB' | 'PB';
     variability?: any;
-    dataPreparationSteps?: any;
+    dataPreparationSteps?: any[];
     toolsData?: string;
 }
 
@@ -302,8 +302,8 @@ export class ProjectService {
             volumeValue: data.volumeValue,
             volumeUnit: data.volumeUnit,
             toolsData: data.toolsData,
-            variability: data.variability || 'NEVER',
-            dataPreparationSteps: data.dataPreparationSteps || 'JOINS',
+            variability: data.variability,
+            dataPreparationSteps: data.dataPreparationSteps || [],
             status: 'DRAFT'
         };
 
@@ -573,7 +573,7 @@ export class ProjectService {
     private async initializeTemplatePhases(projectId: number) {
         await prisma.businessUnderstanding.create({ data: { projectId, status: 'DRAFT'} });
         await prisma.dataCharacteristics.create({
-            data: { projectId, status: 'BLOCKED', variability: 'NEVER', dataPreparationSteps: 'JOINS' }
+            data: { projectId, status: 'BLOCKED'}
         });
         await prisma.analysisConfig.create({ data: { projectId, status: 'BLOCKED' } });
         await prisma.deploymentConfig.create({ data: { projectId, status: 'BLOCKED' } });

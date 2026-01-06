@@ -191,6 +191,59 @@ export class DashboardService {
             evaluations: project.evaluations
         };
     }
+    /**
+     * Aktualisiert Projekt Titel & Domaine
+     */
+    async updateProjectDetails(projectId: number, data: { title?: string, domain?: string }) {
+        return prisma.project.update({
+            where: { id: projectId },
+            data: {
+                title: data.title,
+                domain: data.domain
+            }
+        });
+    }
+
+
+    /**
+     * Aktualisiert Projekt-Konfigurationen (Wizard-Daten), die User aus Dashboard gemacht hat
+     */
+    async updateProjectConfig(
+        projectId: string,
+        configType: 'businessUnderstanding' | 'dataCharacteristics' | 'analysisConfig' | 'deploymentConfig' | 'utilizationConfig',
+        data: any
+    ) {
+        const id = parseInt(projectId, 10);
+        if (isNaN(id)) throw new Error('Ungültige Projekt-ID');
+
+        // Mapping von configType auf Prisma-Model-Delegates
+        // Wir nutzen hier 'any', da Prisma Client Typen dynamisch schwer zu mappen sind,
+        // aber zur Laufzeit funktioniert der Zugriff via Index.
+        const delegateMap: Record<string, any> = {
+            businessUnderstanding: prisma.businessUnderstanding,
+            dataCharacteristics: prisma.dataCharacteristics,
+            analysisConfig: prisma.analysisConfig,
+            deploymentConfig: prisma.deploymentConfig,
+            utilizationConfig: prisma.utilizationConfig
+        };
+
+        const delegate = delegateMap[configType];
+        if (!delegate) throw new Error(`Ungültiger Konfigurationstyp: ${configType}`);
+
+        // Update durchführen
+        // Wir nutzen update, da der Record existieren muss (wurde beim Wizard-Abschluss erstellt)
+        // Wir filtern 'id', 'projectId' und 'createdAt' aus den Daten sicherheitshalber raus
+        const { id: _, projectId: __, createdAt: ___, ...updateData } = data;
+
+        const result = await delegate.update({
+            where: { projectId: id }, // Alle Config-Tabellen haben projectId @unique
+            data: updateData
+        });
+
+        return result;
+    }
+
+
 
     /**
      * Projekt-Timeline/Gantt-Daten
