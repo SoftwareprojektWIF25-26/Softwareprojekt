@@ -293,7 +293,7 @@ onMounted(async () => {
     <!-- Configurations Section -->
     <section class="config-section">
       <div class="header-row">
-        <h2>Projektkonfiguration</h2>
+        <h2>Projektdaten</h2>
         <div class="action-buttons">
           <button @click="gotoGant" class="btn-primary">Gantt Diagramm</button>
 
