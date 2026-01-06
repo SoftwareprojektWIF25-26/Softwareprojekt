@@ -3,12 +3,15 @@ import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router"; // useRouter hinzu
 import api from "@/api";
 import type { DashboardData } from "@/types";
+import { useToast } from "vue-toastification";
 
+const toast = useToast();
 const route = useRoute();
 const router = useRouter(); // Router Instanz
 const dashboard = ref<DashboardData | null>(null);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const editableStatus = ref<string | null>(null);
 
 // Computed für einfachere Zugriffe
 const project = computed(() => dashboard.value?.project);
@@ -21,10 +24,51 @@ function goBack() {
 function gotoGant(){
   router.push({ name: 'Gant' });
 }
+const statusOptions = [
+  { value: 'PLANNING', label: 'Planung' },
+  { value: 'IN_PROGRESS', label: 'In Bearbeitung' },
+  { value: 'COMPLETED', label: 'Abgeschlossen' },
+  { value: 'ON_HOLD', label: 'Pausiert' },
+  { value: 'CANCELLED', label: 'Abgebrochen' }
+];
+const dropdownOpen = ref(false);
+
+function toggleDropdown() {
+  dropdownOpen.value = !dropdownOpen.value;
+}
+
+function selectStatus(value: string) {
+  editableStatus.value = value;
+  patchProjectStatus(value);
+  dropdownOpen.value = false;
+}
+
+async function patchProjectStatus(newStatus: string) {
+  if (!dashboard.value) return;
+
+  const oldStatus = dashboard.value.project.status;
+
+  // Optimistic UI Update
+  dashboard.value.project.status = newStatus;
+
+  try {
+    await api.patchProjektStatus(
+      Number(route.params.id),
+       newStatus
+    );
+  } catch (err) {
+    console.error("Status-Update fehlgeschlagen:", err);
+    dashboard.value.project.status = oldStatus; // Rollback
+    editableStatus.value = oldStatus;
+    toast.error("Status konnte nicht geändert werden.");
+  }
+}
+
 onMounted(async () => {
   try {
     const projektId = Number(route.params.id);
     dashboard.value = await api.getDashboardData(projektId);
+    editableStatus.value = dashboard.value.project.status;
   } catch (err) {
     console.error("Fehler beim Laden des Dashboards:", err);
     error.value = "Dashboard konnte nicht geladen werden.";
@@ -63,9 +107,27 @@ onMounted(async () => {
         </div>
       </div>
 
-      <div class="status-badge" :class="`status-${project?.status}`">
-        {{ project?.status }}
+      <!--Projektstatus -->
+      <div class="status-control">
+        <div class="custom-select-wrapper">
+          <select
+            v-model="editableStatus"
+            @change="patchProjectStatus(editableStatus!)"
+            :class="`status-${editableStatus}`"
+            class="custom-select"
+          >
+            <option
+              v-for="option in statusOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+          <span class="custom-arrow">▾</span>
+        </div>
       </div>
+
     </header>
 
     <!-- Progress Overview -->
@@ -144,8 +206,6 @@ onMounted(async () => {
               <strong>Tools</strong>
               <p>{{ configs.businessUnderstanding.toolsBusinessUnderstanding || '–' }}</p>
             </div>
-
-
 
           </div>
         </div>
@@ -571,4 +631,67 @@ onMounted(async () => {
   gap: 16px;
   margin-bottom: 16px;
 }
+
+
+.selected {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Farben */
+.status-PLANNING { background-color: #2196F3; }
+.status-IN_PROGRESS { background-color: #FF9800; }
+.status-COMPLETED { background-color: #4CAF50; }
+.status-ON_HOLD { background-color: #F44336; }
+.status-CANCELLED { background-color: grey; }
+
+
+.custom-arrow {
+    position: absolute;
+    right: 0.8rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    font-size: 1rem;
+    color: white;
+}
+.custom-select {
+  width: 100%;
+  padding: 0.5rem 1.5rem 0.5rem 0.8rem;
+  border-radius: 50px;
+  appearance: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: white;
+  height: 45px;
+  text-align: center;
+  font-size: clamp(0.85rem, 2vw, 0.95rem);
+  border: 1px solid transparent;
+  outline: none;
+}
+.status-control {
+  width: 200px;
+}
+
+.custom-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.custom-select option {
+  text-align: left;
+  border-radius: 20px;
+  background-color: white !important;
+  color: black !important;
+}
+
+.custom-select:focus {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
 </style>

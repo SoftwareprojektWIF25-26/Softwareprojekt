@@ -113,8 +113,18 @@ function postEvaluation(id: number) {
   return apiClient.post(`/dashboard/${id}/evaluations`).then(res => res.data);
 }
 
-function patchProjektStatus(id: number, status: string) {
-  return apiClient.patch(`/dashboard/${id}/status`, { status }).then(res => res.data);
+async function patchProjektStatus(id: number, status: string) {
+  try
+  {
+    console.log('Patch ProjektStatus:', id);
+    const response = await apiClient.patch(`/dashboard/${id}/status`, { status })
+    console.log('ProjektStatus:', response.data);
+    return response.data;
+  }
+  catch(error) {
+    if (axios.isAxiosError(error)) {console.error('ProjektStatus Error:', error.response?.data); throw new Error('Fehler beim Ändern des ProjektStatus');}
+    throw error;
+  }
 }
 
 function patchTaskStatus(id: number, status: string) {
