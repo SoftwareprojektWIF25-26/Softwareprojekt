@@ -1,11 +1,10 @@
-<script setup lang="ts" >
+<script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
-import { useRoute, useRouter } from "vue-router"; // useRouter hinzu
+import { useRoute, useRouter } from "vue-router";
 import api from "@/api";
 import type { DashboardData } from "@/types";
 import { useToast } from "vue-toastification";
 
-// Importiere die zentralen Konstanten & Labels
 import {
   FORM_OF_PRODUCT_OPTIONS, FORM_LABELS,
   TEAM_ROLE_OPTIONS, TEAM_ROLE_LABELS,
@@ -24,59 +23,62 @@ import {
 
 const toast = useToast();
 const route = useRoute();
-const router = useRouter(); // Router Instanz
+const router = useRouter();
+
 const dashboard = ref<DashboardData | null>(null);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 const editableStatus = ref<string | null>(null);
 
-// Edit Mode State
+// Edit Mode
 const isEditing = ref(false);
-const localConfigs = ref<any>(null); // Lokale Kopie zum Bearbeiten
+const localConfigs = ref<any>(null);
 
-// Computed Properties
+// Computed
 const project = computed(() => dashboard.value?.project);
 const configs = computed(() => dashboard.value?.configurations);
 const progress = computed(() => dashboard.value?.projectPlanProgress);
 
 // --- Navigation ---
-function goBack() { router.push({ name: 'home' }); }
-function gotoGant() { router.push({ name: 'Gant' }); }
+function goBack() {
+  router.push({ name: "home" });
+}
+function gotoGant() {
+  router.push({ name: "Gant" });
+}
 
-
-// --- Edit Mode Funktionen ---
+// --- Edit Mode ---
 function startEditing() {
   if (!dashboard.value?.configurations) return;
-  // Deep Copy der Configurations
-  localConfigs.value = JSON.parse(JSON.stringify(dashboard.value.configurations));
 
+  localConfigs.value = JSON.parse(
+    JSON.stringify(dashboard.value.configurations)
+  );
 
   localConfigs.value.project = {
     title: dashboard.value.project.title,
-    domain: dashboard.value.project.domain
+    domain: dashboard.value.project.domain,
   };
 
-  // 1. Für Data Access
   if (!localConfigs.value.dataCharacteristics.dataAccess) {
     localConfigs.value.dataCharacteristics.dataAccess = [];
   }
 
-  // 2. Data Preparation Steps
-  if (!Array.isArray(localConfigs.value.dataCharacteristics.dataPreparationSteps)) {
-    // Falls es null ist oder aus irgendeinem Grund ein String -> Array machen
+  if (
+    !Array.isArray(
+      localConfigs.value.dataCharacteristics.dataPreparationSteps
+    )
+  ) {
     localConfigs.value.dataCharacteristics.dataPreparationSteps = [];
   }
 
-  // 3. Für Team Roles
   if (!localConfigs.value.businessUnderstanding.projectTeamRoles) {
     localConfigs.value.businessUnderstanding.projectTeamRoles = [];
   }
 
-  // 4. Für Issues
   if (!localConfigs.value.deploymentConfig.projectIssues) {
     localConfigs.value.deploymentConfig.projectIssues = [];
   }
-
 
   isEditing.value = true;
 }
@@ -94,61 +96,97 @@ async function saveChanges() {
   try {
     const projectId = dashboard.value.project.id;
 
-    // Projekt-Details (Titel & Domain) aktualisieren
     if (localConfigs.value.project) {
       await api.updateProjectDetails(projectId, {
         title: localConfigs.value.project.title,
-        domain: localConfigs.value.project.domain
+        domain: localConfigs.value.project.domain,
       });
     }
 
-    // Konfigurationen aktualisieren
     if (localConfigs.value.businessUnderstanding) {
-      await api.updateProjectConfig(projectId, 'businessUnderstanding', localConfigs.value.businessUnderstanding);
+      await api.updateProjectConfig(
+        projectId,
+        "businessUnderstanding",
+        localConfigs.value.businessUnderstanding
+      );
     }
 
     if (localConfigs.value.dataCharacteristics) {
-      await api.updateProjectConfig(projectId, 'dataCharacteristics', localConfigs.value.dataCharacteristics);
+      await api.updateProjectConfig(
+        projectId,
+        "dataCharacteristics",
+        localConfigs.value.dataCharacteristics
+      );
     }
 
     if (localConfigs.value.analysisConfig) {
-      await api.updateProjectConfig(projectId, 'analysisConfig', localConfigs.value.analysisConfig);
+      await api.updateProjectConfig(
+        projectId,
+        "analysisConfig",
+        localConfigs.value.analysisConfig
+      );
     }
 
     if (localConfigs.value.deploymentConfig) {
-      await api.updateProjectConfig(projectId, 'deploymentConfig', localConfigs.value.deploymentConfig);
+      await api.updateProjectConfig(
+        projectId,
+        "deploymentConfig",
+        localConfigs.value.deploymentConfig
+      );
     }
 
     if (localConfigs.value.utilizationConfig) {
-      await api.updateProjectConfig(projectId, 'utilizationConfig', localConfigs.value.utilizationConfig);
+      await api.updateProjectConfig(
+        projectId,
+        "utilizationConfig",
+        localConfigs.value.utilizationConfig
+      );
     }
 
-    // Dashboard neu laden
     dashboard.value = await api.getDashboardData(projectId);
 
     isEditing.value = false;
     localConfigs.value = null;
 
-    toast.success('Änderungen erfolgreich gespeichert');
-
+    toast.success("Änderungen erfolgreich gespeichert");
   } catch (err) {
-    console.error('Fehler beim Speichern der Änderungen:', err);
-    error.value = 'Änderungen konnten nicht gespeichert werden.';
-    toast.error('Änderungen konnten nicht gespeichert werden.');
+    console.error("Fehler beim Speichern der Änderungen:", err);
+    error.value = "Änderungen konnten nicht gespeichert werden.";
+    toast.error("Änderungen konnten nicht gespeichert werden.");
   } finally {
     isLoading.value = false;
   }
 }
 
+// --- NEU: Projekt löschen ---
+async function deleteProject() {
+  if (!dashboard.value?.project?.id) return;
 
+  const confirmed = window.confirm(
+    "Möchtest du dieses Projekt wirklich löschen?"
+  );
+  if (!confirmed) return;
 
+  try {
+    const projectId = Number(route.params.id);
+    await api.deleteProjekt(projectId);
+    toast.success("Projekt erfolgreich gelöscht");
+    router.push({ name: "home" });
+  } catch (err) {
+    console.error("Fehler beim Löschen des Projekts", err);
+    toast.error("Projekt konnte nicht gelöscht werden.");
+  }
+}
+
+// --- Status / Dropdown ---
 const statusOptions = [
-  { value: 'PLANNING', label: 'Planung' },
-  { value: 'IN_PROGRESS', label: 'In Bearbeitung' },
-  { value: 'COMPLETED', label: 'Abgeschlossen' },
-  { value: 'ON_HOLD', label: 'Pausiert' },
-  { value: 'CANCELLED', label: 'Abgebrochen' }
+  { value: "PLANNING", label: "Planung" },
+  { value: "IN_PROGRESS", label: "In Bearbeitung" },
+  { value: "COMPLETED", label: "Abgeschlossen" },
+  { value: "ON_HOLD", label: "Pausiert" },
+  { value: "CANCELLED", label: "Abgebrochen" },
 ];
+
 const dropdownOpen = ref(false);
 
 function toggleDropdown() {
@@ -166,22 +204,17 @@ async function patchProjectStatus(newStatus: string) {
 
   const oldStatus = dashboard.value.project.status;
 
-  // Optimistic UI Update
   dashboard.value.project.status = newStatus;
 
   try {
-    await api.patchProjektStatus(
-      Number(route.params.id),
-       newStatus
-    );
+    await api.patchProjektStatus(Number(route.params.id), newStatus);
   } catch (err) {
     console.error("Status-Update fehlgeschlagen:", err);
-    dashboard.value.project.status = oldStatus; // Rollback
+    dashboard.value.project.status = oldStatus;
     editableStatus.value = oldStatus;
     toast.error("Status konnte nicht geändert werden.");
   }
 }
-
 
 // --- Lifecycle ---
 onMounted(async () => {
@@ -208,27 +241,30 @@ onMounted(async () => {
   <!-- Error -->
   <div v-else-if="error" class="error">
     <p>❌ {{ error }}</p>
-    <button class="btn-secondary" @click="goBack">Zurück zur Übersicht</button>
+    <button class="btn-secondary" @click="goBack">
+      Zurück zur Übersicht
+    </button>
   </div>
 
   <!-- Dashboard Content -->
   <div v-else-if="dashboard" class="dashboard">
-
     <!-- Header -->
     <header class="dashboard-header">
       <div class="header-left">
-        <button class="back-btn" @click="goBack" title="Zurück zur Übersicht">
+        <button
+          class="back-btn"
+          @click="goBack"
+          title="Zurück zur Übersicht (Startseite)"
+        >
           ← Startseite
         </button>
 
         <div class="title-group">
-          <!-- View Mode (wenn NICHT bearbeitet wird) -->
           <template v-if="!isEditing">
             <h1>{{ project?.title }}</h1>
-            <p class="domain">{{ project?.domain || 'Keine Domain' }}</p>
+            <p class="domain">{{ project?.domain || "Keine Domain" }}</p>
           </template>
 
-          <!-- Edit Mode (Eingabefelder) -->
           <template v-else>
             <input
               type="text"
@@ -246,47 +282,62 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Projektstatus -->
-      <div class="status-control">
-        <div class="custom-select-wrapper">
-          <select
-            v-model="editableStatus"
-            @change="patchProjectStatus(editableStatus!)"
-            :class="`status-${editableStatus}`"
-            class="custom-select"
-          >
-            <option
-              v-for="option in statusOptions"
-              :key="option.value"
-              :value="option.value"
+      <!-- Rechte Seite: Status + Löschen -->
+      <div class="header-right">
+        <div class="status-control">
+          <div class="custom-select-wrapper">
+            <select
+              v-model="editableStatus"
+              @change="patchProjectStatus(editableStatus!)"
+              :class="`status-${editableStatus}`"
+              class="custom-select"
             >
-              {{ option.label }}
-            </option>
-          </select>
-          <span class="custom-arrow">▾</span>
+              <option
+                v-for="option in statusOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+            <span class="custom-arrow">▾</span>
+          </div>
         </div>
 
+        <button class="btn-danger ml-2" @click="deleteProject">
+          Projekt löschen
+        </button>
       </div>
-
     </header>
-
 
     <!-- Progress Overview -->
     <section class="progress-section">
       <div class="progress-card">
         <h3>Wizard-Fortschritt</h3>
         <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: dashboard.wizardProgress.percentage + '%' }" />
+          <div
+            class="progress-fill"
+            :style="{ width: dashboard.wizardProgress.percentage + '%' }"
+          />
         </div>
-        <p>{{ dashboard.wizardProgress.currentStep }} / {{ dashboard.wizardProgress.totalSteps }} Schritte</p>
+        <p>
+          {{ dashboard.wizardProgress.currentStep }} /
+          {{ dashboard.wizardProgress.totalSteps }} Schritte
+        </p>
       </div>
 
       <div class="progress-card" v-if="progress">
         <h3>Projektplan</h3>
         <div class="progress-bar">
-          <div class="progress-fill completed" :style="{ width: progress.percentage + '%' }" />
+          <div
+            class="progress-fill completed"
+            :style="{ width: progress.percentage + '%' }"
+          />
         </div>
-        <p>{{ progress.completedTasks }} / {{ progress.totalTasks }} Tasks erledigt</p>
+        <p>
+          {{ progress.completedTasks }} /
+          {{ progress.totalTasks }} Tasks erledigt
+        </p>
       </div>
     </section>
 
@@ -295,15 +346,24 @@ onMounted(async () => {
       <div class="header-row">
         <h2>Projektdaten</h2>
         <div class="action-buttons">
-          <button @click="gotoGant" class="btn-primary">Gantt Diagramm</button>
+          <button @click="gotoGant" class="btn-primary">
+            Gantt Diagramm
+          </button>
 
-          <!-- Edit Controls -->
-          <button v-if="!isEditing" @click="startEditing" class="btn-secondary ml-2">
+          <button
+            v-if="!isEditing"
+            @click="startEditing"
+            class="btn-secondary ml-2"
+          >
             ✏️ Bearbeiten
           </button>
           <template v-else>
-            <button @click="cancelEditing" class="btn-secondary ml-2">Abbrechen</button>
-            <button @click="saveChanges" class="btn-success ml-2">💾 Speichern</button>
+            <button @click="cancelEditing" class="btn-secondary ml-2">
+              Abbrechen
+            </button>
+            <button @click="saveChanges" class="btn-success ml-2">
+              💾 Speichern
+            </button>
           </template>
         </div>
       </div>
@@ -312,131 +372,224 @@ onMounted(async () => {
       <details class="config-card" open>
         <summary>
           <h3>Business Understanding</h3>
-          <span class="status-indicator" :class="dashboard.templatePhases[0].status.toLowerCase()">
+          <span
+            class="status-indicator"
+            :class="dashboard.templatePhases[0].status.toLowerCase()"
+          >
             {{ dashboard.templatePhases[0].status }}
           </span>
         </summary>
         <div class="config-content" v-if="configs?.businessUnderstanding">
           <div class="field-grid">
-
-            <!-- Geschäftsziel -->
             <div class="field">
               <strong>Geschäftsziel</strong>
-              <p v-if="!isEditing">{{ configs.businessUnderstanding.businessGoal || '–' }}</p>
-              <textarea v-else v-model="localConfigs.businessUnderstanding.businessGoal" class="form-input"></textarea>
+              <p v-if="!isEditing">
+                {{ configs.businessUnderstanding.businessGoal || "–" }}
+              </p>
+              <textarea
+                v-else
+                v-model="localConfigs.businessUnderstanding.businessGoal"
+                class="form-input"
+              ></textarea>
             </div>
 
-            <!-- Produkt-Form -->
             <div class="field">
               <strong>Produkt-Form</strong>
-              <p v-if="!isEditing">{{ configs.businessUnderstanding.formOfFinalProduct ? FORM_LABELS[configs.businessUnderstanding.formOfFinalProduct] : '–' }}</p>
-              <select v-else v-model="localConfigs.businessUnderstanding.formOfFinalProduct" class="form-select">
-                <option v-for="opt in FORM_OF_PRODUCT_OPTIONS" :key="opt" :value="opt">{{ FORM_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.businessUnderstanding.formOfFinalProduct
+                    ? FORM_LABELS[
+                      configs.businessUnderstanding.formOfFinalProduct
+                      ]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.businessUnderstanding.formOfFinalProduct"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in FORM_OF_PRODUCT_OPTIONS"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ FORM_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
-            <!-- Team Größe -->
             <div class="field">
               <strong>Teamgröße</strong>
-              <p v-if="!isEditing">{{ configs.businessUnderstanding.teamSize || '–' }} Personen</p>
-              <input v-else type="number" v-model.number="localConfigs.businessUnderstanding.teamSize" class="form-input" />
+              <p v-if="!isEditing">
+                {{ configs.businessUnderstanding.teamSize || "–" }} Personen
+              </p>
+              <input
+                v-else
+                type="number"
+                v-model.number="localConfigs.businessUnderstanding.teamSize"
+                class="form-input"
+              />
             </div>
 
-            <!-- Geschätzte Kosten -->
             <div class="field">
               <strong>Geschätzte Kosten</strong>
-              <p v-if="!isEditing">{{ configs.businessUnderstanding.estimatedCost ? configs.businessUnderstanding.estimatedCost + ' €' : '–' }}</p>
-              <input v-else type="number" v-model.number="localConfigs.businessUnderstanding.estimatedCost" class="form-input" />
+              <p v-if="!isEditing">
+                {{
+                  configs.businessUnderstanding.estimatedCost
+                    ? configs.businessUnderstanding.estimatedCost + " €"
+                    : "–"
+                }}
+              </p>
+              <input
+                v-else
+                type="number"
+                v-model.number="localConfigs.businessUnderstanding.estimatedCost"
+                class="form-input"
+              />
             </div>
 
-            <!-- Timeline -->
             <div class="field">
               <strong>Projektdauer</strong>
               <p v-if="!isEditing">
-                {{ configs.businessUnderstanding.timelineValue || '–' }}
-                {{ configs.businessUnderstanding.timelineUnit ? UNIT_LABELS[configs.businessUnderstanding.timelineUnit] : '' }}
+                {{ configs.businessUnderstanding.timelineValue || "–" }}
+                {{
+                  configs.businessUnderstanding.timelineUnit
+                    ? UNIT_LABELS[configs.businessUnderstanding.timelineUnit]
+                    : ""
+                }}
               </p>
               <div v-else class="flex-row">
-                <input type="number" v-model.number="localConfigs.businessUnderstanding.timelineValue" class="form-input small" placeholder="Wert" />
-                <select v-model="localConfigs.businessUnderstanding.timelineUnit" class="form-select small">
-                  <option v-for="u in TIMELINE_UNITS" :key="u" :value="u">{{ UNIT_LABELS[u] }}</option>
+                <input
+                  type="number"
+                  v-model.number="localConfigs.businessUnderstanding.timelineValue"
+                  class="form-input small"
+                  placeholder="Wert"
+                />
+                <select
+                  v-model="localConfigs.businessUnderstanding.timelineUnit"
+                  class="form-select small"
+                >
+                  <option
+                    v-for="u in TIMELINE_UNITS"
+                    :key="u"
+                    :value="u"
+                  >
+                    {{ UNIT_LABELS[u] }}
+                  </option>
                 </select>
               </div>
             </div>
 
-            <!-- Tools -->
             <div class="field full-width">
               <strong>Tools</strong>
-              <p v-if="!isEditing">{{ configs.businessUnderstanding.toolsBusinessUnderstanding || '–' }}</p>
-              <input v-else type="text" v-model="localConfigs.businessUnderstanding.toolsBusinessUnderstanding" class="form-input" />
+              <p v-if="!isEditing">
+                {{
+                  configs.businessUnderstanding.toolsBusinessUnderstanding ||
+                  "–"
+                }}
+              </p>
+              <input
+                v-else
+                type="text"
+                v-model="
+                  localConfigs.businessUnderstanding.toolsBusinessUnderstanding
+                "
+                class="form-input"
+              />
             </div>
 
-            <!-- Team-Rollen -->
             <div class="field full-width">
               <strong>Team Roles</strong>
 
-              <!-- 1. Ansichts-Modus: Tags anzeigen -->
               <div v-if="!isEditing" class="tags">
-                <template v-if="configs.businessUnderstanding.projectTeamRoles?.length">
-                  <span v-for="role in configs.businessUnderstanding.projectTeamRoles" :key="role" class="tag">
+                <template
+                  v-if="configs.businessUnderstanding.projectTeamRoles?.length"
+                >
+                  <span
+                    v-for="role in configs.businessUnderstanding.projectTeamRoles"
+                    :key="role"
+                    class="tag"
+                  >
                     {{ TEAM_ROLE_LABELS[role] || role }}
                   </span>
                 </template>
                 <span v-else>–</span>
               </div>
 
-              <!-- 2. Bearbeitungs-Modus: Checkboxen -->
               <div v-else class="checkbox-group">
-                <label v-for="role in TEAM_ROLE_OPTIONS" :key="role" class="checkbox-label">
+                <label
+                  v-for="role in TEAM_ROLE_OPTIONS"
+                  :key="role"
+                  class="checkbox-label"
+                >
                   <input
                     type="checkbox"
                     :value="role"
                     v-model="localConfigs.businessUnderstanding.projectTeamRoles"
-                  >
+                  />
                   {{ TEAM_ROLE_LABELS[role] }}
                 </label>
               </div>
             </div>
-
-
           </div>
         </div>
       </details>
 
-      <!-- Data Characteristics -->
+      <!-- 2. Data Characteristics -->
       <details class="config-card">
         <summary>
           <h3>Data Collection & Preparation</h3>
-          <span class="status-indicator" :class="dashboard.templatePhases[1].status.toLowerCase()">
+          <span
+            class="status-indicator"
+            :class="dashboard.templatePhases[1].status.toLowerCase()"
+          >
             {{ dashboard.templatePhases[1].status }}
           </span>
         </summary>
         <div class="config-content" v-if="configs?.dataCharacteristics">
           <div class="field-grid">
-
-            <!-- Data Access -->
             <div class="field full-width">
               <strong>Datenzugriff</strong>
               <div v-if="!isEditing" class="tags">
-                <span v-for="acc in configs.dataCharacteristics.dataAccess" :key="acc" class="tag">
+                <span
+                  v-for="acc in configs.dataCharacteristics.dataAccess"
+                  :key="acc"
+                  class="tag"
+                >
                   {{ DATA_ACCESS_LABELS[acc] || acc }}
                 </span>
-                <span v-if="!configs.dataCharacteristics.dataAccess?.length">–</span>
+                <span
+                  v-if="!configs.dataCharacteristics.dataAccess?.length"
+                >–</span
+                >
               </div>
-              <!-- Checkbox Group für Data Access -->
               <div v-else class="checkbox-group">
-                <label v-for="opt in DATA_ACCESS_OPTIONS" :key="opt" class="checkbox-label">
-                  <input type="checkbox" :value="opt" v-model="localConfigs.dataCharacteristics.dataAccess">
+                <label
+                  v-for="opt in DATA_ACCESS_OPTIONS"
+                  :key="opt"
+                  class="checkbox-label"
+                >
+                  <input
+                    type="checkbox"
+                    :value="opt"
+                    v-model="localConfigs.dataCharacteristics.dataAccess"
+                  />
                   {{ DATA_ACCESS_LABELS[opt] }}
                 </label>
               </div>
             </div>
 
-            <!-- Zeile 1: Verfügbarkeit, Velocity, Volumen -->
             <div class="field">
               <strong>Datenverfügbarkeit</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.dataAvailability ? 'Ja' : 'Nein' }}</p>
-              <select v-else v-model="localConfigs.dataCharacteristics.dataAvailability" class="form-select">
+              <p v-if="!isEditing">
+                {{ configs.dataCharacteristics.dataAvailability ? "Ja" : "Nein" }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.dataCharacteristics.dataAvailability"
+                class="form-select"
+              >
                 <option :value="true">Ja</option>
                 <option :value="false">Nein</option>
               </select>
@@ -444,122 +597,265 @@ onMounted(async () => {
 
             <div class="field">
               <strong>Velocity</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.velocity ? VELOCITY_LABELS[configs.dataCharacteristics.velocity] : '–' }}</p>
-              <select v-else v-model="localConfigs.dataCharacteristics.velocity" class="form-select">
-                <option v-for="opt in VELOCITY_OPTIONS" :key="opt" :value="opt">{{ VELOCITY_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.dataCharacteristics.velocity
+                    ? VELOCITY_LABELS[configs.dataCharacteristics.velocity]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.dataCharacteristics.velocity"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in VELOCITY_OPTIONS"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ VELOCITY_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
             <div class="field">
               <strong>Volumen</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.volumeValue }} {{ configs.dataCharacteristics.volumeUnit }}</p>
-              <div v-else class="flex-row nowrap"> <!-- class nowrap verhindert Umbruch von Input/Select -->
-                <input type="number" v-model.number="localConfigs.dataCharacteristics.volumeValue" class="form-input small" style="width: 80px;" />
-                <select v-model="localConfigs.dataCharacteristics.volumeUnit" class="form-select small" style="flex: 1;">
-                  <option v-for="u in VOLUME_UNITS" :key="u" :value="u">{{ u }}</option>
+              <p v-if="!isEditing">
+                {{ configs.dataCharacteristics.volumeValue }}
+                {{ configs.dataCharacteristics.volumeUnit }}
+              </p>
+              <div class="flex-row nowrap" v-else>
+                <input
+                  type="number"
+                  v-model.number="localConfigs.dataCharacteristics.volumeValue"
+                  class="form-input small"
+                  style="width: 80px"
+                />
+                <select
+                  v-model="localConfigs.dataCharacteristics.volumeUnit"
+                  class="form-select small"
+                  style="flex: 1"
+                >
+                  <option
+                    v-for="u in VOLUME_UNITS"
+                    :key="u"
+                    :value="u"
+                  >
+                    {{ u }}
+                  </option>
                 </select>
               </div>
             </div>
 
-            <!-- Zeile 2: Veracity, Variety, Variability -->
             <div class="field">
               <strong>Veracity (Qualität)</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.veracity ? VERACITY_LABELS[configs.dataCharacteristics.veracity] : '–' }}</p>
-              <select v-else v-model="localConfigs.dataCharacteristics.veracity" class="form-select">
-                <option v-for="opt in VERACITY_OPTIONS" :key="opt" :value="opt">{{ VERACITY_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.dataCharacteristics.veracity
+                    ? VERACITY_LABELS[configs.dataCharacteristics.veracity]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.dataCharacteristics.veracity"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in VERACITY_OPTIONS"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ VERACITY_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
             <div class="field">
               <strong>Variety</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.variety ? VARIETY_LABELS[configs.dataCharacteristics.variety] : '–' }}</p>
-              <select v-else v-model="localConfigs.dataCharacteristics.variety" class="form-select">
-                <option v-for="opt in VARIETY_OPTIONS" :key="opt" :value="opt">{{ VARIETY_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.dataCharacteristics.variety
+                    ? VARIETY_LABELS[configs.dataCharacteristics.variety]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.dataCharacteristics.variety"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in VARIETY_OPTIONS"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ VARIETY_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
             <div class="field">
               <strong>Variability</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.variability ? VARIABILITY_LABELS[configs.dataCharacteristics.variability] : '–' }}</p>
-              <select v-else v-model="localConfigs.dataCharacteristics.variability" class="form-select">
-                <option v-for="opt in VARIABILITY_OPTIONS" :key="opt" :value="opt">{{ VARIABILITY_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.dataCharacteristics.variability
+                    ? VARIABILITY_LABELS[configs.dataCharacteristics.variability]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.dataCharacteristics.variability"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in VARIABILITY_OPTIONS"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ VARIABILITY_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
-            <!-- Data Prep Steps (Volle Breite, unter den Dropdowns) -->
             <div class="field full-width">
               <strong>Data Prep Steps</strong>
               <div v-if="!isEditing" class="tags">
-                <template v-if="Array.isArray(configs.dataCharacteristics.dataPreparationSteps)">
-                    <span v-for="step in configs.dataCharacteristics.dataPreparationSteps" :key="step" class="tag">
-                        {{ PREPARATION_LABELS[step] || step }}
-                    </span>
+                <template
+                  v-if="
+                    Array.isArray(
+                      configs.dataCharacteristics.dataPreparationSteps
+                    )
+                  "
+                >
+                  <span
+                    v-for="step in configs.dataCharacteristics
+                      .dataPreparationSteps"
+                    :key="step"
+                    class="tag"
+                  >
+                    {{ PREPARATION_LABELS[step] || step }}
+                  </span>
                 </template>
                 <span v-else class="tag">
-                    {{ PREPARATION_LABELS[configs.dataCharacteristics.dataPreparationSteps] || configs.dataCharacteristics.dataPreparationSteps || '–' }}
-                 </span>
-                <span v-if="!configs.dataCharacteristics.dataPreparationSteps || (Array.isArray(configs.dataCharacteristics.dataPreparationSteps) && configs.dataCharacteristics.dataPreparationSteps.length === 0)">–</span>
+                  {{
+                    PREPARATION_LABELS[
+                      configs.dataCharacteristics.dataPreparationSteps
+                      ] ||
+                    configs.dataCharacteristics.dataPreparationSteps ||
+                    "–"
+                  }}
+                </span>
+                <span
+                  v-if="
+                    !configs.dataCharacteristics.dataPreparationSteps ||
+                    (Array.isArray(
+                      configs.dataCharacteristics.dataPreparationSteps
+                    ) &&
+                      configs.dataCharacteristics.dataPreparationSteps
+                        .length === 0)
+                  "
+                >–</span
+                >
               </div>
 
-              <!-- Edit Mode: Multi-Select -->
               <div v-else class="checkbox-group">
-                <label v-for="step in PREPARATION_STEPS" :key="step" class="checkbox-label">
+                <label
+                  v-for="step in PREPARATION_STEPS"
+                  :key="step"
+                  class="checkbox-label"
+                >
                   <input
                     type="checkbox"
                     :value="step"
-                    v-model="localConfigs.dataCharacteristics.dataPreparationSteps"
-                  >
+                    v-model="
+                      localConfigs.dataCharacteristics.dataPreparationSteps
+                    "
+                  />
                   {{ PREPARATION_LABELS[step] }}
                 </label>
               </div>
             </div>
 
-            <!-- Tools -->
             <div class="field full-width">
               <strong>Tools</strong>
-              <p v-if="!isEditing">{{ configs.dataCharacteristics.toolsData || '–' }}</p>
-              <input v-else type="text" v-model="localConfigs.dataCharacteristics.toolsData" class="form-input" />
+              <p v-if="!isEditing">
+                {{ configs.dataCharacteristics.toolsData || "–" }}
+              </p>
+              <input
+                v-else
+                type="text"
+                v-model="localConfigs.dataCharacteristics.toolsData"
+                class="form-input"
+              />
             </div>
-
           </div>
         </div>
       </details>
 
-
-        <!-- 3. Analysis Config -->
+      <!-- 3. Analysis Config -->
       <details class="config-card">
         <summary>
           <h3>Analysis & Modeling</h3>
-          <span class="status-indicator" :class="dashboard.templatePhases[2].status.toLowerCase()">
+          <span
+            class="status-indicator"
+            :class="dashboard.templatePhases[2].status.toLowerCase()"
+          >
             {{ dashboard.templatePhases[2].status }}
           </span>
         </summary>
         <div class="config-content" v-if="configs?.analysisConfig">
           <div class="field-grid">
-
-            <!-- Analytics Typ -->
             <div class="field">
               <strong>Analytics Typ</strong>
-              <p v-if="!isEditing">{{ configs.analysisConfig.typeOfAnalytics ? ANALYTICS_LABELS[configs.analysisConfig.typeOfAnalytics] : '–' }}</p>
-              <select v-else v-model="localConfigs.analysisConfig.typeOfAnalytics" class="form-select">
-                <option v-for="opt in ANALYTICS_TYPES" :key="opt" :value="opt">{{ ANALYTICS_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.analysisConfig.typeOfAnalytics
+                    ? ANALYTICS_LABELS[configs.analysisConfig.typeOfAnalytics]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.analysisConfig.typeOfAnalytics"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in ANALYTICS_TYPES"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ ANALYTICS_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
-            <!-- Ziele -->
             <div class="field full-width">
               <strong>Data Science Ziele</strong>
-              <p v-if="!isEditing">{{ configs.analysisConfig.dataScienceGoals || '–' }}</p>
-              <textarea v-else v-model="localConfigs.analysisConfig.dataScienceGoals" class="form-input"></textarea>
+              <p v-if="!isEditing">
+                {{ configs.analysisConfig.dataScienceGoals || "–" }}
+              </p>
+              <textarea
+                v-else
+                v-model="localConfigs.analysisConfig.dataScienceGoals"
+                class="form-input"
+              ></textarea>
             </div>
 
-            <!-- Tools -->
             <div class="field full-width">
               <strong>Tools</strong>
-              <p v-if="!isEditing">{{ configs.analysisConfig.toolsAnalysis || '–' }}</p>
-              <input v-else type="text" v-model="localConfigs.analysisConfig.toolsAnalysis" class="form-input" />
+              <p v-if="!isEditing">
+                {{ configs.analysisConfig.toolsAnalysis || "–" }}
+              </p>
+              <input
+                v-else
+                type="text"
+                v-model="localConfigs.analysisConfig.toolsAnalysis"
+                class="form-input"
+              />
             </div>
-
           </div>
         </div>
       </details>
@@ -568,57 +864,97 @@ onMounted(async () => {
       <details class="config-card">
         <summary>
           <h3>Deployment</h3>
-          <span class="status-indicator" :class="dashboard.templatePhases[3].status.toLowerCase()">
+          <span
+            class="status-indicator"
+            :class="dashboard.templatePhases[3].status.toLowerCase()"
+          >
             {{ dashboard.templatePhases[3].status }}
           </span>
         </summary>
         <div class="config-content" v-if="configs?.deploymentConfig">
           <div class="field-grid">
-
-            <!-- Timeliness -->
             <div class="field">
               <strong>Timeliness</strong>
-              <p v-if="!isEditing">{{ configs.deploymentConfig.timelinessOfAnalytics ? TIMELINESS_LABELS[configs.deploymentConfig.timelinessOfAnalytics] : '–' }}</p>
-              <select v-else v-model="localConfigs.deploymentConfig.timelinessOfAnalytics" class="form-select">
-                <option v-for="opt in TIMELINESS_LEVELS" :key="opt" :value="opt">{{ TIMELINESS_LABELS[opt] }}</option>
+              <p v-if="!isEditing">
+                {{
+                  configs.deploymentConfig.timelinessOfAnalytics
+                    ? TIMELINESS_LABELS[
+                      configs.deploymentConfig.timelinessOfAnalytics
+                      ]
+                    : "–"
+                }}
+              </p>
+              <select
+                v-else
+                v-model="localConfigs.deploymentConfig.timelinessOfAnalytics"
+                class="form-select"
+              >
+                <option
+                  v-for="opt in TIMELINESS_LEVELS"
+                  :key="opt"
+                  :value="opt"
+                >
+                  {{ TIMELINESS_LABELS[opt] }}
+                </option>
               </select>
             </div>
 
-            <!-- Nutzergruppe -->
             <div class="field">
               <strong>Nutzergruppe</strong>
-              <p v-if="!isEditing">{{ configs.deploymentConfig.addressedUsers || '–' }}</p>
-              <input v-else type="text" v-model="localConfigs.deploymentConfig.addressedUsers" class="form-input" />
+              <p v-if="!isEditing">
+                {{ configs.deploymentConfig.addressedUsers || "–" }}
+              </p>
+              <input
+                v-else
+                type="text"
+                v-model="localConfigs.deploymentConfig.addressedUsers"
+                class="form-input"
+              />
             </div>
 
-            <!-- Herausforderungen -->
             <div class="field full-width">
               <strong>Herausforderungen</strong>
               <div v-if="!isEditing" class="tags">
-                 <span v-for="issue in configs.deploymentConfig.projectIssues" :key="issue" class="tag error-tag">
-                    {{ ISSUE_LABELS[issue] || issue }}
-                 </span>
-                <span v-if="!configs.deploymentConfig.projectIssues?.length">–</span>
+                <span
+                  v-for="issue in configs.deploymentConfig.projectIssues"
+                  :key="issue"
+                  class="tag error-tag"
+                >
+                  {{ ISSUE_LABELS[issue] || issue }}
+                </span>
+                <span
+                  v-if="!configs.deploymentConfig.projectIssues?.length"
+                >–</span
+                >
               </div>
               <div v-else class="checkbox-group">
-                <label v-for="type in PROJECT_ISSUE_TYPES" :key="type" class="checkbox-label">
+                <label
+                  v-for="type in PROJECT_ISSUE_TYPES"
+                  :key="type"
+                  class="checkbox-label"
+                >
                   <input
                     type="checkbox"
                     :value="type"
                     v-model="localConfigs.deploymentConfig.projectIssues"
-                  >
+                  />
                   {{ ISSUE_LABELS[type] }}
                 </label>
               </div>
             </div>
 
-            <!-- Tools -->
             <div class="field full-width">
               <strong>Tools</strong>
-              <p v-if="!isEditing">{{ configs.deploymentConfig.toolsDeployment || '–' }}</p>
-              <input v-else type="text" v-model="localConfigs.deploymentConfig.toolsDeployment" class="form-input" />
+              <p v-if="!isEditing">
+                {{ configs.deploymentConfig.toolsDeployment || "–" }}
+              </p>
+              <input
+                v-else
+                type="text"
+                v-model="localConfigs.deploymentConfig.toolsDeployment"
+                class="form-input"
+              />
             </div>
-
           </div>
         </div>
       </details>
@@ -627,49 +963,64 @@ onMounted(async () => {
       <details class="config-card">
         <summary>
           <h3>Utilization & Monitoring</h3>
-          <span class="status-indicator" :class="dashboard.templatePhases[4].status.toLowerCase()">
+          <span
+            class="status-indicator"
+            :class="dashboard.templatePhases[4].status.toLowerCase()"
+          >
             {{ dashboard.templatePhases[4].status }}
           </span>
         </summary>
         <div class="config-content" v-if="configs?.utilizationConfig">
           <div class="field-grid">
-            <!-- Monitoring -->
             <div class="field full-width">
               <strong>Monitoring Strategie</strong>
-              <p v-if="!isEditing">{{ configs.utilizationConfig.monitoring || '–' }}</p>
-              <textarea v-else v-model="localConfigs.utilizationConfig.monitoring" class="form-input"></textarea>
+              <p v-if="!isEditing">
+                {{ configs.utilizationConfig.monitoring || "–" }}
+              </p>
+              <textarea
+                v-else
+                v-model="localConfigs.utilizationConfig.monitoring"
+                class="form-input"
+              ></textarea>
             </div>
 
-            <!-- Maintenance -->
             <div class="field full-width">
               <strong>Wartung</strong>
-              <p v-if="!isEditing">{{ configs.utilizationConfig.maintenance || '–' }}</p>
-              <textarea v-else v-model="localConfigs.utilizationConfig.maintenance" class="form-input"></textarea>
+              <p v-if="!isEditing">
+                {{ configs.utilizationConfig.maintenance || "–" }}
+              </p>
+              <textarea
+                v-else
+                v-model="localConfigs.utilizationConfig.maintenance"
+                class="form-input"
+              ></textarea>
             </div>
 
-            <!-- Tools -->
             <div class="field full-width">
               <strong>Tools</strong>
-              <p v-if="!isEditing">{{ configs.utilizationConfig.toolsUtilization || '–' }}</p>
-              <input v-else type="text" v-model="localConfigs.utilizationConfig.toolsUtilization" class="form-input" />
+              <p v-if="!isEditing">
+                {{ configs.utilizationConfig.toolsUtilization || "–" }}
+              </p>
+              <input
+                v-else
+                type="text"
+                v-model="localConfigs.utilizationConfig.toolsUtilization"
+                class="form-input"
+              />
             </div>
           </div>
         </div>
       </details>
-
     </section>
-
   </div>
 </template>
 
 <style scoped>
-/* Bestehende Styles bleiben erhalten */
-
 .dashboard {
   max-width: 1200px;
   margin: 0 auto;
   padding: 2rem;
-  font-family: 'Segoe UI', sans-serif;
+  font-family: "Segoe UI", sans-serif;
   color: #333;
 }
 
@@ -682,7 +1033,7 @@ onMounted(async () => {
   background: white;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .header-left {
@@ -716,7 +1067,6 @@ onMounted(async () => {
   margin: 0.2rem 0 0;
   color: #666;
   font-size: 0.95rem;
-
 }
 
 .status-badge {
@@ -727,10 +1077,22 @@ onMounted(async () => {
   text-transform: uppercase;
 }
 
-.status-PLANNING { background: #e3f2fd; color: #0d47a1; }
-.status-IN_PROGRESS { background: #fff3e0; color: #e65100; }
-.status-COMPLETED { background: #e8f5e9; color: #1b5e20; }
-.status-ON_HOLD { background: #f3e5f5; color: #4a148c; }
+.status-PLANNING {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+.status-IN_PROGRESS {
+  background: #fff3e0;
+  color: #e65100;
+}
+.status-COMPLETED {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+.status-ON_HOLD {
+  background: #f3e5f5;
+  color: #4a148c;
+}
 
 /* Progress Section */
 .progress-section {
@@ -744,7 +1106,7 @@ onMounted(async () => {
   background: white;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .progress-bar {
@@ -791,7 +1153,7 @@ onMounted(async () => {
 .config-card {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -803,7 +1165,7 @@ onMounted(async () => {
   align-items: center;
   background: #f8f9fa;
   font-weight: 600;
-  list-style: none; /* Hide default triangle in some browsers */
+  list-style: none;
 }
 
 .config-card summary::-webkit-details-marker {
@@ -847,8 +1209,9 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-/* Form Styles für Edit Mode */
-.form-input, .form-select {
+/* Form Styles */
+.form-input,
+.form-select {
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -856,7 +1219,8 @@ onMounted(async () => {
   width: 100%;
 }
 
-.form-input.small, .form-select.small {
+.form-input.small,
+.form-select.small {
   width: auto;
   display: inline-block;
   margin-right: 0.5rem;
@@ -928,17 +1292,47 @@ textarea.form-input {
   cursor: pointer;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-danger {
+  background: #e53935;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #c62828;
+}
+
 .status-indicator {
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: bold;
 }
-.status-indicator.draft { background: #eee; color: #666; }
-.status-indicator.blocked { background: #ffebee; color: #c62828; }
-.status-indicator.completed { background: #e8f5e9; color: #1b5e20; }
+.status-indicator.draft {
+  background: #eee;
+  color: #666;
+}
+.status-indicator.blocked {
+  background: #ffebee;
+  color: #c62828;
+}
+.status-indicator.completed {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
 
-.loading, .error {
+.loading,
+.error {
   text-align: center;
   margin-top: 4rem;
 }
@@ -957,14 +1351,6 @@ textarea.form-input {
   padding: 4rem;
   color: var(--color-error);
 }
-.header-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
 
 .selected {
   padding: 0.5rem 1rem;
@@ -977,21 +1363,30 @@ textarea.form-input {
 }
 
 /* Farben */
-.status-PLANNING { background-color: #2196F3; }
-.status-IN_PROGRESS { background-color: #FF9800; }
-.status-COMPLETED { background-color: #4CAF50; }
-.status-ON_HOLD { background-color: #F44336; }
-.status-CANCELLED { background-color: grey; }
-
+.status-PLANNING {
+  background-color: #2196f3;
+}
+.status-IN_PROGRESS {
+  background-color: #ff9800;
+}
+.status-COMPLETED {
+  background-color: #4caf50;
+}
+.status-ON_HOLD {
+  background-color: #f44336;
+}
+.status-CANCELLED {
+  background-color: grey;
+}
 
 .custom-arrow {
-    position: absolute;
-    right: 0.8rem;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    font-size: 1rem;
-    color: white;
+  position: absolute;
+  right: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 1rem;
+  color: white;
 }
 .custom-select {
   width: 100%;
@@ -1024,8 +1419,15 @@ textarea.form-input {
 }
 
 .custom-select:focus {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
 </style>

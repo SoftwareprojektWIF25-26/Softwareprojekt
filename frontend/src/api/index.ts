@@ -424,6 +424,26 @@ async function completeWizard(id: number): Promise<CompleteWizardResponse> {
   }
 }
 
+// Projekt löschen
+
+
+async function deleteProjekt(id: number): Promise<void> {
+  try {
+    console.log('📤 DELETE Projekt ID', id);
+    await apiClient.delete(`/projects/${id}`);
+    console.log('✅ Projekt gelöscht');
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Delete Error:', error.response?.data);
+      const backendError =
+        (error.response?.data as any)?.error ||
+        (error.response?.data as any)?.message;
+      throw new Error(backendError || 'Fehler beim Löschen des Projekts');
+    }
+    throw error;
+  }
+}
+
 
 
 /**
@@ -492,6 +512,6 @@ export default {
   patchAnalysisConfig,
   patchDeploymentConfig,
   patchUtilizationConfig,
-  completeWizard
-
+  completeWizard,
+  deleteProjekt,
 };
