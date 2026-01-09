@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
 
 
 
-// ===== STARTSEITE =====
+// ===== STARTSEITE ===== //
 
 /**
  * Holt alle Projekte für die Startseite
@@ -83,7 +83,7 @@ function getZuletztBearbeitet(): Promise<Project[]> {
   return apiClient.get('/homeview/recent-projects').then(res => res.data);
 }
 
-    // ===== DASHBOARD =====
+    // ===== DASHBOARD ===== //
 
 function getProjektById(id: number): Promise<FullProject> {
   return apiClient.get(`/dashboard/${id}`).then(res => res.data);
@@ -164,7 +164,52 @@ async function updateProjectConfig(
   }
 }
 
+// Projekt löschen
 
+async function deleteProjekt(id: number): Promise<void> {
+  try {
+    console.log('📤 DELETE Projekt ID', id);
+    await apiClient.delete(`/projects/${id}`);
+    console.log('✅ Projekt gelöscht');
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Delete Error:', error.response?.data);
+      const backendError =
+        (error.response?.data as any)?.error ||
+        (error.response?.data as any)?.message;
+      throw new Error(backendError || 'Fehler beim Löschen des Projekts');
+    }
+    throw error;
+  }
+}
+
+
+
+/**
+ * Holt vollständige Dashboard-Daten für ein Projekt
+ */
+async function getDashboardData(id: number): Promise<DashboardData> {
+  try {
+    console.log(`📤 GET Dashboard Data (ID: ${id})`);
+
+    const response = await apiClient.get<ApiResponse<DashboardData>>(
+      `/dashboard/${id}`
+    );
+
+    console.log('📥 Dashboard Data Response:', response.data);
+    console.log('✅ Dashboard geladen');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Dashboard Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Laden des Dashboards');
+    }
+    throw error;
+  }
+}
 
 
     // ===== WIZARD FUNKTIONEN =====
@@ -424,53 +469,7 @@ async function completeWizard(id: number): Promise<CompleteWizardResponse> {
   }
 }
 
-// Projekt löschen
 
-
-async function deleteProjekt(id: number): Promise<void> {
-  try {
-    console.log('📤 DELETE Projekt ID', id);
-    await apiClient.delete(`/projects/${id}`);
-    console.log('✅ Projekt gelöscht');
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('❌ Delete Error:', error.response?.data);
-      const backendError =
-        (error.response?.data as any)?.error ||
-        (error.response?.data as any)?.message;
-      throw new Error(backendError || 'Fehler beim Löschen des Projekts');
-    }
-    throw error;
-  }
-}
-
-
-
-/**
- * Holt vollständige Dashboard-Daten für ein Projekt
- */
-async function getDashboardData(id: number): Promise<DashboardData> {
-  try {
-    console.log(`📤 GET Dashboard Data (ID: ${id})`);
-
-    const response = await apiClient.get<ApiResponse<DashboardData>>(
-      `/dashboard/${id}`
-    );
-
-    console.log('📥 Dashboard Data Response:', response.data);
-    console.log('✅ Dashboard geladen');
-
-    return unwrapResponse(response);
-
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('❌ Dashboard Error:', error.response?.data);
-      const backendError = error.response?.data?.error || error.response?.data?.message;
-      throw new Error(backendError || 'Fehler beim Laden des Dashboards');
-    }
-    throw error;
-  }
-}
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -503,6 +502,8 @@ export default {
   patchTaskStatus,
   patchTemplatePhase,
   getDashboardData,
+  deleteProjekt,
+
 
   // Wizard
   createProjekt,
@@ -513,5 +514,5 @@ export default {
   patchDeploymentConfig,
   patchUtilizationConfig,
   completeWizard,
-  deleteProjekt,
+
 };

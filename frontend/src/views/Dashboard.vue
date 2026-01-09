@@ -29,6 +29,7 @@ const dashboard = ref<DashboardData | null>(null);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 const editableStatus = ref<string | null>(null);
+const showDeleteModal = ref(false);
 
 // Edit Mode
 const isEditing = ref(false);
@@ -158,24 +159,40 @@ async function saveChanges() {
   }
 }
 
-// --- NEU: Projekt löschen ---
+// Öffnet das Delete Modal
 async function deleteProject() {
   if (!dashboard.value?.project?.id) return;
 
-  const confirmed = window.confirm(
-    "Möchtest du dieses Projekt wirklich löschen?"
-  );
-  if (!confirmed) return;
+  // Zeige das Custom Modal
+  showDeleteModal.value = true;
+}
+
+// Bestätigt die Löschung
+async function confirmDelete() {
+  if (!dashboard.value?.project?.id) return;
+
+  // Modal sofort schließen
+  showDeleteModal.value = false;
 
   try {
     const projectId = Number(route.params.id);
     await api.deleteProjekt(projectId);
+
+    // Erfolgs-Toast
     toast.success("Projekt erfolgreich gelöscht");
+
+    // Sofortige Weiterleitung (verhindert erneuten GET Request)
     router.push({ name: "home" });
+
   } catch (err) {
     console.error("Fehler beim Löschen des Projekts", err);
     toast.error("Projekt konnte nicht gelöscht werden.");
   }
+}
+
+// Bricht die Löschung ab
+function cancelDelete() {
+  showDeleteModal.value = false;
 }
 
 // --- Status / Dropdown ---
@@ -1012,8 +1029,47 @@ onMounted(async () => {
         </div>
       </details>
     </section>
+
+    <!-- Delete Confirmation Modal -->
+    <Transition name="modal-fade">
+      <div v-if="showDeleteModal" class="modal-overlay" @click.self="cancelDelete">
+        <div class="modal-container" @click.stop>
+
+          <!-- Modal Header mit Icon -->
+          <div class="modal-header">
+            <div class="modal-icon-wrapper">
+              <svg class="modal-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3>Projekt löschen?</h3>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="modal-body">
+            <p>Möchtest du das Projekt <strong>"{{ project?.title }}"</strong> wirklich löschen?</p>
+            <p class="modal-warning">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+          </div>
+
+          <!-- Modal Footer mit Buttons -->
+          <div class="modal-footer">
+            <button @click="cancelDelete" class="btn-modal-cancel">
+              Abbrechen
+            </button>
+            <button @click="confirmDelete" class="btn-modal-delete">
+              Projekt löschen
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </Transition>
+
   </div>
 </template>
+
+
 
 <style scoped>
 .dashboard {
