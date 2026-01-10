@@ -24,19 +24,19 @@ const analyticsTypes: AnalyticsType[] = [
   'ANOMALY_DETECTION',
   'TIME_SERIES_FORECASTING',
   'RECOMMENDATION',
-  'RANKING',
+  'ASSOCIATION_RULE_LEARNING',
   'OTHER'
 ];
 
 
 const analyticsLabels: Record<AnalyticsType, string> = {
-  CLASSIFICATION: 'Classification (Klassifizierung)',
-  REGRESSION: 'Regression (Vorhersage kontinuierlicher Werte)',
-  CLUSTERING: 'Clustering (Gruppierung)',
-  ANOMALY_DETECTION: 'Anomaly Detection (Ausreißererkennung)',
-  TIME_SERIES_FORECASTING: 'Time Series Forecasting (Zeitreihenprognose)',
-  RECOMMENDATION: 'Recommendation (Empfehlungssystem)',
-  RANKING: 'Ranking (Rangfolge)',
+  CLASSIFICATION: 'Classification ',
+  REGRESSION: 'Regression ',
+  CLUSTERING: 'Clustering ',
+  ANOMALY_DETECTION: 'Anomaly Detection ',
+  TIME_SERIES_FORECASTING: 'Time Series Forecasting ',
+  RECOMMENDATION: 'Recommendation ',
+  ASSOCIATION_RULE_LEARNING: 'Assoziationsanalyse',
   OTHER: 'Andere'
 };
 
