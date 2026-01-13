@@ -403,6 +403,58 @@ export interface ProjectStatistics {
   CANCELLED: number;
 }
 
+export interface defaultWeights{
+  data_access: number;
+  data_availability: number;
+  stakeholder_support: number;
+  tools_available: number;
+  data_variety: number;
+  data_velocity: number;
+  num_sources: number;
+  analytics_type: number;
+  data_quality: number;
+  privacy_concerns: number;
+  missing_data: number;
+  goal_clarity: number;
+}
+
+export interface BusinessUnderstandingTask{
+  assess_situation: number;
+  create_project_plan: number;
+  compose_team: number;
+  set_criteria_objectives: number;
+  derive_targets: number;
+}
+export interface DataTasks {
+  identify_sources: number;
+  acquire_data: number;
+  describe_data: number;
+  explore_data: number;
+  asses_data_quality: number;
+  prepare_data: number;
+  develop_pipeline: number;
+}
+
+export interface AnalysisTask {
+  define_hypothesis: number;
+  select_model: number;
+  design_test: number;
+  develop_model: number;
+  assess_model: number;
+  develop_pipeline: number;
+}
+export interface EvaluationTask{
+  assess_results: number;
+  evaluate_process: number;
+}
+export interface DeploymentTask {
+  perform_assessment: number;
+  plan_deployment: number;
+  plan_monitoring_maintenance: number;
+  test_deployment: number;
+  perform_integration: number;
+  finalize_project: number;
+}
 
 
 

@@ -3,7 +3,7 @@ import { createRouter, createWebHistory } from "vue-router";
 
 import HomeView from "@/views/HomeView.vue";
 import Dashboard from "@/views/Dashboard.vue";
-
+import Settings from "@/views/Settings.vue";
 import projekt_erstellen from '@/views/projekt_erstellen.vue'
 import WizardBusinessUnd from "@/views/wizard_businessUnd.vue";
 import WizardDataColle from "@/views/wizard_dataColle.vue";
@@ -26,7 +26,7 @@ const router = createRouter({
     { path: "/projekt/erstellen/analysis", name: "projekt-erstellen-analysis", component: WizardAnalysis },
     { path: "/projekt/erstellen/deployment", name: "projekt-erstellen-deployment", component: WizardDeployment },
     { path: "/projekt/erstellen/utilization", name: "projekt-erstellen-utilization", component: WizardUtilization },
-
+    {path: "/settings", name: "settings", component: Settings}
 
   ],
 });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import { computed } from "vue";
-
+import { Icon } from "@iconify/vue";
 const route = useRoute();
 
 const titles: Record<string, string> = {
@@ -13,7 +13,8 @@ const titles: Record<string, string> = {
   "analysis": "Analyse & Modellierung",
   "deployment": "Deployment",
   "utilization": "Nutzung & Monitoring",
-  Gant: "Gantt Diagramm"
+  Gant: "Gantt Diagramm",
+  settings: "Einstellungen",
 };
 
 const title = computed(() => titles[route.name as string] || "");
@@ -32,6 +33,11 @@ const title = computed(() => titles[route.name as string] || "");
     </nav>
     <div class="header-center">
       <p>{{ title }}</p>
+    </div>
+    <div class="header-right">
+      <a href="/settings" class="settings-link">
+        <Icon icon="mdi:settings" class="settings-icon" />
+      </a>
     </div>
   </header>
 </template>
@@ -85,5 +91,11 @@ const title = computed(() => titles[route.name as string] || "");
   outline: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+.settings-link {
+  color: white;
+}
+.settings-icon{
+  font-size: 1.4rem;
 }
 </style>
