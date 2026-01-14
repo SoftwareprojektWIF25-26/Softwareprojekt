@@ -1,4 +1,4 @@
-// src/router/index.ts
+// src/router/PathRouting.ts
 import { createRouter, createWebHistory } from "vue-router";
 
 import HomeView from "@/views/HomeView.vue";

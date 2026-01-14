@@ -190,7 +190,7 @@ export interface FullProject extends Project {
 }
 
 
-// types/index.ts - ERGÄNZUNGEN am Ende
+// types/PathRouting.ts - ERGÄNZUNGEN am Ende
 
 // ============================================
 // RESPONSE TYPES (mit Utility Types)

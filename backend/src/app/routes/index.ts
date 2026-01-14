@@ -1,4 +1,4 @@
-// src/app/routes/index.ts
+// src/app/routes/PathRouting.ts
 import { Router } from 'express';
 import projectRoutes from './projectRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
