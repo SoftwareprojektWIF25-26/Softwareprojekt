@@ -747,6 +747,8 @@ onMounted(async () => {
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+  scroll-behavior: smooth;
 }
 .sidebar-footer {
   margin-top: auto;
