@@ -187,12 +187,12 @@ onMounted(async () => {
       <aside class="sidebar">
         <h2>Navigation</h2>
         <ul>
-          <li><a href="#default-weights">Default Gewichtung</a></li>
+          <li><a href="#default-weights">Default </a></li>
           <li><a href="#business-understanding">Business Understanding</a></li>
-          <li><a href="#data-tasks">Data Tasks</a></li>
-          <li><a href="#analysis-tasks">Analysis Tasks</a></li>
-          <li><a href="#evaluation-tasks">Evaluation Tasks</a></li>
-          <li><a href="#deployment-tasks">Deployment Tasks</a></li>
+          <li><a href="#data-tasks">Data Collection, Exploration, Preparation</a></li>
+          <li><a href="#analysis-tasks">Analysis </a></li>
+          <li><a href="#evaluation-tasks">Evaluation </a></li>
+          <li><a href="#deployment-tasks">Deployment </a></li>
         </ul>
         <div class="sidebar-footer">
         <button class="btn-primary" :disabled="isSaveDisabled" @click="save">
@@ -425,7 +425,7 @@ onMounted(async () => {
        DATA TASKS
   ================================================== -->
   <div class="form-card" id="data-tasks">
-    <h2>Data Tasks – Gewichtung</h2>
+    <h2>Data Collection, Exploration, Preparation Tasks – Gewichtung</h2>
     <p>Summe: {{ totalDataTasks.toFixed(2) }} / 1</p>
 
     <div class="section-grid">
@@ -680,6 +680,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 1.5rem;
   margin-left: 260px;
+  margin-right: 40px;
 }
 .wizard-header {
   margin-bottom: 2rem;
@@ -753,5 +754,7 @@ html {
   border-top: 1px solid var(--color-border);
   flex-shrink: 0; /* Footer bleibt unten fixiert */
 }
-
+.sidebar-footer .btn-primary{
+  width: 100%;
+}
 </style>
