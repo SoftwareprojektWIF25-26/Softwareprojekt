@@ -3,7 +3,7 @@ import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
 import type { ProjectMetrics } from '@/types'
 import { mapBackendToMetrics } from '@/utils/mappingGANT'
 import api from '@/api'
-import router from '@/router'
+import router from '@/router/PathRouting'
 
 const props = defineProps<{ id: string }>()
 const projectId = Number(props.id)

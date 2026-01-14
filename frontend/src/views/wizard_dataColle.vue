@@ -449,8 +449,6 @@ onMounted(() => {
                 .join(', ') }}
               </p>
             </div>
-
-
             <div class="preview-item" v-if="draft.dataCharacteristics.dataAvailability !== undefined">
               <strong>Verfügbarkeit:</strong>
               <p>{{ draft.dataCharacteristics.dataAvailability ? 'Verfügbar' : 'Nicht verfügbar' }}</p>

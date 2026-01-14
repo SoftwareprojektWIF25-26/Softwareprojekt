@@ -9,7 +9,7 @@ import projectRoutes from '../../routes/CRUD-Project.ts';
 
 const app = express();
 app.use(express.json());
-// Wir mounten die Routes genau wie in index.ts
+// Wir mounten die Routes genau wie in PathRouting.ts
 app.use('/api/projects', projectRoutes);
 
 const prisma = new PrismaClient();
