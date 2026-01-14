@@ -18,6 +18,12 @@ import {
   CompleteWizardResponse,
   DashboardData,
   BackendProjectPlan,
+  defaultWeights,
+  BusinessUnderstandingTask,
+  DataTasks,
+  AnalysisTask,
+  EvaluationTask,
+  DeploymentTask
 } from '@/types'
 
 
@@ -469,7 +475,57 @@ async function completeWizard(id: number): Promise<CompleteWizardResponse> {
   }
 }
 
+// ===== Setting =====
+interface WeightsPayload {
+  defaultWeights: defaultWeights;
+  businessTasks: BusinessUnderstandingTask;
+  dataTasks: DataTasks;
+  analysisTasks: AnalysisTask;
+  evaluationTasks: EvaluationTask;
+  deploymentTasks: DeploymentTask;
+}
+async function getWeights(): Promise<WeightsPayload> {
+  try {
+    console.log('📤 GET Standard-Gewichtungen');
 
+    const response = await apiClient.get<{ data: WeightsPayload }>('/settings');
+
+    console.log('📥 Weights GET Response:', response.data);
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Weights GET Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Laden der Gewichtungen');
+    }
+    throw error;
+  }
+}
+
+async function patchWeights(data: WeightsPayload): Promise<WeightsPayload> {
+  try {
+    console.log(`📤 PATCH Weights `, data);
+
+    const response = await apiClient.patch<{
+      data: WeightsPayload;
+    }>(`/settings`, data);
+
+    console.log('📥 Weights Response:', response.data);
+    console.log('✅ Gewichtungen gespeichert');
+
+    return unwrapResponse(response);
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('❌ Weights PATCH Error:', error.response?.data);
+      const backendError = error.response?.data?.error || error.response?.data?.message;
+      throw new Error(backendError || 'Fehler beim Speichern der Gewichtungen');
+    }
+    throw error;
+  }
+}
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -515,4 +571,8 @@ export default {
   patchUtilizationConfig,
   completeWizard,
 
+  //Settings
+
+  getWeights,
+  patchWeights,
 };
