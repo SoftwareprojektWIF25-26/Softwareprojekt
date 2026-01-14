@@ -385,7 +385,7 @@ export class ProjectService {
     async completeWizard(projectId: string) {
         const id = this.parseId(projectId, 'Projekt-ID');
 
-        // 1. Template-Daten laden (bleibt)
+        // 1. Template-Daten laden
         const project = await prisma.project.findUnique({
             where: { id },
             include: {
@@ -399,7 +399,7 @@ export class ProjectService {
 
         if (!project) throw new Error(`Projekt ${id} nicht gefunden`);
 
-        // 2. NEU: In InputFields konvertieren
+        // 2. In InputFields konvertieren
         const inputs = mappingService.mapToCalculationInputs({
             businessUnderstanding: project.businessUnderstanding,
             dataCharacteristics: project.dataCharacteristics,
@@ -408,17 +408,17 @@ export class ProjectService {
             utilizationConfig: project.utilizationConfig
         });
 
-        // 3. NEU: ProjectType bestimmen
+        // 3. ProjectType bestimmen
         const projectType = mappingService.determineProjectType({
             businessUnderstanding: project.businessUnderstanding,
             dataCharacteristics: project.dataCharacteristics,
             analysisConfig: project.analysisConfig
         });
 
-        // 4. NEU: Berechnung durchführen
+        // 4. Berechnung durchführen
         const metrics = calculationService.calculate({
             inputs,
-            weights: {}, // defaultWeights später
+            weights: {}, // defaultWeights
             projectType,
             teamSize: project.businessUnderstanding?.teamSize || 3
         });
@@ -433,7 +433,7 @@ export class ProjectService {
             }
         });
 
-        // 6. Projektplan erstellen
+
         await this.createProjectPlanFromMetrics(String(id), metrics);
 
         return {
@@ -444,9 +444,14 @@ export class ProjectService {
         };
     }
 
+    /**
+     * Erstellt den Projektplan basierend auf den berechneten Metriken.
+     * Löscht existierende Pläne, um saubere Neuberechnungen zu garantieren.
+     */
     async createProjectPlanFromMetrics(projectId: string, metrics: ProjectMetrics) {
         const id = this.parseId(projectId, 'Projekt-ID');
 
+        // 1. Projekt prüfen
         const project = await prisma.project.findUnique({
             where: { id },
             select: { id: true, wizardCompleted: true }
@@ -456,19 +461,26 @@ export class ProjectService {
             throw new Error(`Projekt mit ID ${id} nicht gefunden`);
         }
 
+        /* Optional: Wizard-Check deaktivieren, falls man später neu berechnen will
         if (!project.wizardCompleted) {
             throw new Error('Wizard muss zuerst abgeschlossen werden');
         }
+        */
 
+        // 2. Existierenden Plan bereinigen (Zombie-Fix)
         const existingPlan = await prisma.projectPlan.findUnique({
             where: { projectId: id }
         });
 
         if (existingPlan) {
-            throw new Error('Für dieses Projekt existiert bereits ein Projektplan');
+            console.log(`♻️  ProjectPlan existiert bereits für Projekt ${id}. Lösche alten Plan für saubere Neuberechnung...`);
+            await prisma.projectPlan.delete({
+                where: { projectId: id }
+            });
+            console.log(`✅ Alter ProjectPlan gelöscht.`);
         }
 
-        // 1. ProjectPlan erstellen
+        // 3. ProjectPlan Header erstellen
         const projectPlan = await prisma.projectPlan.create({
             data: {
                 projectId: id,
@@ -486,8 +498,13 @@ export class ProjectService {
             }
         });
 
-        // 2. Phasen erstellen
+        console.log(`✅ ProjectPlan ${projectPlan.id} created`);
+
+        // 4. Phasen mit Tasks erstellen
         for (const [index, phase] of metrics.phases.entries()) {
+            // Berechne Dauer der Phase in Tagen für Task-Verteilung
+            const durationInDays = Math.round(phase.durationWeeks * 7);
+
             const projectPhase = await prisma.projectPhase.create({
                 data: {
                     projectPlanId: projectPlan.id,
@@ -495,7 +512,7 @@ export class ProjectService {
                     phaseType: this.mapPhaseNameToType(phase.name),
                     description: `${phase.name} - ${Math.round(phase.percentage * 100)}% des Gesamtaufwands`,
                     orderIndex: index + 1,
-                    estimatedDuration: Math.round(phase.durationWeeks * 7),
+                    estimatedDuration: durationInDays,
                     estimatedEffort: phase.effortPersonWeeks,
                     baseEffort: phase.baseEffort,
                     bufferEffort: phase.bufferEffort,
@@ -504,9 +521,18 @@ export class ProjectService {
                 }
             });
 
-            // 3. Standard-Tasks erstellen
-            await this.createStandardTasksForPhase(projectPlan.id, projectPhase.id, index + 1);
+            console.log(`  📊 Phase ${index + 1}/${metrics.phases.length}: ${phase.name} (${durationInDays} Tage)`);
+
+            // ✅ Tasks generieren mit projectPlan.id, projectPhase.id UND Dauer
+            await this.createTasksForPhase(
+                projectPlan.id,
+                projectPhase.id,
+                phase.name,
+                durationInDays // <-- WICHTIG: Dauer übergeben!
+            );
         }
+
+        console.log(`🎉 ProjectPlan completed with ${metrics.phases.length} phases`);
 
         return await prisma.projectPlan.findUnique({
             where: { id: projectPlan.id },
@@ -519,56 +545,100 @@ export class ProjectService {
         });
     }
 
+
+
+
     // ======================================================
-    // Private Helpers
-    // ======================================================
+// NEU: Task-Generierung mit CRISP-DM TaskTypes
+// ======================================================
 
-    private mapPhaseNameToType(phaseName: string): any {
-        const mapping: Record<string, string> = {
-            'Anforderungsanalyse': 'BUSINESS_UNDERSTANDING',
-            'Datenaufbereitung': 'DATA_COLLECTION_EXPLORATION_PREPARATION',
-            'Modellierung': 'ANALYSIS_MODELING',
-            'Evaluation & Testing': 'EVALUATION',
-            'Deployment & Dokumentation': 'DEPLOYMENT',
-            'Deployment': 'DEPLOYMENT',
-            'Utilization': 'UTILIZATION'
-        };
+    /**
+     * Erstellt Tasks für eine Phase basierend auf dem Phasennamen
+     */
+    private async createTasksForPhase(
+        projectPlanId: number,
+        phaseId: number,
+        phaseName: string,
+        phaseDuration: number // ✅ NEUER PARAMETER
+    ) {
+        console.log(`🔧 Generating tasks for phase: ${phaseName} (${phaseDuration} days)`);
 
-        const nameLower = phaseName.toLowerCase();
-        if (nameLower.includes('anforderung') || nameLower.includes('business')) return 'BUSINESS_UNDERSTANDING';
-        if (nameLower.includes('daten') || nameLower.includes('data')) return 'DATA_COLLECTION_EXPLORATION_PREPARATION';
-        if (nameLower.includes('modell') || nameLower.includes('analysis')) return 'ANALYSIS_MODELING';
-        if (nameLower.includes('evaluation') || nameLower.includes('test')) return 'EVALUATION';
-        if (nameLower.includes('deployment')) return 'DEPLOYMENT';
-        if (nameLower.includes('utilization') || nameLower.includes('monitoring')) return 'UTILIZATION';
+        const phaseType = this.getPhaseTypeFromName(phaseName);
 
-        return mapping[phaseName] || 'BUSINESS_UNDERSTANDING';
-    }
+        // ✅ Dauer an Mapping-Service übergeben
+        const taskSteps = mappingService.generatePhaseSteps(phaseType, phaseDuration);
 
-    private async createStandardTasksForPhase(projectPlanId: number, phaseId: number, phaseNumber: number) {
-        const phaseTaskMapping: Record<number, string[]> = {
-            1: ['DEFINE_BUSINESS_GOAL', 'IDENTIFY_PROJECT_TEAM_ROLES', 'PLAN_TIMELINE', 'ESTIMATE_COST'],
-            2: ['IDENTIFY_DATA_SOURCES', 'VERIFY_DATA_AVAILABILITY', 'ASSESS_DATA_VERACITY', 'ESTIMATE_DATA_VOLUME', 'DEFINE_DATA_PREPARATION_STEPS'],
-            3: ['DEFINE_DATA_SCIENCE_GOALS', 'DETERMINE_ANALYTICS_TYPE', 'SELECT_EVALUATION_METRICS', 'SELECT_ANALYSIS_TOOLS'],
-            4: ['PLAN_TESTING_STRATEGY'],
-            5: ['DEFINE_TIMELINESS_REQUIREMENTS', 'SELECT_DEPLOYMENT_TOOLS', 'PLAN_MONITORING_ACTIVITIES', 'PLAN_MAINTENANCE_STRATEGY']
-        };
+        console.log(`  ✅ Generated ${taskSteps.length} tasks for ${phaseType}`);
 
-        const taskTypes = phaseTaskMapping[phaseNumber] || [];
-
-        for (const taskType of taskTypes) {
+        for (const taskData of taskSteps) {
             await prisma.phaseSteps.create({
                 data: {
-                    projectPlanId,
-                    phaseId,
-                    taskType: taskType as any,
-                    status: 'TODO',
-                    estimatedDuration: 3,
-                    estimatedEffort: 2.0
+                    projectPlanId: projectPlanId,
+                    phaseId: phaseId,
+                    taskType: taskData.taskType as any,
+                    title: taskData.title,
+                    estimatedDuration: taskData.estimatedDuration,
+                    status: taskData.status as any
                 }
             });
         }
     }
+
+
+    // ======================================================
+    // Private Helpers
+    // ======================================================
+
+    /**
+     * Helper: Phasenname → PhaseType für Task-Generierung
+     */
+    /**
+     * Helper: Phasenname → PhaseType für Task-Generierung
+     */
+    private getPhaseTypeFromName(phaseName: string): string {
+        const mapping: Record<string, string> = {
+            'Business Understanding': 'BUSINESS_UNDERSTANDING',
+            'Data Collection, Exploration & Preparation': 'DATA_COLLECTION_EXPLORATION_PREPARATION',
+            'Analysis': 'ANALYSIS_MODELING',
+            'Evaluation': 'EVALUATION',
+            'Deployment': 'DEPLOYMENT',
+            'Utilization': 'UTILIZATION'
+        };
+
+        return mapping[phaseName] || 'BUSINESS_UNDERSTANDING';
+    }
+
+
+
+    private mapPhaseNameToType(phaseName: string): any {
+        const nameLower = phaseName.toLowerCase();
+
+        if (nameLower.includes('business') || nameLower.includes('understanding')) {
+            return 'BUSINESS_UNDERSTANDING';
+        }
+        if (nameLower.includes('data') &&
+            (nameLower.includes('collection') || nameLower.includes('exploration') || nameLower.includes('preparation'))) {
+            return 'DATA_COLLECTION_EXPLORATION_PREPARATION';
+        }
+        if (nameLower.includes('analysis') || nameLower.includes('modeling')) {
+            return 'ANALYSIS_MODELING';
+        }
+        if (nameLower.includes('evaluation') || nameLower.includes('testing')) {
+            return 'EVALUATION';
+        }
+        if (nameLower.includes('deployment')) {
+            return 'DEPLOYMENT';
+        }
+        if (nameLower.includes('utilization') || nameLower.includes('monitoring')) {
+            return 'UTILIZATION';
+        }
+
+        return 'BUSINESS_UNDERSTANDING'; // Fallback
+    }
+
+
+
+
 
     private async initializeTemplatePhases(projectId: number) {
         await prisma.businessUnderstanding.create({ data: { projectId, status: 'DRAFT'} });

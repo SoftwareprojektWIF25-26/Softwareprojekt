@@ -1,6 +1,7 @@
 // src/app/services/mapping/mapping.service.ts
 
 import { InputField, ProjectType } from '../../types.js';
+import { mappingService } from '../mapping/mapping.service.js';
 
 interface TemplateData {
     businessUnderstanding: any;
@@ -237,6 +238,150 @@ export class MappingService {
         // Fallback: Classic ML
         return ProjectType.CLASSIC_ML;
     }
+
+// mapping.service.ts - AM ENDE DER KLASSE hinzufügen (vor dem letzten "}")
+
+    // backend/src/services/mapping/mapping.service.ts
+
+    generatePhaseSteps(phaseType: string, phaseDurationDays: number): any[] {
+        const tasksByPhaseType: Record<string, string[]> = {
+            'BUSINESS_UNDERSTANDING': [
+                'ASSESS_SITUATION',
+                'COMPOSE_PROJECT_TEAM',
+                'SET_BUSINESS_OBJECTIVES',
+                'DERIVE_DATA_SCIENCE_TARGETS',
+                'CREATE_PROJECT_PLAN'
+            ],
+            'DATA_COLLECTION_EXPLORATION_PREPARATION': [  // ← Achtung: Im Schema heißt es 'DATA_COLLECTION_EXPLORATION_PREPARATION'!
+                'IDENTIFY_DATA_SOURCES',
+                'ACQUIRE_DATA',
+                'DESCRIBE_DATA',
+                'EXPLORE_DATA',
+                'ASSESS_DATA_QUALITY',
+                'PREPARE_DATA',
+                'DEVELOP_DATA_PIPELINE'
+            ],
+            'ANALYSIS_MODELING': [  // ← Im Schema: 'ANALYSIS_MODELING'!
+                'DEFINE_HYPOTHESIS',
+                'SELECT_ANALYTICAL_MODEL',
+                'DESIGN_TEST_FOR_ANALYTICAL_MODEL',
+                'DEVELOP_ANALYTICAL_MODEL',
+                'ASSESS_ANALYTICAL_MODEL',
+                'DEVELOP_ANALYTICAL_PIPELINE'
+            ],
+            'EVALUATION': [
+                'ASSESS_ANALYTICAL_RESULTS',
+                'EVALUATE_PROCESS',
+                'PERFORM_CHECKPOINT_DECISION'
+            ],
+            'DEPLOYMENT': [
+                'PERFORM_IMPACT_ASSESSMENT',
+                'PLAN_DEPLOYMENT',
+                'PLAN_MONITORING_AND_MAINTENANCE',
+                'TEST_DEPLOYMENT',
+                'PERFORM_BUSINESS_INTEGRATION',
+                'FINALIZE_PROJECT'
+            ],
+            'UTILIZATION': [
+                'MONITOR_MODEL_PERFORMANCE',
+                'MAINTAIN_DATA_PIPELINE',
+                'UPDATE_MODEL'
+            ]
+        };
+
+        const taskTypes = tasksByPhaseType[phaseType] || [];
+        if (taskTypes.length === 0) return [];
+
+        // 1. Basis-Gewichte holen (relative Komplexität der Tasks zueinander)
+        const taskWeights = taskTypes.map(t => ({
+            type: t,
+            weight: this.getTaskWeight(t)
+        }));
+
+        // 2. Gesamtgewicht berechnen
+        const totalWeight = taskWeights.reduce((sum, t) => sum + t.weight, 0);
+
+        // 3. Dauer proportional verteilen
+        let distributedDays = 0;
+
+        return taskWeights.map((task, index) => {
+            // Proportionale Dauer berechnen
+            let duration = Math.round((task.weight / totalWeight) * phaseDurationDays);
+
+            // Mindestens 1 Tag pro Task
+            duration = Math.max(1, duration);
+
+            // Letzter Task bekommt den Rest (Rundungsdifferenz ausgleichen)
+            if (index === taskWeights.length - 1) {
+                duration = Math.max(1, phaseDurationDays - distributedDays);
+            }
+
+            distributedDays += duration;
+
+            return {
+                taskType: task.type,
+                title: null,
+                estimatedDuration: duration, // ✅ Dynamisch berechnet!
+                status: 'TODO'
+            };
+        });
+    }
+
+
+    /**
+     * Gibt das relative Gewicht (Komplexität) eines Tasks zurück.
+     * Dient als Basis für die prozentuale Verteilung.
+     */
+    private getTaskWeight(taskType: string): number {
+        const weights: Record<string, number> = {
+            // Business Understanding
+            'ASSESS_SITUATION': 2,
+            'COMPOSE_PROJECT_TEAM': 1,
+            'SET_BUSINESS_OBJECTIVES': 3,
+            'DERIVE_DATA_SCIENCE_TARGETS': 2,
+            'CREATE_PROJECT_PLAN': 2,
+
+            // Data Collection
+            'IDENTIFY_DATA_SOURCES': 2,
+            'ACQUIRE_DATA': 5,
+            'DESCRIBE_DATA': 2,
+            'EXPLORE_DATA': 5,
+            'ASSESS_DATA_QUALITY': 3,
+            'PREPARE_DATA': 8,
+            'DEVELOP_DATA_PIPELINE': 5,
+
+            // Modeling
+            'DEFINE_HYPOTHESIS': 2,
+            'SELECT_ANALYTICAL_MODEL': 3,
+            'DESIGN_TEST_FOR_ANALYTICAL_MODEL': 2,
+            'DEVELOP_ANALYTICAL_MODEL': 10,
+            'ASSESS_ANALYTICAL_MODEL': 5,
+            'DEVELOP_ANALYTICAL_PIPELINE': 8,
+
+            // Evaluation
+            'ASSESS_ANALYTICAL_RESULTS': 3,
+            'EVALUATE_PROCESS': 2,
+            'PERFORM_CHECKPOINT_DECISION': 1,
+
+            // Deployment
+            'PERFORM_IMPACT_ASSESSMENT': 2,
+            'PLAN_DEPLOYMENT': 3,
+            'PLAN_MONITORING_AND_MAINTENANCE': 2,
+            'TEST_DEPLOYMENT': 5,
+            'PERFORM_BUSINESS_INTEGRATION': 3,
+            'FINALIZE_PROJECT': 2,
+
+            // Utilization
+            'MONITOR_MODEL_PERFORMANCE': 2,
+            'MAINTAIN_DATA_PIPELINE': 2,
+            'UPDATE_MODEL': 5
+        };
+
+        return weights[taskType] || 2; // Default Gewicht
+    }
+
+
+
 }
 
 export const mappingService = new MappingService();

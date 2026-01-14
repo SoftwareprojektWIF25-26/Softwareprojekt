@@ -302,6 +302,7 @@ export class DashboardService {
                     status: task.status,
                     startDate: task.startDate,
                     endDate: task.endDate,
+                    estimatedDuration: task.estimatedDuration,
                     dependencies: task.dependenciesFrom.map(dep => ({
                         toTaskId: dep.toTaskId,
                         toTaskTitle: dep.toTask.title,
@@ -311,6 +312,8 @@ export class DashboardService {
             }))
         };
     }
+
+
 
     /**
      * Task-Status aktualisieren
@@ -444,41 +447,53 @@ export class DashboardService {
      */
     private getTaskTitle(taskType: string): string {
         const taskTitles: Record<string, string> = {
-            'DEFINE_TITLE': 'Titel definieren',
-            'DEFINE_DOMAIN': 'Domain festlegen',
-            'DEFINE_BUSINESS_GOAL': 'Business Goal definieren',
-            'DEFINE_FINAL_PRODUCT_FORM': 'Form des finalen Produkts festlegen',
-            'IDENTIFY_PROJECT_TEAM_ROLES': 'Projekt-Team-Rollen identifizieren',
-            'DETERMINE_TEAM_SIZE': 'Team-Größe bestimmen',
-            'PLAN_TIMELINE': 'Timeline planen',
-            'ESTIMATE_COST': 'Kosten schätzen',
-            'SELECT_TOOLS_BUSINESS_UNDERSTANDING': 'Tools auswählen',
-            'DETERMINE_DATA_ACCESS': 'Datenzugang bestimmen',
-            'VERIFY_DATA_AVAILABILITY': 'Datenverfügbarkeit prüfen',
-            'IDENTIFY_DATA_SOURCES': 'Datenquellen identifizieren',
-            'ASSESS_DATA_SECURITY_PRIVACY': 'Datensicherheit bewerten',
-            'EVALUATE_DATA_VELOCITY': 'Datengeschwindigkeit bewerten',
-            'ASSESS_DATA_VERACITY': 'Datenqualität bewerten',
-            'DETERMINE_DATA_VARIETY': 'Datenvielfalt bestimmen',
-            'ESTIMATE_DATA_VOLUME': 'Datenvolumen schätzen',
-            'ASSESS_DATA_VARIABILITY': 'Datenvariabilität bewerten',
-            'DEFINE_DATA_PREPARATION_STEPS': 'Datenaufbereitungsschritte definieren',
-            'SELECT_DATA_TOOLS': 'Daten-Tools auswählen',
-            'DEFINE_DATA_SCIENCE_GOALS': 'Data Science Ziele definieren',
-            'DETERMINE_ANALYTICS_TYPE': 'Analytics-Typ bestimmen',
-            'SELECT_EVALUATION_METRICS': 'Evaluationsmetriken auswählen',
-            'SELECT_ANALYSIS_TOOLS': 'Analyse-Tools auswählen',
-            'DEFINE_TIMELINESS_REQUIREMENTS': 'Zeitanforderungen definieren',
-            'IDENTIFY_ADDRESSED_USERS': 'Zielnutzer identifizieren',
-            'PLAN_TESTING_STRATEGY': 'Test-Strategie planen',
-            'DOCUMENT_PROJECT_ISSUES': 'Projekt-Issues dokumentieren',
-            'SELECT_DEPLOYMENT_TOOLS': 'Deployment-Tools auswählen',
-            'PLAN_MONITORING_ACTIVITIES': 'Monitoring-Aktivitäten planen',
-            'PLAN_MAINTENANCE_STRATEGY': 'Wartungsstrategie planen',
-            'SELECT_UTILIZATION_TOOLS': 'Nutzungs-Tools auswählen',
+            // ========== BUSINESS UNDERSTANDING ==========
+            'ASSESS_SITUATION': 'Assess Situation',
+            'COMPOSE_PROJECT_TEAM': 'Compose Project Team',
+            'SET_BUSINESS_OBJECTIVES': 'Set Business Objectives and Success Criteria',
+            'DERIVE_DATA_SCIENCE_TARGETS': 'Derive Data Science Targets',
+            'CREATE_PROJECT_PLAN': 'Create Project Plan',
+
+            // ========== DATA COLLECTION, EXPLORATION & PREPARATION ==========
+            'IDENTIFY_DATA_SOURCES': 'Identify Data Sources',
+            'ACQUIRE_DATA': 'Acquire Data',
+            'DESCRIBE_DATA': 'Describe Data',
+            'EXPLORE_DATA': 'Explore Data',
+            'ASSESS_DATA_QUALITY': 'Assess Data Quality',
+            'PREPARE_DATA': 'Prepare Data',
+            'DEVELOP_DATA_PIPELINE': 'Develop Data Pipeline',
+
+            // ========== MODELING/ANALYSIS ==========
+            'DEFINE_HYPOTHESIS': 'Define Hypothesis',
+            'SELECT_ANALYTICAL_MODEL': 'Select Analytical Model',
+            'DESIGN_TEST_FOR_ANALYTICAL_MODEL': 'Design Test for Analytical Model',
+            'DEVELOP_ANALYTICAL_MODEL': 'Develop Analytical Model',
+            'ASSESS_ANALYTICAL_MODEL': 'Assess Analytical Model',
+            'DEVELOP_ANALYTICAL_PIPELINE': 'Develop Analytical Pipeline',
+
+            // ========== EVALUATION ==========
+            'ASSESS_ANALYTICAL_RESULTS': 'Assess Analytical Results',
+            'EVALUATE_PROCESS': 'Evaluate Process and Perform Checkpoint Decision',
+            'PERFORM_CHECKPOINT_DECISION': 'Perform Checkpoint Decision',
+
+            // ========== DEPLOYMENT ==========
+            'PERFORM_IMPACT_ASSESSMENT': 'Perform Impact Assessment',
+            'PLAN_DEPLOYMENT': 'Plan Deployment',
+            'PLAN_MONITORING_AND_MAINTENANCE': 'Plan Monitoring and Maintenance',
+            'TEST_DEPLOYMENT': 'Test Deployment',
+            'PERFORM_BUSINESS_INTEGRATION': 'Perform Business Integration',
+            'FINALIZE_PROJECT': 'Finalize Project',
+
+            // ========== UTILIZATION ==========
+            'MONITOR_MODEL_PERFORMANCE': 'Monitor Model Performance',
+            'MAINTAIN_DATA_PIPELINE': 'Maintain Data Pipeline',
+            'UPDATE_MODEL': 'Update Model',
+
+            // Legacy
             'CUSTOM': 'Custom Task'
         };
 
         return taskTitles[taskType] || taskType;
     }
+
 }

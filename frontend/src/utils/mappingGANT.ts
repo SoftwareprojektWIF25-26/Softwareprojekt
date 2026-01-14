@@ -4,34 +4,38 @@ export function mapBackendToMetrics(backend: BackendProjectPlan): ProjectMetrics
   let currentWeek = 0
 
   const phases: PhaseMetrics[] = backend.phases.map((phase) => {
-    const baseEffort = phase.estimatedEffort ?? 1 // ← Person-Wochen!
-    const durationWeeks = Math.ceil((phase.estimatedDuration ?? 7) / 7) // Tage → Wochen
+    // Aufwand (Person-Wochen)
+    const baseEffort = phase.baseEffort ?? phase.estimatedEffort ?? 1
+    const bufferEffort = phase.bufferEffort ?? 0
 
-    const startWeek = currentWeek
-    const effortPersonWeeks = baseEffort
+    // Dauer (Kalender-Wochen) - von Tagen konvertieren
+    const baseDurationWeeks = (phase.baseDuration ?? 0) / 7
+    const bufferDurationWeeks = (phase.bufferDuration ?? 0) / 7
+    const totalDurationWeeks = baseDurationWeeks + bufferDurationWeeks
 
-    currentWeek = startWeek + durationWeeks // ← Nutze durationWeeks für Timeline
-
-    console.log(`[mapBackendToMetrics] Phase ${phase.name}`, {
-      startWeek,
-      durationWeeks,
-      effortPersonWeeks,
-      baseEffort,
-      startDate: phase.startDate,
-      endDate: phase.endDate,
-    })
-
-    return {
+    const phaseData = {
       name: phase.name,
-      startWeek,
-      durationWeeks,
-      effortPersonWeeks,
+      startWeek: currentWeek,
+      durationWeeks: totalDurationWeeks,
+      effortPersonWeeks: baseEffort + bufferEffort,
       percentage: 0,
-      baseEffort: phase.baseEffort ?? baseEffort,
-      bufferEffort: phase.bufferEffort ?? 0,
-      baseDuration: phase.baseDuration ?? durationWeeks,
-      bufferDuration: phase.bufferDuration ?? 0,
+      baseEffort: baseEffort,
+      bufferEffort: bufferEffort,
+      baseDuration: baseDurationWeeks,
+      bufferDuration: bufferDurationWeeks,
+
+      // NEU: Tasks durchreichen
+      tasks: phase.tasks || [],
+      phaseId: phase.id
     }
+
+    // ✅ WICHTIG: Nutze DAUER (nicht Aufwand) für Timeline!
+    // Alternative: Wenn ihr Aufwand als Timeline wollt, dann so:
+    currentWeek += baseEffort + bufferEffort  // Aufwand-basiert (wie vorher)
+    // ODER für echte Kalender-Timeline:
+    // currentWeek += totalDurationWeeks  // Dauer-basiert
+
+    return phaseData
   })
 
   const totalEffort = phases.reduce((sum, p) => sum + p.effortPersonWeeks, 0)

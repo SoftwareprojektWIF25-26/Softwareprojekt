@@ -483,12 +483,19 @@ onMounted(() => {
               <p>{{ variabilityLabels[draft.dataCharacteristics.variability] }}</p>
             </div>
 
-            <!-- Neu: Vorbereitungsschritte -->
-            <div class="preview-item" v-if="draft.dataCharacteristics.dataPreparationSteps">
+            <!-- dataPreparationSteps -->
+            <div class="preview-item" v-if="draft.dataCharacteristics.dataPreparationSteps?.length">
               <strong>Vorbereitung:</strong>
-              <!-- Annahme: Es ist ein einzelner Wert (Enum), kein Array. Falls Array, Logik anpassen wie bei dataAccess -->
-              <p>{{ preparationLabels[draft.dataCharacteristics.dataPreparationSteps] }}</p>
+              <p>
+                {{
+                  draft.dataCharacteristics.dataPreparationSteps
+                    .map((step: DataPreparationStep) => preparationLabels[step])
+                    .join(', ')
+                }}
+              </p>
             </div>
+
+
 
             <!-- Neu: Datensicherheit -->
             <div class="preview-item" v-if="draft.dataCharacteristics.dataSecurityConstraints">

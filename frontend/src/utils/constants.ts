@@ -116,3 +116,97 @@ export const ISSUE_LABELS: Record<string, string> = {
   TIMELINE_CONSTRAINTS: 'Timeline Constraints',
   TEAM_COORDINATION: 'Team Coordination'
 };
+
+export const TASK_LABELS: Record<string, string> = {
+  // ========== BUSINESS UNDERSTANDING ==========
+  'ASSESS_SITUATION': 'Assess Situation',
+  'COMPOSE_PROJECT_TEAM': 'Compose Project Team',
+  'SET_BUSINESS_OBJECTIVES': 'Set Business Objectives and Success Criteria',
+  'DERIVE_DATA_SCIENCE_TARGETS': 'Derive Data Science Targets',
+  'CREATE_PROJECT_PLAN': 'Create Project Plan',
+
+  // ========== DATA COLLECTION, EXPLORATION & PREPARATION ==========
+  'IDENTIFY_DATA_SOURCES': 'Identify Data Sources',
+  'ACQUIRE_DATA': 'Acquire Data',
+  'DESCRIBE_DATA': 'Describe Data',
+  'EXPLORE_DATA': 'Explore Data',
+  'ASSESS_DATA_QUALITY': 'Assess Data Quality',
+  'PREPARE_DATA': 'Prepare Data',
+  'DEVELOP_DATA_PIPELINE': 'Develop Data Pipeline',
+
+  // ========== MODELING/ANALYSIS ==========
+  'DEFINE_HYPOTHESIS': 'Define Hypothesis',
+  'SELECT_ANALYTICAL_MODEL': 'Select Analytical Model',
+  'DESIGN_TEST_FOR_ANALYTICAL_MODEL': 'Design Test for Analytical Model',
+  'DEVELOP_ANALYTICAL_MODEL': 'Develop Analytical Model',
+  'ASSESS_ANALYTICAL_MODEL': 'Assess Analytical Model',
+  'DEVELOP_ANALYTICAL_PIPELINE': 'Develop Analytical Pipeline',
+
+  // ========== EVALUATION ==========
+  'ASSESS_ANALYTICAL_RESULTS': 'Assess Analytical Results',
+  'EVALUATE_PROCESS': 'Evaluate Process and Perform Checkpoint Decision',
+  'PERFORM_CHECKPOINT_DECISION': 'Perform Checkpoint Decision',
+
+  // ========== DEPLOYMENT ==========
+  'PERFORM_IMPACT_ASSESSMENT': 'Perform Impact Assessment',
+  'PLAN_DEPLOYMENT': 'Plan Deployment',
+  'PLAN_MONITORING_AND_MAINTENANCE': 'Plan Monitoring and Maintenance',
+  'TEST_DEPLOYMENT': 'Test Deployment',
+  'PERFORM_BUSINESS_INTEGRATION': 'Perform Business Integration',
+  'FINALIZE_PROJECT': 'Finalize Project',
+
+  // ========== UTILIZATION ==========
+  'MONITOR_MODEL_PERFORMANCE': 'Monitor Model Performance',
+  'MAINTAIN_DATA_PIPELINE': 'Maintain Data Pipeline',
+  'UPDATE_MODEL': 'Update Model',
+
+  // Legacy
+  'CUSTOM': 'Custom Task'
+};
+
+// Mapping: Phase -> Task Types
+export const PHASE_TASKS: Record<string, TaskType[]> = {
+  'BUSINESS_UNDERSTANDING': [
+    'ASSESS_SITUATION',
+    'COMPOSE_PROJECT_TEAM',
+    'SET_BUSINESS_OBJECTIVES',
+    'DERIVE_DATA_SCIENCE_TARGETS',
+    'CREATE_PROJECT_PLAN'
+  ],
+  'DATA_COLLECTION': [
+    'IDENTIFY_DATA_SOURCES',
+    'ACQUIRE_DATA',
+    'DESCRIBE_DATA',
+    'EXPLORE_DATA',
+    'ASSESS_DATA_QUALITY',
+    'PREPARE_DATA',
+    'DEVELOP_DATA_PIPELINE'
+  ],
+  'ANALYSIS': [
+    'DEFINE_HYPOTHESIS',
+    'SELECT_ANALYTICAL_MODEL',
+    'DESIGN_TEST_FOR_ANALYTICAL_MODEL',
+    'DEVELOP_ANALYTICAL_MODEL',
+    'ASSESS_ANALYTICAL_MODEL',
+    'DEVELOP_ANALYTICAL_PIPELINE'
+  ],
+  'EVALUATION': [
+    'ASSESS_ANALYTICAL_RESULTS',
+    'EVALUATE_PROCESS',
+    'PERFORM_CHECKPOINT_DECISION'
+  ],
+  'DEPLOYMENT': [
+    'PERFORM_IMPACT_ASSESSMENT',
+    'PLAN_DEPLOYMENT',
+    'PLAN_MONITORING_AND_MAINTENANCE',
+    'TEST_DEPLOYMENT',
+    'PERFORM_BUSINESS_INTEGRATION',
+    'FINALIZE_PROJECT'
+  ],
+  'UTILIZATION': [
+    'MONITOR_MODEL_PERFORMANCE',
+    'MAINTAIN_DATA_PIPELINE',
+    'UPDATE_MODEL'
+  ]
+};
+

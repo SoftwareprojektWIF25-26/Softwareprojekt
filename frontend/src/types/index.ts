@@ -88,7 +88,7 @@ export interface DataCharacteristicsData {
   volumeValue?: number;
   volumeUnit?: VolumeUnit;
   variability?: DataVariability;
-  dataPreparationSteps?: DataPreparationStep;
+  dataPreparationSteps?: DataPreparationStep[];
   toolsData?: string;
 }
 
@@ -248,6 +248,8 @@ export interface PhaseMetrics {
   bufferEffort: number;
   baseDuration: number;
   bufferDuration: number;
+  tasks?: PhaseTask[];
+  phaseId?: number;
 }
 
 // ============================================
@@ -359,6 +361,53 @@ export interface ProjectEvaluation {
   createdAt: Date;
 }
 
+export type TaskType =
+// ========== BUSINESS UNDERSTANDING ==========
+  | 'ASSESS_SITUATION'
+  | 'COMPOSE_PROJECT_TEAM'
+  | 'SET_BUSINESS_OBJECTIVES'
+  | 'DERIVE_DATA_SCIENCE_TARGETS'
+  | 'CREATE_PROJECT_PLAN'
+
+  // ========== DATA COLLECTION, EXPLORATION & PREPARATION ==========
+  | 'IDENTIFY_DATA_SOURCES'
+  | 'ACQUIRE_DATA'
+  | 'DESCRIBE_DATA'
+  | 'EXPLORE_DATA'
+  | 'ASSESS_DATA_QUALITY'
+  | 'PREPARE_DATA'
+  | 'DEVELOP_DATA_PIPELINE'
+
+  // ========== MODELING/ANALYSIS ==========
+  | 'DEFINE_HYPOTHESIS'
+  | 'SELECT_ANALYTICAL_MODEL'
+  | 'DESIGN_TEST_FOR_ANALYTICAL_MODEL'
+  | 'DEVELOP_ANALYTICAL_MODEL'
+  | 'ASSESS_ANALYTICAL_MODEL'
+  | 'DEVELOP_ANALYTICAL_PIPELINE'
+
+  // ========== EVALUATION ==========
+  | 'ASSESS_ANALYTICAL_RESULTS'
+  | 'EVALUATE_PROCESS'
+  | 'PERFORM_CHECKPOINT_DECISION'
+
+  // ========== DEPLOYMENT ==========
+  | 'PERFORM_IMPACT_ASSESSMENT'
+  | 'PLAN_DEPLOYMENT'
+  | 'PLAN_MONITORING_AND_MAINTENANCE'
+  | 'TEST_DEPLOYMENT'
+  | 'PERFORM_BUSINESS_INTEGRATION'
+  | 'FINALIZE_PROJECT'
+
+  // ========== UTILIZATION ==========
+  | 'MONITOR_MODEL_PERFORMANCE'
+  | 'MAINTAIN_DATA_PIPELINE'
+  | 'UPDATE_MODEL'
+
+  // Legacy
+  | 'CUSTOM';
+
+
 // Enums
 export type ProjectStatus = 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED'
 export type TemplatePhaseStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
@@ -455,6 +504,35 @@ export interface DeploymentTask {
   perform_integration: number;
   finalize_project: number;
 }
+
+
+export interface PhaseTask {
+  id: number;
+  title: string;
+  taskType: string;
+  status: TaskStatus;
+  estimatedDuration: number; // in Tagen
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+// BackendPhase erweitern (falls noch nicht komplett):
+export interface BackendPhase {
+  id: number;
+  name: string;
+  phaseType: string;
+  orderIndex: number;
+  startDate: Date | null;
+  endDate: Date | null;
+  estimatedDuration: number;
+  estimatedEffort: number;
+  baseEffort: number | null;
+  bufferEffort: number | null;
+  baseDuration: number | null;
+  bufferDuration: number | null;
+  tasks: PhaseTask[]; // ← Tasks sind enthalten!
+}
+
 
 
 
