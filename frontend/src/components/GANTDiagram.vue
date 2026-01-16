@@ -5,8 +5,15 @@ import { mapBackendToMetrics } from '@/utils/mappingGANT'
 import api from '@/api'
 import router from '@/router/PathRouting'
 import { TASK_LABELS } from '@/utils/constants'
+import {
+  addWeeks,
+  format,
+  eachMonthOfInterval,
+  differenceInCalendarWeeks
+} from 'date-fns';
+import { de } from 'date-fns/locale';
 
-const props = defineProps<{ id: string }>()
+const props = defineProps<{ id: string; startDate?: string|Date; }>()
 const projectId = Number(props.id)
 const phases = ref<any[]>([])
 const containerWidth = ref(800)
@@ -23,13 +30,26 @@ function getTaskTitle(taskType: string): string {
   return TASK_LABELS[taskType] || taskType.replace(/_/g, ' ')
 }
 
+const projectStartDate = computed(() => {
+  // 1. Priorität: Das übergebene Prop nutzen
+  if (props.startDate) return new Date(props.startDate);
+
+  // 2. Priorität: Aus der ersten Phase lesen (falls vorhanden)
+  if (phases.value.length > 0 && phases.value[0].startDate) {
+    return new Date(phases.value[0].startDate);
+  }
+
+  // 3. Fallback: Heute
+  return new Date();
+});
+
 // Task Modal öffnen
 function openTaskModal(phase: any) {
   console.log('📊 Opening modal for phase:', {
     name: phase.name,
     tasks: phase.tasks,
     tasksLength: phase.tasks?.length,
-    effortPersonWeeks: phase.effortPersonWeeks
+    effortPersonWeeks: phase.effortPersonWeeks,
   })
 
   selectedPhase.value = phase
@@ -45,32 +65,31 @@ function closeTaskModal() {
 // Task Status Badge Farbe
 function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    'TODO': '#9ca3af',
-    'IN_PROGRESS': '#3b82f6',
-    'BLOCKED': '#ef4444',
-    'DONE': '#10b981'
+    TODO: '#9ca3af',
+    IN_PROGRESS: '#3b82f6',
+    BLOCKED: '#ef4444',
+    DONE: '#10b981',
   }
   return colors[status] || '#6b7280'
 }
 
-// Task Status Label
-function getStatusLabel(status: string): string {
-  const labels: Record<string, string> = {
-    'TODO': 'Offen',
-    'IN_PROGRESS': 'In Bearbeitung',
-    'BLOCKED': 'Blockiert',
-    'DONE': 'Fertig'
-  }
-  return labels[status] || status
+// Dauer formatieren
+const showHours = ref(false)
+
+function toggleUnit() {
+  showHours.value = !showHours.value
 }
 
-// Dauer formatieren
 function formatDuration(days: number | null): string {
   if (!days) return '–'
-  if (days === 1) return '1 Tag'
-  if (days < 7) return `${days} Tage`
-  const weeks = (days / 7).toFixed(1)
-  return `${weeks} Wochen (${days} Tage)`
+
+  if (!showHours.value) {
+    const formatted = Number.isInteger(days) ? days.toString() : days.toFixed(1).replace('.', ',')
+    return `${formatted} ${days === 1 ? 'Tag' : 'Tage'}`
+  } else {
+    const hours = Math.ceil(days * 8)
+    return `${hours} Std.`
+  }
 }
 
 // Download Funktion
@@ -84,9 +103,7 @@ function exportToCSV() {
   ])
   const csvContent =
     '\uFEFF' + // UTF-8 BOM für Excel
-    [headers, ...rows]
-      .map((r) => r.join(';'))
-      .join('\n')
+    [headers, ...rows].map((r) => r.join(';')).join('\n')
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -131,25 +148,54 @@ function goBack() {
   router.push({ name: 'dashboard', params: { id: props.id } })
 }
 
-// Header anpassen an Anzahl der Wochen
-const headerUnit = computed(() => {
-  const weeks = totalWeeks.value || 1
-  if (weeks <= 8) return { label: 'W', step: 1 }
-  if (weeks <= 16) return { label: 'W', step: 2 }
-  if (weeks <= 52) return { label: 'M', step: 4 }
-  if (weeks <= 104) return { label: 'M', step: 8 }
-  if (weeks <= 156) return { label: 'M', step: 12 }
-  return { label: 'M', step: 24 }
-})
 
-const headerSteps = computed(() => {
-  const step = headerUnit.value.step
-  const steps: number[] = []
-  for (let i = 0; i < totalWeeks.value; i += step) {
-    steps.push(i)
+// Neue dynamischer Timeline
+const timelineHeaders = computed(() => {
+  const weeksTotal = totalWeeks.value || 1;
+  const start = projectStartDate.value;
+  // Enddatum berechnen
+  const end = addWeeks(start, weeksTotal);
+
+  // Ab ca. 5 Monaten (20 Wochen) auf Monatsansicht wechseln
+  const showMonths = weeksTotal > 20;
+
+  if (showMonths) {
+    // === MONATS-MODUS ===
+    // Holt alle Monate zwischen Start und Ende
+    const months = eachMonthOfInterval({ start, end });
+
+    return months.map(date => {
+      // Berechne Abstand vom Start in Wochen
+      const weeksFromStart = differenceInCalendarWeeks(date, start);
+
+      return {
+        // Label: "Jan 2026"
+        label: format(date, 'MMM yyyy', { locale: de }),
+        // Position: Prozentualer Abstand
+        left: `${(weeksFromStart / weeksTotal) * 100}%`,
+        // Breite: Lassen wir offen (auto)
+        width: 'auto',
+        isPrimary: true
+      };
+    });
+  } else {
+    // === WOCHEN-MODUS ===
+    const headers = [];
+    for (let i = 0; i < weeksTotal; i++) {
+      const currentWeekStart = addWeeks(start, i);
+      headers.push({
+        // Label: "KW 03"
+        label: `KW ${format(currentWeekStart, 'ww')}`,
+        left: `${(i / weeksTotal) * 100}%`,
+        // Breite: Exakt 1 Woche
+        width: `${(1 / weeksTotal) * 100}%`,
+        isPrimary: false
+      });
+    }
+    return headers;
   }
-  return steps
-})
+});
+
 
 // Daten laden
 onMounted(async () => {
@@ -171,7 +217,7 @@ onMounted(async () => {
       baseEffort: p.baseEffort ?? 0,
       bufferEffort: p.bufferEffort ?? 0,
       effortPersonWeeks: p.effortPersonWeeks ?? 0,
-      tasks: p.tasks || []
+      tasks: p.tasks || [],
     }))
 
     console.log('📊 Gantt Phases loaded:', phases.value)
@@ -184,6 +230,8 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateContainerWidth)
 })
 </script>
+
+
 
 <template>
   <div style="padding: 40px">
@@ -203,22 +251,41 @@ onUnmounted(() => {
           <div style="width: 16px; height: 16px; background: #10b981; border-radius: 3px"></div>
           <span>Pufferzeit</span>
         </div>
+
+        <div style="display: flex; align-items: center; gap: 6px">
+          <div ></div>
+          <span>Personenwoche (PW) = 5 Tage á 8 h </span>
+        </div>
+
       </div>
     </div>
 
     <!-- Timeline Container -->
     <div class="timeline-scroll" ref="timelineContainer">
       <!-- Header -->
-      <div class="timeline-header">
+      <div class="timeline-header" style="position: relative; overflow: hidden;">
+        <!-- Linkes Label (leer oder statisch) -->
         <div class="timeline-label">Phase</div>
-        <div v-if="phases.length" class="timeline-weeks">
+
+        <!-- Dynamische Zeitachse -->
+        <div class="timeline-weeks" style="position: relative;">
           <div
-            v-for="w in headerSteps"
-            :key="w"
+            v-for="(header, index) in timelineHeaders"
+            :key="index"
             class="week-column"
-            :style="{ width: (headerUnit.step / totalWeeks) * 100 + '%' }"
+            :style="{
+        position: 'absolute',
+        left: header.left,
+        width: header.width || 'auto', // Auto bei Monaten, fest bei Wochen
+        textAlign: 'left',
+        paddingLeft: '4px',
+        borderLeft: '1px solid #ccc',
+        height: '100%',
+        fontSize: '12px',
+        whiteSpace: 'nowrap'
+      }"
           >
-            {{ w + 1 }} {{ headerUnit.label }}
+            {{ header.label }}
           </div>
         </div>
       </div>
@@ -299,46 +366,70 @@ onUnmounted(() => {
             </div>
 
             <!-- Modal Body -->
+            <!-- Modal Body -->
             <div class="modal-body">
-              <!-- Phase Info -->
+              <!-- Phase Info Header -->
               <div class="phase-info">
+                <!-- 1. Gesamt-Aufwand (PW) -->
                 <div class="info-item">
                   <span class="info-label">Gesamt-Aufwand:</span>
                   <span class="info-value">
-                {{ selectedPhase.effortPersonWeeks ? selectedPhase.effortPersonWeeks.toFixed(1) : '0.0' }} PW
-              </span>
+                    {{
+                      selectedPhase.effortPersonWeeks
+                        ? selectedPhase.effortPersonWeeks.toFixed(1)
+                        : '0.0'
+                    }}
+                    PW
+                  </span>
                 </div>
+
+                <!-- 2. Anzahl Tasks -->
                 <div class="info-item">
                   <span class="info-label">Anzahl Tasks:</span>
                   <span class="info-value">
-                {{ (selectedPhase.tasks && Array.isArray(selectedPhase.tasks)) ? selectedPhase.tasks.length : 0 }}
-              </span>
+                    {{
+                      selectedPhase.tasks && Array.isArray(selectedPhase.tasks)
+                        ? selectedPhase.tasks.length
+                        : 0
+                    }}
+                  </span>
+                </div>
+
+                <!-- 3. NEU: Einheit Umschalter -->
+                <div
+                  class="info-item clickable-toggle"
+                  title="Klicken zum Umschalten"
+                >
+                  <span class="info-label">Anzeige in:</span>
+                  <button class="btn-secondary" @click="toggleUnit">
+                    {{ showHours ? 'In Tagen anzeigen' : 'In Stunden anzeigen' }}
+                    </button>
+
                 </div>
               </div>
+
 
               <!-- Task Liste -->
               <div v-if="selectedPhase.tasks && selectedPhase.tasks.length > 0" class="task-list">
                 <h3>Projekt-Tasks</h3>
-                <div
-                  v-for="task in selectedPhase.tasks"
-                  :key="task.id"
-                  class="task-item"
-                >
+                <div v-for="task in selectedPhase.tasks" :key="task.id" class="task-item">
                   <div class="task-header">
                     <span class="task-title">{{ task.title || getTaskTitle(task.taskType) }}</span>
                     <span
                       class="task-status-badge"
                       :style="{ backgroundColor: getStatusColor(task.status) }"
                     >
-                  {{ getStatusLabel(task.status) }}
-                </span>
+                    </span>
                   </div>
                   <div class="task-details">
                     <div class="task-detail-item">
                       <span class="detail-icon">⏱️</span>
-                      <span>{{ task.estimatedDuration }}</span>
+                      <span>{{ formatDuration(task.estimatedDuration) }}</span>
                     </div>
-                    <div v-if="task.taskType && task.taskType !== 'CUSTOM'" class="task-detail-item">
+                    <div
+                      v-if="task.taskType && task.taskType !== 'CUSTOM'"
+                      class="task-detail-item"
+                    >
                       <span class="detail-icon">🏷️</span>
                       <span class="task-type">{{ task.taskType.replace(/_/g, ' ') }}</span>
                     </div>
@@ -354,9 +445,7 @@ onUnmounted(() => {
 
             <!-- Modal Footer -->
             <div class="modal-footer">
-              <button class="btn-secondary" @click="closeTaskModal">
-                Schließen
-              </button>
+              <button class="btn-secondary" @click="closeTaskModal">Schließen</button>
             </div>
           </div>
         </div>

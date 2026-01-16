@@ -239,124 +239,100 @@ export class MappingService {
         return ProjectType.CLASSIC_ML;
     }
 
-// mapping.service.ts - AM ENDE DER KLASSE hinzufügen (vor dem letzten "}")
+    /**
+     *  Berechnet Tasks basierend auf Person-Wochen (PW)
+     * Rechnet intern in Stunden (1 PW = 40h) und gibt Tage (8h = 1 Tag) zurück.
+     *
+     * @param phaseType Der Typ der Phase
+     * @param phaseEffortPW Der Aufwand der Phase in Person-Wochen (z.B. 3.4)
+     */
 
-    // backend/src/services/mapping/mapping.service.ts
-
-    generatePhaseSteps(phaseType: string, phaseDurationDays: number): any[] {
-        const tasksByPhaseType: Record<string, string[]> = {
-            'BUSINESS_UNDERSTANDING': [
-                'ASSESS_SITUATION',
-                'COMPOSE_PROJECT_TEAM',
-                'SET_BUSINESS_OBJECTIVES',
-                'DERIVE_DATA_SCIENCE_TARGETS',
-                'CREATE_PROJECT_PLAN'
-            ],
-            'DATA_COLLECTION_EXPLORATION_PREPARATION': [  // ← Achtung: Im Schema heißt es 'DATA_COLLECTION_EXPLORATION_PREPARATION'!
-                'IDENTIFY_DATA_SOURCES',
-                'ACQUIRE_DATA',
-                'DESCRIBE_DATA',
-                'EXPLORE_DATA',
-                'ASSESS_DATA_QUALITY',
-                'PREPARE_DATA',
-                'DEVELOP_DATA_PIPELINE'
-            ],
-            'ANALYSIS_MODELING': [  // ← Im Schema: 'ANALYSIS_MODELING'!
-                'DEFINE_HYPOTHESIS',
-                'SELECT_ANALYTICAL_MODEL',
-                'DESIGN_TEST_FOR_ANALYTICAL_MODEL',
-                'DEVELOP_ANALYTICAL_MODEL',
-                'ASSESS_ANALYTICAL_MODEL',
-                'DEVELOP_ANALYTICAL_PIPELINE'
-            ],
-            'EVALUATION': [
-                'ASSESS_ANALYTICAL_RESULTS',
-                'EVALUATE_PROCESS',
-                'PERFORM_CHECKPOINT_DECISION'
-            ],
-            'DEPLOYMENT': [
-                'PERFORM_IMPACT_ASSESSMENT',
-                'PLAN_DEPLOYMENT',
-                'PLAN_MONITORING_AND_MAINTENANCE',
-                'TEST_DEPLOYMENT',
-                'PERFORM_BUSINESS_INTEGRATION',
-                'FINALIZE_PROJECT'
-            ],
-            'UTILIZATION': [
-                'MONITOR_MODEL_PERFORMANCE',
-                'MAINTAIN_DATA_PIPELINE',
-                'UPDATE_MODEL'
-            ]
-        };
-
-        const taskTypes = tasksByPhaseType[phaseType] || [];
+    /**
+     * Berechnet Tasks basierend auf Person-Wochen (PW)
+     * Fix: Berechnet Tage direkt und verteilt den Rest auf den letzten Task,
+     * damit Summe(Tasks) == PhaseDuration ist.
+     */
+    /**
+     * Berechnet Tasks basierend auf Person-Wochen (PW) mit Gewichtung.
+     * Fix: Verteilt die exakten Tage proportional und gleicht Rundungsfehler
+     * beim letzten Task aus.
+     */
+    generatePhaseSteps(phaseType: string, phaseEffortPW: number): any[] {
+        const taskTypes = this.getTasksForPhase(phaseType);
         if (taskTypes.length === 0) return [];
 
-        // 1. Basis-Gewichte holen (relative Komplexität der Tasks zueinander)
-        const taskWeights = taskTypes.map(t => ({
-            type: t,
-            weight: this.getTaskWeight(t)
-        }));
+        // 1. Gesamtdauer in Tagen (1 PW = 40h, 8h = 1 Tag)
+        const totalHours = Math.max(0.1, phaseEffortPW) * 40;
+        const totalDays = totalHours / 8;
 
-        // 2. Gesamtgewicht berechnen
-        const totalWeight = taskWeights.reduce((sum, t) => sum + t.weight, 0);
+        // 2. Gesamtgewichtung der Phase berechnen
+        const weights = taskTypes.map(t => this.getTaskWeight(t));
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
 
-        // 3. Dauer proportional verteilen
         let distributedDays = 0;
 
-        return taskWeights.map((task, index) => {
-            // Proportionale Dauer berechnen
-            let duration = Math.round((task.weight / totalWeight) * phaseDurationDays);
+        return taskTypes.map((taskType, index) => {
+            let durationInDays: number;
 
-            // Mindestens 1 Tag pro Task
-            duration = Math.max(1, duration);
+            // Gewichtung für diesen Task
+            const weight = weights[index];
 
-            // Letzter Task bekommt den Rest (Rundungsdifferenz ausgleichen)
-            if (index === taskWeights.length - 1) {
-                duration = Math.max(1, phaseDurationDays - distributedDays);
+            if (index === taskTypes.length - 1) {
+                // 3. Letzter Task nimmt den verbleibenden Rest (Fix für die Summen-Differenz)
+                durationInDays = totalDays - distributedDays;
+            } else {
+                // Proportionale Verteilung: (TaskWeight / TotalWeight) * TotalDays
+                const rawDuration = (weight / totalWeight) * totalDays;
+                // Wir runden auf 2 Nachkommastellen für saubere Werte im Frontend
+                durationInDays = Number(rawDuration.toFixed(2));
             }
 
-            distributedDays += duration;
+            // Negative Werte verhindern (falls Rundung größer als Rest war)
+            if (durationInDays < 0) durationInDays = 0;
+
+            // Rundungs-Ungesicherheiten beim letzten Task glätten (z.B. 4.00000001 -> 4.0)
+            durationInDays = Number(durationInDays.toFixed(2));
+
+            distributedDays += durationInDays;
 
             return {
-                taskType: task.type,
-                title: null,
-                estimatedDuration: duration, // ✅ Dynamisch berechnet!
-                status: 'TODO'
+                taskType,
+                title: null, // Title wird im Frontend aus Constants geladen
+                estimatedDuration: durationInDays,
+                status: 'TODO',
             };
         });
     }
 
-
     /**
-     * Gibt das relative Gewicht (Komplexität) eines Tasks zurück.
-     * Dient als Basis für die prozentuale Verteilung.
+     * Gibt die Gewichtung (relative Dauer) für einen Task-Typ zurück.
+     * Werte basieren auf dem Screenshot-Beispiel (z.B. Develop Model ist aufwendig).
      */
     private getTaskWeight(taskType: string): number {
         const weights: Record<string, number> = {
             // Business Understanding
             'ASSESS_SITUATION': 2,
             'COMPOSE_PROJECT_TEAM': 1,
-            'SET_BUSINESS_OBJECTIVES': 3,
+            'SET_BUSINESS_OBJECTIVES': 2,
             'DERIVE_DATA_SCIENCE_TARGETS': 2,
-            'CREATE_PROJECT_PLAN': 2,
+            'CREATE_PROJECT_PLAN': 3,
 
-            // Data Collection
+            // Data Understanding & Prep
             'IDENTIFY_DATA_SOURCES': 2,
-            'ACQUIRE_DATA': 5,
-            'DESCRIBE_DATA': 2,
+            'ACQUIRE_DATA': 4,
+            'DESCRIBE_DATA': 3,
             'EXPLORE_DATA': 5,
             'ASSESS_DATA_QUALITY': 3,
-            'PREPARE_DATA': 8,
-            'DEVELOP_DATA_PIPELINE': 5,
+            'PREPARE_DATA': 6,
+            'DEVELOP_DATA_PIPELINE': 8,
 
-            // Modeling
+            // Modeling (Werte aus Ihrem Beispiel angepasst)
             'DEFINE_HYPOTHESIS': 2,
             'SELECT_ANALYTICAL_MODEL': 3,
             'DESIGN_TEST_FOR_ANALYTICAL_MODEL': 2,
-            'DEVELOP_ANALYTICAL_MODEL': 10,
+            'DEVELOP_ANALYTICAL_MODEL': 11, // Hoher Aufwand
             'ASSESS_ANALYTICAL_MODEL': 5,
-            'DEVELOP_ANALYTICAL_PIPELINE': 8,
+            'DEVELOP_ANALYTICAL_PIPELINE': 9, // Hoher Aufwand
 
             // Evaluation
             'ASSESS_ANALYTICAL_RESULTS': 3,
@@ -365,19 +341,39 @@ export class MappingService {
 
             // Deployment
             'PERFORM_IMPACT_ASSESSMENT': 2,
-            'PLAN_DEPLOYMENT': 3,
-            'PLAN_MONITORING_AND_MAINTENANCE': 2,
-            'TEST_DEPLOYMENT': 5,
-            'PERFORM_BUSINESS_INTEGRATION': 3,
-            'FINALIZE_PROJECT': 2,
-
-            // Utilization
-            'MONITOR_MODEL_PERFORMANCE': 2,
-            'MAINTAIN_DATA_PIPELINE': 2,
-            'UPDATE_MODEL': 5
+            'PLAN_DEPLOYMENT': 4,
+            'PLAN_MONITORING_AND_MAINTENANCE': 3,
+            'TEST_DEPLOYMENT': 4,
+            'PERFORM_BUSINESS_INTEGRATION': 5,
+            'FINALIZE_PROJECT': 2
         };
 
-        return weights[taskType] || 2; // Default Gewicht
+        return weights[taskType] || 3; // Fallback-Gewicht
+    }
+
+
+    private getTasksForPhase(phaseType: string): string[] {
+        const tasksByPhaseType: Record<string, string[]> = {
+            'BUSINESS_UNDERSTANDING': [
+                'ASSESS_SITUATION', 'COMPOSE_PROJECT_TEAM', 'SET_BUSINESS_OBJECTIVES', 'DERIVE_DATA_SCIENCE_TARGETS', 'CREATE_PROJECT_PLAN'
+            ],
+            'DATA_COLLECTION_EXPLORATION_PREPARATION': [
+                'IDENTIFY_DATA_SOURCES', 'ACQUIRE_DATA', 'DESCRIBE_DATA', 'EXPLORE_DATA', 'ASSESS_DATA_QUALITY', 'PREPARE_DATA', 'DEVELOP_DATA_PIPELINE'
+            ],
+            'ANALYSIS_MODELING': [
+                'DEFINE_HYPOTHESIS', 'SELECT_ANALYTICAL_MODEL', 'DESIGN_TEST_FOR_ANALYTICAL_MODEL', 'DEVELOP_ANALYTICAL_MODEL', 'ASSESS_ANALYTICAL_MODEL', 'DEVELOP_ANALYTICAL_PIPELINE'
+            ],
+            'EVALUATION': [
+                'ASSESS_ANALYTICAL_RESULTS', 'EVALUATE_PROCESS', 'PERFORM_CHECKPOINT_DECISION'
+            ],
+            'DEPLOYMENT': [
+                'PERFORM_IMPACT_ASSESSMENT', 'PLAN_DEPLOYMENT', 'PLAN_MONITORING_AND_MAINTENANCE', 'TEST_DEPLOYMENT', 'PERFORM_BUSINESS_INTEGRATION', 'FINALIZE_PROJECT'
+            ],
+            'UTILIZATION': [
+                'MONITOR_MODEL_PERFORMANCE', 'MAINTAIN_DATA_PIPELINE', 'UPDATE_MODEL'
+            ]
+        };
+        return tasksByPhaseType[phaseType] || [];
     }
 
 

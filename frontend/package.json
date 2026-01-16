@@ -22,6 +22,7 @@
   "dependencies": {
     "@iconify/vue": "^5.0.0",
     "axios": "^1.13.2",
+    "date-fns": "^4.1.0",
     "frappe-gantt": "^1.0.4",
     "lucide-vue-next": "^0.562.0",
     "pinia": "^3.0.3",

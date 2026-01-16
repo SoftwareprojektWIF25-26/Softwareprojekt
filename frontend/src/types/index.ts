@@ -511,7 +511,7 @@ export interface PhaseTask {
   title: string;
   taskType: string;
   status: TaskStatus;
-  estimatedDuration: number; // in Tagen
+  estimatedDuration: number;
   startDate: Date | null;
   endDate: Date | null;
 }

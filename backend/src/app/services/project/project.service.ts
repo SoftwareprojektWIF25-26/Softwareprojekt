@@ -453,8 +453,8 @@ export class ProjectService {
 
         // 1. Projekt prüfen
         const project = await prisma.project.findUnique({
-            where: { id },
-            select: { id: true, wizardCompleted: true }
+            where: {id},
+            select: {id: true, wizardCompleted: true}
         });
 
         if (!project) {
@@ -469,13 +469,13 @@ export class ProjectService {
 
         // 2. Existierenden Plan bereinigen (Zombie-Fix)
         const existingPlan = await prisma.projectPlan.findUnique({
-            where: { projectId: id }
+            where: {projectId: id}
         });
 
         if (existingPlan) {
             console.log(`♻️  ProjectPlan existiert bereits für Projekt ${id}. Lösche alten Plan für saubere Neuberechnung...`);
             await prisma.projectPlan.delete({
-                where: { projectId: id }
+                where: {projectId: id}
             });
             console.log(`✅ Alter ProjectPlan gelöscht.`);
         }
@@ -502,7 +502,7 @@ export class ProjectService {
 
         // 4. Phasen mit Tasks erstellen
         for (const [index, phase] of metrics.phases.entries()) {
-            // Berechne Dauer der Phase in Tagen für Task-Verteilung
+            // Wir speichern weiterhin die Dauer in Tagen für die Phase selbst (fürs Gantt-Chart Header)
             const durationInDays = Math.round(phase.durationWeeks * 7);
 
             const projectPhase = await prisma.projectPhase.create({
@@ -521,35 +521,25 @@ export class ProjectService {
                 }
             });
 
-            console.log(`  📊 Phase ${index + 1}/${metrics.phases.length}: ${phase.name} (${durationInDays} Tage)`);
+            console.log(`  📊 Phase ${index + 1}/${metrics.phases.length}: ${phase.name} (${phase.effortPersonWeeks} PW)`);
 
-            // ✅ Tasks generieren mit projectPlan.id, projectPhase.id UND Dauer
+            // ✅ NEU: Wir übergeben phase.effortPersonWeeks (PW) statt durationInDays
+            // Damit die Task-Berechnung auf Arbeitszeit basiert, nicht Kalenderzeit.
             await this.createTasksForPhase(
                 projectPlan.id,
                 projectPhase.id,
                 phase.name,
-                durationInDays // <-- WICHTIG: Dauer übergeben!
+                phase.effortPersonWeeks
             );
         }
-
-        console.log(`🎉 ProjectPlan completed with ${metrics.phases.length} phases`);
-
-        return await prisma.projectPlan.findUnique({
-            where: { id: projectPlan.id },
-            include: {
-                phases: {
-                    include: { tasks: true },
-                    orderBy: { orderIndex: 'asc' }
-                }
-            }
-        });
     }
 
 
 
 
-    // ======================================================
-// NEU: Task-Generierung mit CRISP-DM TaskTypes
+
+        // ======================================================
+//  Task-Generierung mit CRISP-DM TaskTypes
 // ======================================================
 
     /**
@@ -559,14 +549,14 @@ export class ProjectService {
         projectPlanId: number,
         phaseId: number,
         phaseName: string,
-        phaseDuration: number // ✅ NEUER PARAMETER
+        phaseEffortPW: number // <--- Parameter umbenannt für Klarheit
     ) {
-        console.log(`🔧 Generating tasks for phase: ${phaseName} (${phaseDuration} days)`);
+        console.log(`🔧 Generating tasks for phase: ${phaseName} (${phaseEffortPW} PW)`);
 
         const phaseType = this.getPhaseTypeFromName(phaseName);
 
-        // ✅ Dauer an Mapping-Service übergeben
-        const taskSteps = mappingService.generatePhaseSteps(phaseType, phaseDuration);
+        // ✅ Aufruf mit PW
+        const taskSteps = mappingService.generatePhaseSteps(phaseType, phaseEffortPW);
 
         console.log(`  ✅ Generated ${taskSteps.length} tasks for ${phaseType}`);
 
@@ -577,12 +567,13 @@ export class ProjectService {
                     phaseId: phaseId,
                     taskType: taskData.taskType as any,
                     title: taskData.title,
-                    estimatedDuration: taskData.estimatedDuration,
+                    estimatedDuration: taskData.estimatedDuration, // Das sind jetzt die "sauberen" Tage (z.B. 1.25)
                     status: taskData.status as any
                 }
             });
         }
     }
+
 
 
     // ======================================================

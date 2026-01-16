@@ -572,7 +572,6 @@ export default {
   completeWizard,
 
   //Settings
-
   getWeights,
   patchWeights,
 };
