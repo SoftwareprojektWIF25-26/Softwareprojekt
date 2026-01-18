@@ -209,7 +209,7 @@ onMounted(() => {
                   placeholder="z.B. Accuracy, Precision, Recall, F1-Score, RMSE, MAE, AUC-ROC"
                 />
                 <p class="field-help">
-                  Kommagetrennt. Welche Metriken werden zur Bewertung des Modells verwendet?
+                  Welche Metriken werden zur Bewertung des Modells verwendet? (Kommagetrennt)
                 </p>
               </div>
 
