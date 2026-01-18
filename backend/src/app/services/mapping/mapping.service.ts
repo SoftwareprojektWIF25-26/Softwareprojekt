@@ -65,24 +65,21 @@ export class MappingService {
             });
         }
 
-        // VERBESSERT: Tools Available - Anzahl der ausgefüllten Tool-Felder
         const toolFields = [
             businessUnderstanding?.toolsBusinessUnderstanding,
             dataCharacteristics?.toolsData,
             analysisConfig?.toolsAnalysis,
             templateData.deploymentConfig?.toolsDeployment,
             templateData.utilizationConfig?.toolsUtilization
-        ].filter(Boolean);
+        ].filter(field => field && typeof field === 'string' && field.trim().length > 0);
 
-        if (toolFields.length > 0) {
-            inputs.push({
-                id: 'tools_available',
-                label: 'Tools & Infrastruktur',
-                type: 'boolean',
-                value: toolFields.length >= 2, // Mindestens 2 Tool-Kategorien
-                category: 'readiness'
-            });
-        }
+        inputs.push({
+            id: 'tools_available',
+            label: 'Tools & Infrastruktur',
+            type: 'boolean',
+            value: toolFields.length >= 2,
+            category: 'readiness'
+        });
 
         // === COMPLEXITY FACTORS ===
 
@@ -127,40 +124,26 @@ export class MappingService {
         if (dataCharacteristics?.volumeValue != null && dataCharacteristics?.volumeUnit) {
             const { volumeValue, volumeUnit } = dataCharacteristics;
 
-            // 1. Volumen grob auf "GB" normalisieren
-            // Annahme: 1 Record ≈ 1 KB (kannst du bei Bedarf anpassen)
-            let gbEstimate: number;
+            // Konvertierungsfaktoren zu GB (zentral definiert, wartbar)
+            const GB_CONVERSION_FACTORS: Record<string, number> = {
+                'RECORDS': 1 / (1024 * 1024), // Annahme: 1 Record ≈ 1 KB
+                'KB': 1 / (1024 * 1024),
+                'MB': 1 / 1024,
+                'GB': 1,
+                'TB': 1024,
+                'PB': 1024 * 1024
+            };
 
-            switch (volumeUnit) {
-                case 'RECORDS':
-                    gbEstimate = (volumeValue * 1 /* KB */) / (1024 * 1024); // ≈ GB
-                    break;
-                case 'KB':
-                    gbEstimate = volumeValue / (1024 * 1024);
-                    break;
-                case 'MB':
-                    gbEstimate = volumeValue / 1024;
-                    break;
-                case 'GB':
-                    gbEstimate = volumeValue;
-                    break;
-                case 'TB':
-                    gbEstimate = volumeValue * 1024;
-                    break;
-                case 'PB':
-                    gbEstimate = volumeValue * 1024 * 1024;
-                    break;
-                default:
-                    gbEstimate = 0;
-            }
+            // Volumen auf GB normalisieren
+            const gbEstimate = volumeValue * (GB_CONVERSION_FACTORS[volumeUnit] || 0);
 
-            // 2. Logarithmische Skala auf 1–10 mappen
+            // Logarithmische Skala auf 1-10 mappen
             // Idee:
-            //  - < 1 GB  →  Score 1–3  (kaum Impact)
-            //  - 1–10 GB →  Score 3–5  (normales DS-Projekt)
-            //  - 10–100 GB → Score 5–7 (spürbar langsamer, evtl. Server nötig)
-            //  - 100 GB–10 TB → Score 7–9 (Big Data, Cluster/Cloud)
-            //  - > 10 TB → Score 9–10 (sehr hoher Engineering-Aufwand)
+            //  - < 1 GB       →  Score 1-3  (kaum Impact)
+            //  - 1-10 GB      →  Score 3-5  (normales DS-Projekt)
+            //  - 10-100 GB    →  Score 5-7  (spürbar langsamer, evtl. Server nötig)
+            //  - 100 GB-10 TB →  Score 7-9  (Big Data, Cluster/Cloud)
+            //  - > 10 TB      →  Score 9-10 (sehr hoher Engineering-Aufwand)
             const rawScore = Math.log10(gbEstimate + 1) * 3 + 1;
             const volumeComplexity = Math.max(1, Math.min(10, Math.round(rawScore)));
 
