@@ -1,6 +1,5 @@
 // src/app/services/ProjectService.ts
-// Falls ProjectMetrics nicht gefunden wird, stelle sicher, dass der Pfad stimmt
-import { ProjectMetrics } from "../../types.ts";
+import { ProjectMetrics, CalculatedTask } from "../../types.ts";
 import { mappingService } from '../mapping/mapping.service.js';
 import { calculationService } from '../calculation/calculationService.ts';
 import { PrismaClient, ProjectStatus, TeamRole } from '@prisma/client';
@@ -13,7 +12,6 @@ const prisma = new PrismaClient();
 // ======================================================
 
 export interface CreateProjectRequest {
-
     title: string;
     domain?: string;
 }
@@ -56,10 +54,10 @@ export interface UpdateDataCharacteristicsRequest {
 }
 
 export interface UpdateDeploymentConfigRequest {
-    timelinessOfAnalytics?: any; // Oder spezifischer Enum Typ falls vorhanden
+    timelinessOfAnalytics?: any;
     addressedUsers?: string;
     tests?: string;
-    projectIssues?: string[]; // Array von Strings/Enums
+    projectIssues?: string[];
     toolsDeployment?: string;
 }
 
@@ -80,8 +78,7 @@ export class ProjectService {
      * Erstellt ein neues Projekt
      */
     async createProject(data: CreateProjectRequest) {
-
-        // Projekt erstellen - direkt ohne Workspace-Relation
+        // Projekt erstellen
         const project = await prisma.project.create({
             data: {
                 title: data.title,
@@ -117,7 +114,6 @@ export class ProjectService {
         const project = await prisma.project.findUnique({
             where: { id },
             include: {
-                // workspace: true,  <-- ENTFERNT
                 businessUnderstanding: true,
                 dataCharacteristics: true,
                 analysisConfig: true,
@@ -199,7 +195,6 @@ export class ProjectService {
                 createdAt: project.createdAt,
                 updatedAt: project.updatedAt
             },
-            // Workspace Objekt entfernt
             wizardProgress,
             templatePhases,
             projectPlan: project.projectPlan,
@@ -230,7 +225,6 @@ export class ProjectService {
                 ...data,
                 updatedAt: new Date()
             }
-            // include workspace entfernt
         });
 
         return {
@@ -327,34 +321,43 @@ export class ProjectService {
         return dataCharacteristics;
     }
 
-    async updateUtilizationConfig(projectId: string, data: any) {
+    async updateAnalysisConfig(projectId: string, data: any) {
         const id = this.parseId(projectId, 'Projekt-ID');
-        // ... Daten mappen ...
-        const config = await prisma.utilizationConfig.upsert({
+
+        const safeData: any = {
+            dataScienceGoals: data.dataScienceGoals,
+            typeOfAnalytics: data.typeOfAnalytics,
+            toolsAnalysis: data.toolsAnalysis,
+            status: 'DRAFT'
+        };
+
+        if (Array.isArray(data.evaluationMetrics)) {
+            safeData.evaluationMetrics = data.evaluationMetrics;
+        }
+
+        const analysisConfig = await prisma.analysisConfig.upsert({
             where: { projectId: id },
-            create: { projectId: id, ...data, status: 'COMPLETED' }, // oder READY
-            update: { ...data, status: 'COMPLETED' }
+            create: { projectId: id, ...safeData },
+            update: safeData
         });
-        return config;
+
+        await this.advanceWizardStep(id, 3);
+        await this.unlockNextPhase(id, 'deploymentConfig');
+
+        return analysisConfig;
     }
 
-    /**
-     * PATCH /api/projects/:id/deployment-config
-     * Deployment Config Phase aktualisieren
-     */
     async updateDeploymentConfig(projectId: string, data: any) {
         const id = this.parseId(projectId, 'Projekt-ID');
 
-        // Sicheres Mapping der Felder, um ungewollte Daten zu filtern
         const safeData: any = {
             timelinessOfAnalytics: data.timelinessOfAnalytics,
             addressedUsers: data.addressedUsers,
             tests: data.tests,
             toolsDeployment: data.toolsDeployment,
-            status: 'DRAFT' // oder 'COMPLETED', je nach Logik
+            status: 'DRAFT'
         };
 
-        // Arrays sicher übernehmen, falls vorhanden
         if (Array.isArray(data.projectIssues)) {
             safeData.projectIssues = data.projectIssues;
         }
@@ -365,18 +368,23 @@ export class ProjectService {
             update: safeData
         });
 
-        // Wizard auf Schritt 4 setzen
         await this.advanceWizardStep(id, 4);
-
-        // Nächste Phase (Utilization) freischalten
         await this.unlockNextPhase(id, 'utilizationConfig');
 
         return deploymentConfig;
     }
 
+    async updateUtilizationConfig(projectId: string, data: any) {
+        const id = this.parseId(projectId, 'Projekt-ID');
 
+        const config = await prisma.utilizationConfig.upsert({
+            where: { projectId: id },
+            create: { projectId: id, ...data, status: 'COMPLETED' },
+            update: { ...data, status: 'COMPLETED' }
+        });
 
-
+        return config;
+    }
 
     // ======================================================
     // Wizard & Planning Logic
@@ -433,7 +441,7 @@ export class ProjectService {
             }
         });
 
-
+        // 6. Projektplan erstellen
         await this.createProjectPlanFromMetrics(String(id), metrics);
 
         return {
@@ -453,29 +461,23 @@ export class ProjectService {
 
         // 1. Projekt prüfen
         const project = await prisma.project.findUnique({
-            where: {id},
-            select: {id: true, wizardCompleted: true}
+            where: { id },
+            select: { id: true, wizardCompleted: true }
         });
 
         if (!project) {
             throw new Error(`Projekt mit ID ${id} nicht gefunden`);
         }
 
-        /* Optional: Wizard-Check deaktivieren, falls man später neu berechnen will
-        if (!project.wizardCompleted) {
-            throw new Error('Wizard muss zuerst abgeschlossen werden');
-        }
-        */
-
         // 2. Existierenden Plan bereinigen (Zombie-Fix)
         const existingPlan = await prisma.projectPlan.findUnique({
-            where: {projectId: id}
+            where: { projectId: id }
         });
 
         if (existingPlan) {
             console.log(`♻️  ProjectPlan existiert bereits für Projekt ${id}. Lösche alten Plan für saubere Neuberechnung...`);
             await prisma.projectPlan.delete({
-                where: {projectId: id}
+                where: { projectId: id }
             });
             console.log(`✅ Alter ProjectPlan gelöscht.`);
         }
@@ -498,11 +500,11 @@ export class ProjectService {
             }
         });
 
-        console.log(`✅ ProjectPlan ${projectPlan.id} created`);
+        console.log(`✅ ProjectPlan ${projectPlan.id} erstellt`);
 
         // 4. Phasen mit Tasks erstellen
         for (const [index, phase] of metrics.phases.entries()) {
-            // Wir speichern weiterhin die Dauer in Tagen für die Phase selbst (fürs Gantt-Chart Header)
+            // Dauer in Tagen für Gantt-Chart
             const durationInDays = Math.round(phase.durationWeeks * 7);
 
             const projectPhase = await prisma.projectPhase.create({
@@ -523,83 +525,54 @@ export class ProjectService {
 
             console.log(`  📊 Phase ${index + 1}/${metrics.phases.length}: ${phase.name} (${phase.effortPersonWeeks} PW)`);
 
-            // ✅ NEU: Wir übergeben phase.effortPersonWeeks (PW) statt durationInDays
-            // Damit die Task-Berechnung auf Arbeitszeit basiert, nicht Kalenderzeit.
+            // ✅ Tasks direkt aus calculationService verwenden
             await this.createTasksForPhase(
                 projectPlan.id,
                 projectPhase.id,
-                phase.name,
-                phase.effortPersonWeeks
+                phase.tasks  // ← Berechnete Tasks vom calculationService
             );
         }
+
+        console.log(`✅ ProjectPlan komplett erstellt mit allen Phasen und Tasks`);
     }
 
-
-
-
-
-        // ======================================================
-//  Task-Generierung mit CRISP-DM TaskTypes
-// ======================================================
+    // ======================================================
+    // Task-Generierung
+    // ======================================================
 
     /**
-     * Erstellt Tasks für eine Phase basierend auf dem Phasennamen
+     * Erstellt Tasks für eine Phase basierend auf den berechneten Tasks
+     * vom calculationService (Single Source of Truth)
      */
     private async createTasksForPhase(
         projectPlanId: number,
         phaseId: number,
-        phaseName: string,
-        phaseEffortPW: number // <--- Parameter umbenannt für Klarheit
+        calculatedTasks: CalculatedTask[]
     ) {
-        console.log(`🔧 Generating tasks for phase: ${phaseName} (${phaseEffortPW} PW)`);
+        console.log(`🔧 Erstelle ${calculatedTasks.length} Tasks für Phase ${phaseId}`);
 
-        const phaseType = this.getPhaseTypeFromName(phaseName);
+        for (const task of calculatedTasks) {
+            // Konvertierung: Person-Wochen → Arbeitstage (1 PW = 5 Arbeitstage)
+            const estimatedDuration = Math.round(task.effortPersonWeeks * 5 * 10) / 10; // Auf 1 Dezimalstelle runden
 
-        // ✅ Aufruf mit PW
-        const taskSteps = mappingService.generatePhaseSteps(phaseType, phaseEffortPW);
-
-        console.log(`  ✅ Generated ${taskSteps.length} tasks for ${phaseType}`);
-
-        for (const taskData of taskSteps) {
             await prisma.phaseSteps.create({
                 data: {
                     projectPlanId: projectPlanId,
                     phaseId: phaseId,
-                    taskType: taskData.taskType as any,
-                    title: taskData.title,
-                    estimatedDuration: taskData.estimatedDuration, // Das sind jetzt die "sauberen" Tage (z.B. 1.25)
-                    status: taskData.status as any
+                    taskType: task.id as any,  // z.B. 'DEVELOP_ANALYTICAL_MODEL'
+                    title: task.name,
+                    estimatedDuration: estimatedDuration,
+                    status: 'TODO'
                 }
             });
+
+            console.log(`  ✅ Task: ${task.name} (${task.effortPersonWeeks} PW = ${estimatedDuration} Tage)`);
         }
     }
-
-
 
     // ======================================================
     // Private Helpers
     // ======================================================
-
-    /**
-     * Helper: Phasenname → PhaseType für Task-Generierung
-     */
-    /**
-     * Helper: Phasenname → PhaseType für Task-Generierung
-     */
-    private getPhaseTypeFromName(phaseName: string): string {
-        const mapping: Record<string, string> = {
-            'Business Understanding': 'BUSINESS_UNDERSTANDING',
-            'Data Collection, Exploration & Preparation': 'DATA_COLLECTION_EXPLORATION_PREPARATION',
-            'Analysis': 'ANALYSIS_MODELING',
-            'Evaluation': 'EVALUATION',
-            'Deployment': 'DEPLOYMENT',
-            'Utilization': 'UTILIZATION'
-        };
-
-        return mapping[phaseName] || 'BUSINESS_UNDERSTANDING';
-    }
-
-
 
     private mapPhaseNameToType(phaseName: string): any {
         const nameLower = phaseName.toLowerCase();
@@ -627,67 +600,66 @@ export class ProjectService {
         return 'BUSINESS_UNDERSTANDING'; // Fallback
     }
 
-
-
-
-
     private async initializeTemplatePhases(projectId: number) {
-        await prisma.businessUnderstanding.create({ data: { projectId, status: 'DRAFT'} });
-        await prisma.dataCharacteristics.create({
-            data: { projectId, status: 'BLOCKED'}
-        });
+        await prisma.businessUnderstanding.create({ data: { projectId, status: 'DRAFT' } });
+        await prisma.dataCharacteristics.create({ data: { projectId, status: 'BLOCKED' } });
         await prisma.analysisConfig.create({ data: { projectId, status: 'BLOCKED' } });
         await prisma.deploymentConfig.create({ data: { projectId, status: 'BLOCKED' } });
         await prisma.utilizationConfig.create({ data: { projectId, status: 'BLOCKED' } });
     }
 
     private async advanceWizardStep(projectId: number, targetStep: number) {
-        const project = await prisma.project.findUnique({ where: { id: projectId }, select: { wizardStep: true } });
+        const project = await prisma.project.findUnique({
+            where: { id: projectId },
+            select: { wizardStep: true }
+        });
+
         if (project && project.wizardStep < targetStep) {
-            await prisma.project.update({ where: { id: projectId }, data: { wizardStep: targetStep } });
+            await prisma.project.update({
+                where: { id: projectId },
+                data: { wizardStep: targetStep }
+            });
         }
     }
 
-    private async unlockNextPhase(projectId: number, phase: 'dataCharacteristics' | 'analysisConfig' | 'deploymentConfig' | 'utilizationConfig') {
+    private async unlockNextPhase(
+        projectId: number,
+        phase: 'dataCharacteristics' | 'analysisConfig' | 'deploymentConfig' | 'utilizationConfig'
+    ) {
         const updateData = { status: 'READY' };
-        // Dynamic table access logic simplified for readability
-        if (phase === 'dataCharacteristics') await prisma.dataCharacteristics.update({ where: { projectId }, data: updateData as any });
-        if (phase === 'analysisConfig') await prisma.analysisConfig.update({ where: { projectId }, data: updateData as any });
-        if (phase === 'deploymentConfig') await prisma.deploymentConfig.update({ where: { projectId }, data: updateData as any });
-        if (phase === 'utilizationConfig') await prisma.utilizationConfig.update({ where: { projectId }, data: updateData as any });
-    }
 
-    // getOrCreateWorkspace wurde gelöscht
+        if (phase === 'dataCharacteristics') {
+            await prisma.dataCharacteristics.update({
+                where: { projectId },
+                data: updateData as any
+            });
+        }
+        if (phase === 'analysisConfig') {
+            await prisma.analysisConfig.update({
+                where: { projectId },
+                data: updateData as any
+            });
+        }
+        if (phase === 'deploymentConfig') {
+            await prisma.deploymentConfig.update({
+                where: { projectId },
+                data: updateData as any
+            });
+        }
+        if (phase === 'utilizationConfig') {
+            await prisma.utilizationConfig.update({
+                where: { projectId },
+                data: updateData as any
+            });
+        }
+    }
 
     private parseId(value: string, fieldName: string): number {
         const id = parseInt(value, 10);
-        if (isNaN(id) || id <= 0) throw new Error(`Ungültige ${fieldName}: ${value}`);
-        return id;
-    }
-    async updateAnalysisConfig(projectId: string, data: any) {
-        const id = this.parseId(projectId, 'Projekt-ID');
-
-        const safeData: any = {
-            dataScienceGoals: data.dataScienceGoals,
-            typeOfAnalytics: data.typeOfAnalytics,
-            toolsAnalysis: data.toolsAnalysis,
-            status: 'DRAFT'
-        };
-
-        if (Array.isArray(data.evaluationMetrics)) {
-            safeData.evaluationMetrics = data.evaluationMetrics;
+        if (isNaN(id) || id <= 0) {
+            throw new Error(`Ungültige ${fieldName}: ${value}`);
         }
-
-        const analysisConfig = await prisma.analysisConfig.upsert({
-            where: { projectId: id },
-            create: { projectId: id, ...safeData },
-            update: safeData
-        });
-
-        await this.advanceWizardStep(id, 3);
-        await this.unlockNextPhase(id, 'deploymentConfig');
-
-        return analysisConfig;
+        return id;
     }
 
     async debugBusinessUnderstanding() {
@@ -700,6 +672,4 @@ export class ProjectService {
 
         console.log('DEBUG business_understanding:', rows);
     }
-
-
 }

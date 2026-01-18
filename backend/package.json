@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "prisma": {
-    "schema": "src/app/prismadatabase/schema.prisma",
-    "seed": "node --loader ts-node/esm src/app/prismadatabase/prisma/seed.ts"
+    "schema": "src/app/prismadatabase/schema.prisma"
   },
   "scripts": {
     "dev": "tsx src/index.ts",
