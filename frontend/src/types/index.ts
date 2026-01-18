@@ -505,7 +505,6 @@ export interface DeploymentTask {
   finalize_project: number;
 }
 
-
 export interface PhaseTask {
   id: number;
   title: string;
