@@ -561,3 +561,112 @@ enum DependencyType {
   FINISH_TO_FINISH
   START_TO_FINISH
 }
+
+model WeightsSettings {
+  id        Int      @id @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  defaultWeights        DefaultWeights?
+  businessUnderstanding BusinessUnderstandingTask?
+  dataTasks             DataTasks?
+  analysisTasks         AnalysisTask?
+  evaluationTasks       EvaluationTask?
+  deploymentTasks       DeploymentTask?
+  productivity          Productivity?
+  cost                  Cost?
+}
+
+model DefaultWeights {
+  id         Int             @id @default(autoincrement())
+  settingsId Int             @unique
+  settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  data_access         Float
+  data_availability   Float
+  stakeholder_support Float
+  tools_available     Float
+  data_variety        Float
+  data_velocity       Float
+  num_sources         Float
+  analytics_type      Float
+  data_quality        Float
+  privacy_concerns    Float
+  missing_data        Float
+  goal_clarity        Float
+}
+
+model BusinessUnderstandingTask {
+  id         Int             @id @default(autoincrement())
+  settingsId Int             @unique
+  settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  assess_situation        Float
+  create_project_plan     Float
+  compose_team            Float
+  set_criteria_objectives Float
+  derive_targets          Float
+}
+
+model DataTasks {
+  id         Int             @id @default(autoincrement())
+  settingsId Int             @unique
+  settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  identify_sources   Float
+  acquire_data       Float
+  describe_data      Float
+  explore_data       Float
+  asses_data_quality Float
+  prepare_data       Float
+  develop_pipeline   Float
+}
+
+model AnalysisTask {
+  id         Int             @id @default(autoincrement())
+  settingsId Int             @unique
+  settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  define_hypothesis Float
+  select_model      Float
+  design_test       Float
+  develop_model     Float
+  assess_model      Float
+  develop_pipeline  Float
+}
+
+model EvaluationTask {
+  id         Int             @id @default(autoincrement())
+  settingsId Int             @unique
+  settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  assess_results   Float
+  evaluate_process Float
+}
+
+model DeploymentTask {
+  id         Int             @id @default(autoincrement())
+  settingsId Int             @unique
+  settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+
+  perform_assessment          Float
+  plan_deployment             Float
+  plan_monitoring_maintenance Float
+  test_deployment             Float
+  perform_integration         Float
+  finalize_project            Float
+}
+
+model Productivity {
+  id           Int             @id @default(autoincrement())
+  settingsId   Int             @unique
+  productivity Float
+  settings     WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+}
+
+model Cost {
+  id          Int             @id @default(autoincrement())
+  settingsId  Int             @unique
+  hourly_rate Float
+  settings    WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
+}

@@ -388,3 +388,12 @@ export const PHASE_TRANSLATIONS: Record<string, string> = {
     'Deployment': 'Deployment',
     'Utilization': 'Betrieb & Monitoring'
 };
+
+export interface UpdateWeightsSettingsDto {
+    defaultWeights: DefaultWeights
+    businessUnderstanding: BusinessUnderstandingTask
+    dataTasks: DataTasks
+    analysisTasks: AnalysisTask
+    evaluationTasks: EvaluationTask
+    deploymentTasks: DeploymentTask
+}
