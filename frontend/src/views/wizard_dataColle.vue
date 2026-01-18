@@ -443,11 +443,11 @@ onMounted(() => {
 
             <div class="preview-item" v-if="draft.dataCharacteristics.dataAccess?.length">
               <strong>Datenzugriff:</strong>
-              <p>
-                {{ draft.dataCharacteristics.dataAccess
-                .map((type: DataAccessType) => dataAccessLabels[type])
-                .join(', ') }}
-              </p>
+              <ul>
+                <li v-for="access in draft.dataCharacteristics.dataAccess" :key="access">
+                  {{dataAccessLabels[access]}}
+                </li>
+              </ul>
             </div>
             <div class="preview-item" v-if="draft.dataCharacteristics.dataAvailability !== undefined">
               <strong>Verfügbarkeit:</strong>
@@ -486,13 +486,10 @@ onMounted(() => {
             <!-- dataPreparationSteps -->
             <div class="preview-item" v-if="draft.dataCharacteristics.dataPreparationSteps?.length">
               <strong>Vorbereitung:</strong>
-              <p>
-                {{
-                  draft.dataCharacteristics.dataPreparationSteps
-                    .map((step: DataPreparationStep) => preparationLabels[step])
-                    .join(', ')
-                }}
-              </p>
+              <ul><li v-for="preparation in draft.dataCharacteristics.dataPreparationSteps" :key="preparation">
+                {{preparationLabels[preparation]}}
+              </li>
+              </ul>
             </div>
 
 
