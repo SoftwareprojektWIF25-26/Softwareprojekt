@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, ProjectStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { defaultWeights } from '../../config/defaultWeights.ts';
 import {UpdateWeightsSettingsDto} from "../../types.ts";
 
@@ -59,6 +59,11 @@ export class SettingsService {
                     where: { settingsId },
                     data: data.businessTasks,
                 })
+
+                await prisma.dataTasks.update({
+                    where: { settingsId },
+                    data: data.dataTasks,
+                });
 
                 await prisma.analysisTask.update({
                     where: { settingsId },

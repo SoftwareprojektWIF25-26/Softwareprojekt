@@ -101,5 +101,35 @@ export const defaultFields = [
         type: 'boolean',
         value: true,
         category: 'uncertainty'
+    },
+    {
+        id: 'data_volume_complexity',
+        label: 'Datenvolumen-Komplexität (1-10)',
+        type: 'number',
+        value: 5,
+        category: 'complexity',
+        isNegative: true,
+        min: 1,
+        max: 10
+    },
+    {
+        id: 'data_prep_complexity',
+        label: 'Datenaufbereitungs-Komplexität (0-10)',
+        type: 'number',
+        value: 5,
+        category: 'complexity',
+        isNegative: true,
+        min: 0,
+        max: 10
+    },
+    {
+        id: 'product_complexity',
+        label: 'Produkt-Komplexität (1-10)',
+        type: 'number',
+        value: 5,
+        category: 'complexity',
+        isNegative: true,
+        min: 1,
+        max: 10
     }
 ];

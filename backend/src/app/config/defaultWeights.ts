@@ -43,8 +43,9 @@ export const defaultWeights = {
         develop_pipeline: 0.1,
     },
     evaluationTasks: {
-        assess_results: 0.5,
-        evaluate_process: 0.5,
+        assess_results: 0.33,
+        evaluate_process: 0.33,
+        perform_checkpoint_decision: 0.34,
     },
     deploymentTasks: {
         perform_assessment: 0.15,

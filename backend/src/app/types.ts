@@ -12,6 +12,17 @@ import type {
     TaskType
 } from '@prisma/client';
 
+export interface UpdateWeightsSettingsDto {
+    defaultWeights: Omit<DefaultWeights, 'id' | 'settingsId'>;
+    businessTasks: Omit<BusinessUnderstandingTask, 'id' | 'settingsId'>;
+    dataTasks: Omit<DataTasks, 'id' | 'settingsId'>;
+    analysisTasks: Omit<AnalysisTask, 'id' | 'settingsId'>;
+    evaluationTasks: Omit<EvaluationTask, 'id' | 'settingsId'>;
+    deploymentTasks: Omit<DeploymentTask, 'id' | 'settingsId'>;
+    productivity: Omit<Productivity, 'id' | 'settingsId'>;
+    cost: Omit<Cost, 'id' | 'settingsId'>;
+}
+
 export interface InputField {
     id: string;
     label: string;

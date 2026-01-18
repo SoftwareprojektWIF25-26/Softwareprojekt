@@ -594,6 +594,9 @@ model DefaultWeights {
   privacy_concerns    Float
   missing_data        Float
   goal_clarity        Float
+  data_volume_complexity Float
+  data_prep_complexity   Float
+  product_complexity     Float
 }
 
 model BusinessUnderstandingTask {
