@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma, ProjectStatus } from '@prisma/client';
-import { defaultWeights } from '@/app/config/defaultWeights';
+import { defaultWeights } from '../../config/defaultWeights.ts';
+import {UpdateWeightsSettingsDto} from "../../types.ts";
 
 const prisma = new PrismaClient();
 
@@ -10,7 +11,7 @@ export class SettingsService {
             where: { id: settingsId },
             include: {
                 defaultWeights: true,
-                businessUnderstanding: true,
+                businessTasks: true,
                 dataTasks: true,
                 analysisTasks: true,
                 evaluationTasks: true,
@@ -56,12 +57,7 @@ export class SettingsService {
 
                 await prisma.businessUnderstandingTask.update({
                     where: { settingsId },
-                    data: data.businessUnderstanding,
-                })
-
-                await prisma.dataTasks.update({
-                    where: { settingsId },
-                    data: data.dataTasks,
+                    data: data.businessTasks,
                 })
 
                 await prisma.analysisTask.update({
@@ -91,7 +87,7 @@ export class SettingsService {
                         data: { hourly_rate: data.cost.hourly_rate },
                     });}
 
-                return getWeightsSettings(settingsId)
+                return this.getWeightsSettings(settingsId)
             })
         }
     }

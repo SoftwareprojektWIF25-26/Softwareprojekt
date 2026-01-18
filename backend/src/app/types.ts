@@ -1,5 +1,17 @@
 // types.ts - Typdefinitionen für das Projektschätzungssystem mit Task-basierter Berechnung
 
+import type {
+    DefaultWeights,
+    BusinessUnderstandingTask,
+    DataTasks,
+    AnalysisTask,
+    EvaluationTask,
+    DeploymentTask,
+    Productivity,
+    Cost,
+    TaskType
+} from '@prisma/client';
+
 export interface InputField {
     id: string;
     label: string;
@@ -42,17 +54,17 @@ export enum ProjectSize {
     XL = 'XL'
 }
 
-// NEU: Task-Definition
+//VEREINFACHT: Verwendet direkt TaskType aus Prisma
 export interface PhaseTask {
-    id: string;
+    id: TaskType;  //Direkt Prisma Enum - kein String mehr!
     name: string;
-    defaultWeight: number;  // Standardgewichtung (summiert sich auf 1 pro Phase)
+    defaultWeight: number;
     description?: string;
 }
 
-// NEU: Task mit berechneten Werten
+//VEREINFACHT: Verwendet direkt TaskType
 export interface CalculatedTask {
-    id: string;
+    id: TaskType;  // Direkt Prisma Enum
     name: string;
     weight: number;
     effortPersonWeeks: number;
@@ -108,10 +120,10 @@ export interface CalculationRequest {
     weights: WeightConfig;
     projectType: ProjectType;
     teamSize: number;
-    productivityFactor?: number; // Standard: 0.6
-    velocityPerSprint?: number; // Standard: 20 SP
-    includeRiskBuffer?: boolean; // Standard: true
-    taskWeights?: TaskWeightConfig;  // NEU: Optionale Task-Gewichtungen
+    productivityFactor?: number;
+    velocityPerSprint?: number;
+    includeRiskBuffer?: boolean;
+    taskWeights?: TaskWeightConfig;
 }
 
 export interface CalculationResponse {
@@ -120,7 +132,7 @@ export interface CalculationResponse {
     error?: string;
 }
 
-// NEU: Task-Gewichtungen pro Phase
+//Task-Gewichtungen pro Phase
 export interface TaskWeightConfig {
     [phaseName: string]: {
         [taskId: string]: number;
@@ -143,7 +155,7 @@ export const PROJECT_SIZE_THRESHOLDS = [
     { size: ProjectSize.XL, max: Infinity }
 ];
 
-// NEU: DSLC Phasen mit Tasks
+// Alle IDs sind jetzt TaskType Enums (UPPER_SNAKE_CASE)
 export const DSLC_PHASES_WITH_TASKS: {
     name: string;
     basePercentage: number;
@@ -153,233 +165,75 @@ export const DSLC_PHASES_WITH_TASKS: {
         name: 'Business Understanding',
         basePercentage: 0.10,
         tasks: [
-            {
-                id: 'assess-situation',
-                name: 'Assess Situation',
-                defaultWeight: 0.20,
-                description: 'Analyse der aktuellen Situation und Rahmenbedingungen'
-            },
-            {
-                id: 'compose-team',
-                name: 'Compose Project Team',
-                defaultWeight: 0.15,
-                description: 'Zusammenstellung des Projektteams'
-            },
-            {
-                id: 'business-objectives',
-                name: 'Set Business Objectives and Success Criteria',
-                defaultWeight: 0.25,
-                description: 'Definition von Geschäftszielen und Erfolgskriterien'
-            },
-            {
-                id: 'data-science-targets',
-                name: 'Derive Data Science Targets',
-                defaultWeight: 0.20,
-                description: 'Ableitung von Data Science Zielen'
-            },
-            {
-                id: 'project-plan',
-                name: 'Create Project Plan',
-                defaultWeight: 0.20,
-                description: 'Erstellung des Projektplans'
-            }
+            { id: 'ASSESS_SITUATION' as TaskType, name: 'Assess Situation', defaultWeight: 0.20, description: 'Analyse der aktuellen Situation' },
+            { id: 'COMPOSE_PROJECT_TEAM' as TaskType, name: 'Compose Project Team', defaultWeight: 0.15, description: 'Zusammenstellung des Teams' },
+            { id: 'SET_BUSINESS_OBJECTIVES' as TaskType, name: 'Set Business Objectives', defaultWeight: 0.25, description: 'Definition von Geschäftszielen' },
+            { id: 'DERIVE_DATA_SCIENCE_TARGETS' as TaskType, name: 'Derive Data Science Targets', defaultWeight: 0.20, description: 'Ableitung von DS-Zielen' },
+            { id: 'CREATE_PROJECT_PLAN' as TaskType, name: 'Create Project Plan', defaultWeight: 0.20, description: 'Erstellung des Projektplans' }
         ]
     },
     {
         name: 'Data Collection, Exploration & Preparation',
         basePercentage: 0.25,
         tasks: [
-            {
-                id: 'identify-sources',
-                name: 'Identify Data Sources',
-                defaultWeight: 0.10,
-                description: 'Identifikation relevanter Datenquellen'
-            },
-            {
-                id: 'acquire-data',
-                name: 'Acquire Data',
-                defaultWeight: 0.15,
-                description: 'Beschaffung der Daten'
-            },
-            {
-                id: 'describe-data',
-                name: 'Describe Data',
-                defaultWeight: 0.10,
-                description: 'Beschreibung der Datenstruktur'
-            },
-            {
-                id: 'explore-data',
-                name: 'Explore Data',
-                defaultWeight: 0.15,
-                description: 'Explorative Datenanalyse'
-            },
-            {
-                id: 'assess-quality',
-                name: 'Assess Data Quality',
-                defaultWeight: 0.15,
-                description: 'Bewertung der Datenqualität'
-            },
-            {
-                id: 'prepare-data',
-                name: 'Prepare Data',
-                defaultWeight: 0.20,
-                description: 'Datenaufbereitung und -transformation'
-            },
-            {
-                id: 'data-pipeline',
-                name: 'Develop Data Pipeline',
-                defaultWeight: 0.15,
-                description: 'Entwicklung der Datenpipeline'
-            }
+            { id: 'IDENTIFY_DATA_SOURCES' as TaskType, name: 'Identify Data Sources', defaultWeight: 0.10 },
+            { id: 'ACQUIRE_DATA' as TaskType, name: 'Acquire Data', defaultWeight: 0.15 },
+            { id: 'DESCRIBE_DATA' as TaskType, name: 'Describe Data', defaultWeight: 0.10 },
+            { id: 'EXPLORE_DATA' as TaskType, name: 'Explore Data', defaultWeight: 0.15 },
+            { id: 'ASSESS_DATA_QUALITY' as TaskType, name: 'Assess Data Quality', defaultWeight: 0.15 },
+            { id: 'PREPARE_DATA' as TaskType, name: 'Prepare Data', defaultWeight: 0.20 },
+            { id: 'DEVELOP_DATA_PIPELINE' as TaskType, name: 'Develop Data Pipeline', defaultWeight: 0.15 }
         ]
     },
     {
         name: 'Analysis',
         basePercentage: 0.30,
         tasks: [
-            {
-                id: 'define-hypothesis',
-                name: 'Define Hypothesis',
-                defaultWeight: 0.10,
-                description: 'Definition von Hypothesen'
-            },
-            {
-                id: 'select-model',
-                name: 'Select Analytical Model',
-                defaultWeight: 0.15,
-                description: 'Auswahl des analytischen Modells'
-            },
-            {
-                id: 'design-test',
-                name: 'Design Test for Analytical Model',
-                defaultWeight: 0.10,
-                description: 'Design des Testverfahrens'
-            },
-            {
-                id: 'develop-model',
-                name: 'Develop Analytical Model',
-                defaultWeight: 0.35,
-                description: 'Entwicklung des analytischen Modells'
-            },
-            {
-                id: 'assess-model',
-                name: 'Assess Analytical Model',
-                defaultWeight: 0.15,
-                description: 'Bewertung des Modells'
-            },
-            {
-                id: 'analytical-pipeline',
-                name: 'Develop Analytical Pipeline',
-                defaultWeight: 0.15,
-                description: 'Entwicklung der Analyse-Pipeline'
-            }
+            { id: 'DEFINE_HYPOTHESIS' as TaskType, name: 'Define Hypothesis', defaultWeight: 0.10 },
+            { id: 'SELECT_ANALYTICAL_MODEL' as TaskType, name: 'Select Analytical Model', defaultWeight: 0.15 },
+            { id: 'DESIGN_TEST_FOR_ANALYTICAL_MODEL' as TaskType, name: 'Design Test for Analytical Model', defaultWeight: 0.10 },
+            { id: 'DEVELOP_ANALYTICAL_MODEL' as TaskType, name: 'Develop Analytical Model', defaultWeight: 0.35 },
+            { id: 'ASSESS_ANALYTICAL_MODEL' as TaskType, name: 'Assess Analytical Model', defaultWeight: 0.15 },
+            { id: 'DEVELOP_ANALYTICAL_PIPELINE' as TaskType, name: 'Develop Analytical Pipeline', defaultWeight: 0.15 }
         ]
     },
     {
         name: 'Evaluation',
         basePercentage: 0.15,
         tasks: [
-            {
-                id: 'assess-results',
-                name: 'Assess Analytical Results',
-                defaultWeight: 0.60,
-                description: 'Bewertung der analytischen Ergebnisse'
-            },
-            {
-                id: 'evaluate-process',
-                name: 'Evaluate Process and Perform Checkpoint Decision',
-                defaultWeight: 0.40,
-                description: 'Prozessevaluation und Checkpoint-Entscheidung'
-            }
+            { id: 'ASSESS_ANALYTICAL_RESULTS' as TaskType, name: 'Assess Analytical Results', defaultWeight: 0.60 },
+            { id: 'EVALUATE_PROCESS' as TaskType, name: 'Evaluate Process', defaultWeight: 0.25 },
+            { id: 'PERFORM_CHECKPOINT_DECISION' as TaskType, name: 'Perform Checkpoint Decision', defaultWeight: 0.15 }
         ]
     },
     {
         name: 'Deployment',
         basePercentage: 0.10,
         tasks: [
-            {
-                id: 'impact-assessment',
-                name: 'Perform Impact Assessment',
-                defaultWeight: 0.15,
-                description: 'Durchführung der Impact-Analyse'
-            },
-            {
-                id: 'plan-deployment',
-                name: 'Plan Deployment',
-                defaultWeight: 0.20,
-                description: 'Planung des Deployments'
-            },
-            {
-                id: 'plan-monitoring',
-                name: 'Plan Monitoring and Maintenance',
-                defaultWeight: 0.15,
-                description: 'Planung von Monitoring und Wartung'
-            },
-            {
-                id: 'test-deployment',
-                name: 'Test Deployment',
-                defaultWeight: 0.20,
-                description: 'Test des Deployments'
-            },
-            {
-                id: 'business-integration',
-                name: 'Perform Business Integration',
-                defaultWeight: 0.20,
-                description: 'Integration in Geschäftsprozesse'
-            },
-            {
-                id: 'finalize-project',
-                name: 'Finalize Project',
-                defaultWeight: 0.10,
-                description: 'Projektabschluss'
-            }
+            { id: 'PERFORM_IMPACT_ASSESSMENT' as TaskType, name: 'Perform Impact Assessment', defaultWeight: 0.15 },
+            { id: 'PLAN_DEPLOYMENT' as TaskType, name: 'Plan Deployment', defaultWeight: 0.20 },
+            { id: 'PLAN_MONITORING_AND_MAINTENANCE' as TaskType, name: 'Plan Monitoring and Maintenance', defaultWeight: 0.15 },
+            { id: 'TEST_DEPLOYMENT' as TaskType, name: 'Test Deployment', defaultWeight: 0.20 },
+            { id: 'PERFORM_BUSINESS_INTEGRATION' as TaskType, name: 'Perform Business Integration', defaultWeight: 0.20 },
+            { id: 'FINALIZE_PROJECT' as TaskType, name: 'Finalize Project', defaultWeight: 0.10 }
         ]
     },
     {
         name: 'Utilization',
         basePercentage: 0.10,
         tasks: [
-            {
-                id: 'create-value',
-                name: 'Create Value',
-                defaultWeight: 0.30,
-                description: 'Wertschöpfung aus dem System'
-            },
-            {
-                id: 'monitor-system',
-                name: 'Monitor System',
-                defaultWeight: 0.25,
-                description: 'System-Monitoring'
-            },
-            {
-                id: 'support-user',
-                name: 'Support User',
-                defaultWeight: 0.20,
-                description: 'Benutzer-Support'
-            },
-            {
-                id: 'infrastructure-management',
-                name: 'Perform Infrastructure Management',
-                defaultWeight: 0.15,
-                description: 'Infrastruktur-Management'
-            },
-            {
-                id: 'perform-maintenance',
-                name: 'Perform Maintenance',
-                defaultWeight: 0.10,
-                description: 'Wartung und Updates'
-            }
+            { id: 'MONITOR_MODEL_PERFORMANCE' as TaskType, name: 'Monitor Model Performance', defaultWeight: 0.40 },
+            { id: 'MAINTAIN_DATA_PIPELINE' as TaskType, name: 'Maintain Data Pipeline', defaultWeight: 0.30 },
+            { id: 'UPDATE_MODEL' as TaskType, name: 'Update Model', defaultWeight: 0.30 }
         ]
     }
 ];
 
-// Für Abwärtskompatibilität
 export const BASE_PHASE_DISTRIBUTION = DSLC_PHASES_WITH_TASKS.map(phase => ({
     name: phase.name,
     percentage: phase.basePercentage
 }));
 
-// Deutschen Namen für UI -> optional falls wir das brauchen
 export const PHASE_TRANSLATIONS: Record<string, string> = {
     'Business Understanding': 'Geschäftsverständnis',
     'Data Collection, Exploration & Preparation': 'Datenerfassung & -aufbereitung',
@@ -391,9 +245,11 @@ export const PHASE_TRANSLATIONS: Record<string, string> = {
 
 export interface UpdateWeightsSettingsDto {
     defaultWeights: DefaultWeights
-    businessUnderstanding: BusinessUnderstandingTask
+    businessTasks: BusinessUnderstandingTask
     dataTasks: DataTasks
     analysisTasks: AnalysisTask
     evaluationTasks: EvaluationTask
     deploymentTasks: DeploymentTask
+    productivity: Productivity
+    cost: Cost
 }

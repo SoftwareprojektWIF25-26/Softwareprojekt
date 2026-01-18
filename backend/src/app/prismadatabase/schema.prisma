@@ -568,7 +568,7 @@ model WeightsSettings {
   updatedAt DateTime @updatedAt
 
   defaultWeights        DefaultWeights?
-  businessUnderstanding BusinessUnderstandingTask?
+  businessTasks BusinessUnderstandingTask?
   dataTasks             DataTasks?
   analysisTasks         AnalysisTask?
   evaluationTasks       EvaluationTask?
@@ -642,6 +642,7 @@ model EvaluationTask {
 
   assess_results   Float
   evaluate_process Float
+  perform_checkpoint_decision Float
 }
 
 model DeploymentTask {

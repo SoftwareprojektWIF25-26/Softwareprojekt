@@ -2,7 +2,7 @@
 
 export const defaultWeights = {
     defaultWeights: {
-        data_access: 1.5,         // Besonders wichtig
+        data_access: 1.5,
         data_availability: 1.2,
         stakeholder_support: 1.0,
         tools_available: 0.8,
@@ -10,10 +10,13 @@ export const defaultWeights = {
         data_velocity: 1.0,
         num_sources: 1.0,
         analytics_type: 1.3,
-        data_quality: 1.5,        // Sehr wichtig
+        data_quality: 1.5,
         privacy_concerns: 1.2,
         missing_data: 1.1,
-        goal_clarity: 1.4
+        goal_clarity: 1.4,
+        data_volume_complexity: 0.8,
+        data_prep_complexity: 0.9,
+        product_complexity: 0.85,
     },
     businessTasks: {
         assess_situation: 0.2,

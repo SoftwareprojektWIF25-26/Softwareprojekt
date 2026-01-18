@@ -409,7 +409,6 @@ export type TaskType =
 
 
 // Enums
-export type ProjectStatus = 'PLANNING' | 'IN_PROGRESS' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED'
 export type TemplatePhaseStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
 

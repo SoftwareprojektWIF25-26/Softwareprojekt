@@ -1,8 +1,10 @@
 // src/app/services/ProjectService.ts
-import { ProjectMetrics, CalculatedTask } from "../../types.ts";
+import {ProjectMetrics, CalculatedTask, TaskWeightConfig} from "../../types.ts";
 import { mappingService } from '../mapping/mapping.service.js';
 import { calculationService } from '../calculation/calculationService.ts';
-import { PrismaClient, ProjectStatus, TeamRole } from '@prisma/client';
+import { PrismaClient, ProjectStatus, TeamRole, TaskType } from '@prisma/client';
+import { defaultWeights as configDefaults } from '../../config/defaultWeights.ts';
+import {SettingsService} from "../settings/settings.service.ts";
 
 
 const prisma = new PrismaClient();
@@ -47,7 +49,7 @@ export interface UpdateDataCharacteristicsRequest {
     veracity?: any;
     variety?: any;
     volumeValue?: number;
-    volumeUnit?: 'RECORDS' | 'GB' | 'TB' | 'PB';
+    volumeUnit?: 'RECORDS' | 'KB' | 'MB' | 'GB' | 'TB' | 'PB';
     variability?: any;
     dataPreparationSteps?: any[];
     toolsData?: string;
@@ -423,12 +425,19 @@ export class ProjectService {
             analysisConfig: project.analysisConfig
         });
 
+        // Settings laden
+
+        const settings = await this.loadWeightSettings();
+        const taskWeights = this.convertSettingsToTaskWeights(settings);
+        const inputWeights = settings?.defaultWeights || configDefaults.defaultWeights;
+
         // 4. Berechnung durchführen
         const metrics = calculationService.calculate({
             inputs,
-            weights: {}, // defaultWeights
+            weights: inputWeights,
             projectType,
-            teamSize: project.businessUnderstanding?.teamSize || 3
+            teamSize: project.businessUnderstanding?.teamSize || 3,
+            taskWeights
         });
 
         // 5. Wizard als completed markieren
@@ -559,7 +568,7 @@ export class ProjectService {
                 data: {
                     projectPlanId: projectPlanId,
                     phaseId: phaseId,
-                    taskType: task.id as any,  // z.B. 'DEVELOP_ANALYTICAL_MODEL'
+                    taskType: task.id,
                     title: task.name,
                     estimatedDuration: estimatedDuration,
                     status: 'TODO'
@@ -573,6 +582,88 @@ export class ProjectService {
     // ======================================================
     // Private Helpers
     // ======================================================
+
+
+    private async loadWeightSettings() {
+        try {
+            const settingsService = new SettingsService();
+            return await settingsService.getWeightsSettings(1);
+        } catch (error) {
+            console.error('Fehler beim Laden der Settings:', error);
+            //Fallback auf null → completeWizard() nutzt dann configDefaults
+            return null;
+        }
+    }
+
+    /**
+     * Konvertiert DB-Settings in TaskWeightConfig (OHNE Utilization)
+     */
+    private convertSettingsToTaskWeights(settings: any): TaskWeightConfig | undefined {
+        if (!settings) return undefined;
+
+        const taskWeights: TaskWeightConfig = {};
+
+        // Business Understanding
+        if (settings.businessTasks) {
+            taskWeights['Business Understanding'] = {
+                'ASSESS_SITUATION': settings.businessTasks.assess_situation,
+                'COMPOSE_PROJECT_TEAM': settings.businessTasks.compose_team,
+                'SET_BUSINESS_OBJECTIVES': settings.businessTasks.set_criteria_objectives,
+                'DERIVE_DATA_SCIENCE_TARGETS': settings.businessTasks.derive_targets,
+                'CREATE_PROJECT_PLAN': settings.businessTasks.create_project_plan
+            };
+        }
+
+        // Data Collection, Exploration & Preparation
+        if (settings.dataTasks) {
+            taskWeights['Data Collection, Exploration & Preparation'] = {
+                'IDENTIFY_DATA_SOURCES': settings.dataTasks.identify_sources,
+                'ACQUIRE_DATA': settings.dataTasks.acquire_data,
+                'DESCRIBE_DATA': settings.dataTasks.describe_data,
+                'EXPLORE_DATA': settings.dataTasks.explore_data,
+                'ASSESS_DATA_QUALITY': settings.dataTasks.asses_data_quality,
+                'PREPARE_DATA': settings.dataTasks.prepare_data,
+                'DEVELOP_DATA_PIPELINE': settings.dataTasks.develop_pipeline
+            };
+        }
+
+        // Analysis
+        if (settings.analysisTasks) {
+            taskWeights['Analysis'] = {
+                'DEFINE_HYPOTHESIS': settings.analysisTasks.define_hypothesis,
+                'SELECT_ANALYTICAL_MODEL': settings.analysisTasks.select_model,
+                'DESIGN_TEST_FOR_ANALYTICAL_MODEL': settings.analysisTasks.design_test,
+                'DEVELOP_ANALYTICAL_MODEL': settings.analysisTasks.develop_model,
+                'ASSESS_ANALYTICAL_MODEL': settings.analysisTasks.assess_model,
+                'DEVELOP_ANALYTICAL_PIPELINE': settings.analysisTasks.develop_pipeline
+            };
+        }
+
+        // Evaluation
+        if (settings.evaluationTasks) {
+            taskWeights['Evaluation'] = {
+                'ASSESS_ANALYTICAL_RESULTS': settings.evaluationTasks.assess_results,
+                'EVALUATE_PROCESS': settings.evaluationTasks.evaluate_process
+                // PERFORM_CHECKPOINT_DECISION fehlt im Schema - wird auf Default-Weight zurückfallen
+            };
+        }
+
+        // Deployment
+        if (settings.deploymentTasks) {
+            taskWeights['Deployment'] = {
+                'PERFORM_IMPACT_ASSESSMENT': settings.deploymentTasks.perform_assessment,
+                'PLAN_DEPLOYMENT': settings.deploymentTasks.plan_deployment,
+                'PLAN_MONITORING_AND_MAINTENANCE': settings.deploymentTasks.plan_monitoring_maintenance,
+                'TEST_DEPLOYMENT': settings.deploymentTasks.test_deployment,
+                'PERFORM_BUSINESS_INTEGRATION': settings.deploymentTasks.perform_integration,
+                'FINALIZE_PROJECT': settings.deploymentTasks.finalize_project
+            };
+        }
+
+        // Utilization wird NICHT gemappt (bleibt auf Default-Weights)
+
+        return taskWeights;
+    }
 
     private mapPhaseNameToType(phaseName: string): any {
         const nameLower = phaseName.toLowerCase();
