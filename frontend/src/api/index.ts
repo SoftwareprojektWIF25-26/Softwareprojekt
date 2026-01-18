@@ -1,6 +1,6 @@
 // api/PathRouting.ts
 import axios, { AxiosError } from 'axios';
-import {
+import type {
   ApiResponse,
   Project,
   CreateProjectRequest,
