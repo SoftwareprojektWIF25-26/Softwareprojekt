@@ -710,7 +710,10 @@ onMounted(async () => {
           Die Summe darf 1 nicht überschreiten.
         </p>
       </div>
-
+<div class="wizard-header">
+  <h1>Sonstiges
+  </h1>
+</div>
       <div class="form-card" id="productivity">
         <h2>Produktivität</h2>
         <div class="section-grid">
