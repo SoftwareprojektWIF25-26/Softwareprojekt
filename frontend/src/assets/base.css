@@ -378,6 +378,7 @@ h3 {
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: 3rem;
+  position: relative;
 }
 
 .select-card:hover {
@@ -402,7 +403,7 @@ h3 {
   flex-shrink: 0;
   cursor: pointer;
   accent-color: #3b82f6;
-  margin: 0;
+  margin-right: 0.5rem;
 }
 
 .select-card span {
