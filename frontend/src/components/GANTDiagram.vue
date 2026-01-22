@@ -265,7 +265,8 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="timeline-header" style="position: relative; overflow: hidden;">
         <!-- Linkes Label (leer oder statisch) -->
-        <div class="timeline-label">Phase</div>
+        <div class="timeline-label" style="color: transparent;">Phase</div>
+
 
         <!-- Dynamische Zeitachse -->
         <div class="timeline-weeks" style="position: relative;">
@@ -518,6 +519,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  overflow: hidden; /* ← NEU */
+  min-width: 220px; /* ← NEU: Verhindert Schrumpfen */
 }
 
 .phase-name {
