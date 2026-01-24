@@ -29,16 +29,15 @@ function save() {
     deploymentTasks: { ...deploymentTasks },
     productivity: { ...productivity },
     cost: { ...cost },
-
   }
 
   api
     .patchWeights(payload)
     .then(() => {
-      console.log('✅ Gewichtungen gespeichert')
+      console.log('Gewichtungen gespeichert')
     })
     .catch((err) => {
-      console.error('❌ Fehler beim Speichern der Gewichtungen:', err)
+      console.error('Fehler beim Speichern der Gewichtungen:', err)
       toast.error(err.message || 'Fehler beim Speichern der Gewichtungen')
     })
 }
@@ -194,6 +193,35 @@ onMounted(async () => {
     toast.error(err.message || 'Fehler beim Laden der Gewichtungen')
   }
 })
+
+function scrollToSection(sectionId: string) {
+  const element = document.getElementById(sectionId)
+  if (!element) return
+
+  const headerOffset = 100
+  const elementPosition = element.getBoundingClientRect().top
+  const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+  const startPosition = window.pageYOffset
+  const distance = offsetPosition - startPosition
+  const duration = 750 //(1500 = 1.5 Sekunden)
+
+  let start: number | null = null
+
+  function step(currentTime: number) {
+    if (!start) start = currentTime
+    const elapsed = currentTime - start
+    const progress = Math.min(elapsed / duration, 1)
+
+    const easeProgress =
+      progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2
+
+    window.scrollTo(0, startPosition + distance * easeProgress)
+
+    if (progress < 1) requestAnimationFrame(step)
+  }
+
+  requestAnimationFrame(step)
+}
 </script>
 
 <template>
@@ -201,14 +229,20 @@ onMounted(async () => {
     <aside class="sidebar">
       <h2>Navigation</h2>
       <ul>
-        <li><a href="#default-weights">Default </a></li>
-        <li><a href="#business-understanding">Business Understanding</a></li>
-        <li><a href="#data-tasks">Data Collection, Exploration, Preparation</a></li>
-        <li><a href="#analysis-tasks">Analysis </a></li>
-        <li><a href="#evaluation-tasks">Evaluation </a></li>
-        <li><a href="#deployment-tasks">Deployment </a></li>
-        <li><a href="#productivity">Produktivität</a></li>
-        <li><a href="#cost">Personalkosten</a></li>
+        <li><a @click.prevent="scrollToSection('default-weights')">Default</a></li>
+        <li>
+          <a @click.prevent="scrollToSection('business-understanding')">Business Understanding</a>
+        </li>
+        <li>
+          <a @click.prevent="scrollToSection('data-tasks')"
+            >Data Collection, Exploration, Preparation</a
+          >
+        </li>
+        <li><a @click.prevent="scrollToSection('analysis-tasks')">Analysis</a></li>
+        <li><a @click.prevent="scrollToSection('evaluation-tasks')">Evaluation</a></li>
+        <li><a @click.prevent="scrollToSection('deployment-tasks')">Deployment</a></li>
+        <li><a @click.prevent="scrollToSection('productivity')">Produktivität</a></li>
+        <li><a @click.prevent="scrollToSection('cost')">Personalkosten</a></li>
       </ul>
       <div class="sidebar-footer">
         <button class="btn-primary" :disabled="isSaveDisabled" @click="save">Speichern</button>
@@ -710,10 +744,9 @@ onMounted(async () => {
           Die Summe darf 1 nicht überschreiten.
         </p>
       </div>
-<div class="wizard-header">
-  <h1>Sonstiges
-  </h1>
-</div>
+      <div class="wizard-header">
+        <h1>Sonstiges</h1>
+      </div>
       <div class="form-card" id="productivity">
         <h2>Produktivität</h2>
         <div class="section-grid">
@@ -747,6 +780,7 @@ onMounted(async () => {
   display: flex;
   gap: 2rem;
 }
+
 .main-content {
   flex: 1;
   display: flex;
@@ -754,19 +788,26 @@ onMounted(async () => {
   gap: 1.5rem;
   margin-left: 260px;
   margin-right: 40px;
+  scroll-behavior: smooth; /* Nur einmal hier */
 }
+
 .wizard-header {
   margin-bottom: 2rem;
+  scroll-margin-top: 100px; /* Scroll-Offset */
 }
+
 .form-card {
   margin-bottom: 1.5rem;
+  scroll-margin-top: 100px; /* Scroll-Offset */
 }
+
 @media (min-width: 1200px) {
   .section-grid {
     grid-template-columns: repeat(4, 1fr);
     align-items: start;
   }
 }
+
 .sidebar {
   position: fixed;
   top: 1rem;
@@ -789,21 +830,23 @@ onMounted(async () => {
 
 .sidebar li {
   margin-bottom: 0.75rem;
-  background-color: transparent;
 }
 
 .sidebar a {
   text-decoration: none;
   color: #333;
   font-weight: 500;
-}
-.sidebar li a {
   background-color: transparent;
-}
-.sidebar li a:hover {
-  color: var(--color-primary);
+  transition: all 0.3s ease;
   cursor: pointer;
-  background-color: transparent;
+  display: block; /* Wichtig! */
+  text-align: left;
+  line-height: 1.4;
+  padding: 0.25rem 0; /* Etwas Padding für bessere Klickfläche */
+}
+
+.sidebar a:hover {
+  color: var(--color-primary);
 }
 
 .sidebar h2 {
@@ -818,18 +861,20 @@ onMounted(async () => {
   background-clip: text;
 }
 
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 80px;
-  scroll-behavior: smooth;
-}
 .sidebar-footer {
   margin-top: auto;
   padding: 1.5rem;
   border-top: 1px solid var(--color-border);
-  flex-shrink: 0; /* Footer bleibt unten fixiert */
+  flex-shrink: 0;
 }
+
 .sidebar-footer .btn-primary {
   width: 100%;
+}
+
+/* Global smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 100px; /* Offset für fixierte Header/Sidebar */
 }
 </style>

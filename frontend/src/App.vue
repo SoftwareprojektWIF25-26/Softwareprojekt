@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router';
-import Header from "@/layouts/Header.vue";
-import { onMounted } from 'vue';
-import { setupAutoSave } from '@/stores/projektDraft';
+import { RouterView } from 'vue-router'
+import Header from '@/layouts/Header.vue'
+import { onMounted } from 'vue'
+import { setupAutoSave } from '@/stores/projektDraft'
 
 onMounted(() => {
-  setupAutoSave();
-});
+  setupAutoSave()
+})
 </script>
 
 <template>
@@ -48,5 +48,10 @@ body {
   margin-top: 60px; /* Höhe des Headers */
   flex: 1;
   width: 100%;
+}
+
+/* Vue DevTools ausblenden */
+[class*='vue-devtools'] {
+  display: none !important;
 }
 </style>
