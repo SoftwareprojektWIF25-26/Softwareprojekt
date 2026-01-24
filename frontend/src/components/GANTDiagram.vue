@@ -5,15 +5,10 @@ import { mapBackendToMetrics } from '@/utils/mappingGANT'
 import api from '@/api'
 import router from '@/router/PathRouting'
 import { TASK_LABELS } from '@/utils/constants'
-import {
-  addWeeks,
-  format,
-  eachMonthOfInterval,
-  differenceInCalendarWeeks
-} from 'date-fns';
-import { de } from 'date-fns/locale';
+import { addWeeks, format, eachMonthOfInterval, differenceInCalendarWeeks } from 'date-fns'
+import { de } from 'date-fns/locale'
 
-const props = defineProps<{ id: string; startDate?: string|Date; }>()
+const props = defineProps<{ id: string; startDate?: string | Date }>()
 const projectId = Number(props.id)
 const phases = ref<any[]>([])
 const containerWidth = ref(800)
@@ -32,16 +27,16 @@ function getTaskTitle(taskType: string): string {
 
 const projectStartDate = computed(() => {
   // 1. Priorität: Das übergebene Prop nutzen
-  if (props.startDate) return new Date(props.startDate);
+  if (props.startDate) return new Date(props.startDate)
 
   // 2. Priorität: Aus der ersten Phase lesen (falls vorhanden)
   if (phases.value.length > 0 && phases.value[0].startDate) {
-    return new Date(phases.value[0].startDate);
+    return new Date(phases.value[0].startDate)
   }
 
   // 3. Fallback: Heute
-  return new Date();
-});
+  return new Date()
+})
 
 // Task Modal öffnen
 function openTaskModal(phase: any) {
@@ -94,21 +89,46 @@ function formatDuration(days: number | null): string {
 
 // Download Funktion
 function exportToCSV() {
-  const headers = ['Phase', 'Start (Woche)', 'Dauer (Wochen)', 'Gesamt-Aufwand (PW)']
-  const rows = phases.value.map((p) => [
-    p.name,
-    p.startWeek + 1,
-    (p.baseEffort + p.bufferEffort).toFixed(1),
-    p.effortPersonWeeks.toFixed(1).replace('.', ','),
-  ])
+  const headers = [
+    'Phase',
+    'Start',
+    'Ende',
+    'Basisaufwand (Wochen)',
+    'Puffer (Wochen)',
+    'Gesamtdauer (Wochen)',
+    'Aufwand (PW)',
+    'Anzahl Tasks',
+  ]
+
+  const rows = phases.value.map((p) => {
+    // Datums-Berechnung
+    const phaseStart = addWeeks(projectStartDate.value, p.startWeek)
+    const phaseEnd = addWeeks(phaseStart, p.baseEffort + p.bufferEffort)
+
+    return [
+      p.name,
+      format(phaseStart, 'dd.MM.yyyy', { locale: de }),
+      format(phaseEnd, 'dd.MM.yyyy', { locale: de }),
+      p.baseEffort.toFixed(1).replace('.', ','), // ← MIT Komma
+      p.bufferEffort.toFixed(1).replace('.', ','), // ← MIT Komma
+      (p.baseEffort + p.bufferEffort).toFixed(1).replace('.', ','), // ← MIT Komma
+      p.effortPersonWeeks.toFixed(1).replace('.', ','), // ← MIT Komma
+      (p.tasks?.length || 0).toString(), // ← Als String
+    ]
+  })
+
+  // CSV erstellen
   const csvContent =
-    '\uFEFF' + // UTF-8 BOM für Excel
-    [headers, ...rows].map((r) => r.join(';')).join('\n')
+    '\uFEFF' + // UTF-8 BOM
+    [headers, ...rows]
+      .map((row) => row.join(';')) // Semikolon als Trenner
+      .join('\r\n') // Windows-Zeilenumbruch
+
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'project-gantt.csv'
+  a.download = `projekt-gantt-${format(new Date(), 'yyyy-MM-dd')}.csv`
   a.click()
   URL.revokeObjectURL(url)
 }
@@ -148,25 +168,24 @@ function goBack() {
   router.push({ name: 'dashboard', params: { id: props.id } })
 }
 
-
 // Neue dynamischer Timeline
 const timelineHeaders = computed(() => {
-  const weeksTotal = totalWeeks.value || 1;
-  const start = projectStartDate.value;
+  const weeksTotal = totalWeeks.value || 1
+  const start = projectStartDate.value
   // Enddatum berechnen
-  const end = addWeeks(start, weeksTotal);
+  const end = addWeeks(start, weeksTotal)
 
   // Ab ca. 5 Monaten (20 Wochen) auf Monatsansicht wechseln
-  const showMonths = weeksTotal > 20;
+  const showMonths = weeksTotal > 20
 
   if (showMonths) {
     // === MONATS-MODUS ===
     // Holt alle Monate zwischen Start und Ende
-    const months = eachMonthOfInterval({ start, end });
+    const months = eachMonthOfInterval({ start, end })
 
-    return months.map(date => {
+    return months.map((date) => {
       // Berechne Abstand vom Start in Wochen
-      const weeksFromStart = differenceInCalendarWeeks(date, start);
+      const weeksFromStart = differenceInCalendarWeeks(date, start)
 
       return {
         // Label: "Jan 2026"
@@ -175,27 +194,26 @@ const timelineHeaders = computed(() => {
         left: `${(weeksFromStart / weeksTotal) * 100}%`,
         // Breite: Lassen wir offen (auto)
         width: 'auto',
-        isPrimary: true
-      };
-    });
+        isPrimary: true,
+      }
+    })
   } else {
     // === WOCHEN-MODUS ===
-    const headers = [];
+    const headers = []
     for (let i = 0; i < weeksTotal; i++) {
-      const currentWeekStart = addWeeks(start, i);
+      const currentWeekStart = addWeeks(start, i)
       headers.push({
         // Label: "KW 03"
         label: `KW ${format(currentWeekStart, 'ww')}`,
         left: `${(i / weeksTotal) * 100}%`,
         // Breite: Exakt 1 Woche
         width: `${(1 / weeksTotal) * 100}%`,
-        isPrimary: false
-      });
+        isPrimary: false,
+      })
     }
-    return headers;
+    return headers
   }
-});
-
+})
 
 // Daten laden
 onMounted(async () => {
@@ -231,8 +249,6 @@ onUnmounted(() => {
 })
 </script>
 
-
-
 <template>
   <div style="padding: 40px">
     <h1>Projekt-Gantt-Chart</h1>
@@ -253,38 +269,36 @@ onUnmounted(() => {
         </div>
 
         <div style="display: flex; align-items: center; gap: 6px">
-          <div ></div>
+          <div></div>
           <span>Personenwoche (PW) = 5 Tage á 8 h </span>
         </div>
-
       </div>
     </div>
 
     <!-- Timeline Container -->
     <div class="timeline-scroll" ref="timelineContainer">
       <!-- Header -->
-      <div class="timeline-header" style="position: relative; overflow: hidden;">
+      <div class="timeline-header" style="position: relative; overflow: hidden">
         <!-- Linkes Label (leer oder statisch) -->
-        <div class="timeline-label" style="color: transparent;">Phase</div>
-
+        <div class="timeline-label" style="color: transparent">Phase</div>
 
         <!-- Dynamische Zeitachse -->
-        <div class="timeline-weeks" style="position: relative;">
+        <div class="timeline-weeks" style="position: relative">
           <div
             v-for="(header, index) in timelineHeaders"
             :key="index"
             class="week-column"
             :style="{
-        position: 'absolute',
-        left: header.left,
-        width: header.width || 'auto', // Auto bei Monaten, fest bei Wochen
-        textAlign: 'left',
-        paddingLeft: '4px',
-        borderLeft: '1px solid #ccc',
-        height: '100%',
-        fontSize: '12px',
-        whiteSpace: 'nowrap'
-      }"
+              position: 'absolute',
+              left: header.left,
+              width: header.width || 'auto', // Auto bei Monaten, fest bei Wochen
+              textAlign: 'left',
+              paddingLeft: '4px',
+              borderLeft: '1px solid #ccc',
+              height: '100%',
+              fontSize: '12px',
+              whiteSpace: 'nowrap',
+            }"
           >
             {{ header.label }}
           </div>
@@ -397,18 +411,13 @@ onUnmounted(() => {
                 </div>
 
                 <!-- 3. NEU: Einheit Umschalter -->
-                <div
-                  class="info-item clickable-toggle"
-                  title="Klicken zum Umschalten"
-                >
+                <div class="info-item clickable-toggle" title="Klicken zum Umschalten">
                   <span class="info-label">Anzeige in:</span>
                   <button class="btn-secondary" @click="toggleUnit">
                     {{ showHours ? 'In Tagen anzeigen' : 'In Stunden anzeigen' }}
-                    </button>
-
+                  </button>
                 </div>
               </div>
-
 
               <!-- Task Liste -->
               <div v-if="selectedPhase.tasks && selectedPhase.tasks.length > 0" class="task-list">
@@ -813,15 +822,6 @@ onUnmounted(() => {
 }
 
 /* Modal Transitions */
-.modal-fade-enter-active,
-.modal-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.modal-fade-enter-from,
-.modal-fade-leave-to {
-  opacity: 0;
-}
 
 .modal-fade-enter-active .modal-container,
 .modal-fade-leave-active .modal-container {
