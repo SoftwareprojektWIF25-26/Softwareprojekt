@@ -18,16 +18,12 @@ const totalFields = 7; // businessGoal, formOfFinalProduct, teamRoles, teamSize,
 const formOfProductOptions: FormOfFinalProduct[] = [
   'REPORT',
   'APPLICATION_SOFTWARE',
-  'AUTOMATED_DECISION_SYSTEM',
-  'INSIGHT_DOCUMENT',
   'OTHER'
 ];
 
-const formLabels: Record<FormOfFinalProduct, string> = {
+const formLabels: { REPORT: string; APPLICATION_SOFTWARE: string; OTHER: string } = {
   REPORT: 'Report / Dokumentation',
   APPLICATION_SOFTWARE: 'Software-Anwendung',
-  AUTOMATED_DECISION_SYSTEM: 'Automatisiertes Entscheidungssystem',
-  INSIGHT_DOCUMENT: 'Insight-Dokument',
   OTHER: 'Andere'
 };
 

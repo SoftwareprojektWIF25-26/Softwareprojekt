@@ -99,8 +99,6 @@ model BusinessUnderstanding {
 enum FormOfFinalProduct {
   REPORT // Bericht/Dashboard
   APPLICATION_SOFTWARE // ML-Anwendung
-  AUTOMATED_DECISION_SYSTEM // Automatisiertes System
-  INSIGHT_DOCUMENT // Insights/Erkenntnisse
   OTHER
 }
 
