@@ -145,11 +145,14 @@ async function saveChanges() {
       );
     }
 
+    // Projektplan (Gantt) auf Basis der neuen Daten neu berechnen ---
+    await api.recalculateProjectPlan(projectId);
+
     dashboard.value = await api.getDashboardData(projectId);
+
 
     isEditing.value = false;
     localConfigs.value = null;
-
     toast.success("Änderungen erfolgreich gespeichert");
   } catch (err) {
     console.error("Fehler beim Speichern der Änderungen:", err);

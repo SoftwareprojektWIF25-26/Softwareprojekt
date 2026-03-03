@@ -36,7 +36,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// ✨ ALLE API-Routes zentral montieren
+//  ALLE API-Routes zentral
 app.use('/api', apiRoutes);
 
 // Static Frontend für Production

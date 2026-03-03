@@ -1,5 +1,7 @@
 import { PrismaClient, Prisma, ProjectStatus, TemplatePhaseStatus } from '@prisma/client';
 
+
+
 const prisma = new PrismaClient();
 
 // Type für vollständiges Projekt mit allen Relationen
@@ -203,6 +205,8 @@ export class DashboardService {
             }
         });
     }
+
+
 
 
     /**

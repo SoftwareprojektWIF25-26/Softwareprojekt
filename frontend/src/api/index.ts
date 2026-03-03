@@ -213,6 +213,24 @@ async function getDashboardData(id: number): Promise<DashboardData> {
   }
 }
 
+/**
+ * Löst die Neuberechnung des Projektplans (Gantt) aus
+ * nach Änderungen an den Projektdaten.
+ */
+async function recalculateProjectPlan(id: number): Promise<void> {
+  try {
+    console.log(`POST Recalculate ProjectPlan (ID: ${id})`);
+    const response = await apiClient.post(`/dashboard/${id}/recalculate`);
+    console.log('Recalculate Response:', response.data);
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Recalculate Error:', error.response?.data);
+      throw new Error('Fehler bei der Neuberechnung des Projektplans');
+    }
+    throw error;
+  }
+}
+
 // ===== WIZARD FUNKTIONEN =====
 
 /**
@@ -536,6 +554,9 @@ async function patchWeights(data: WeightsPayload): Promise<WeightsPayload> {
   }
 }
 
+
+
+
 // ===== HELPER FUNCTIONS =====
 
 /**
@@ -577,6 +598,7 @@ export default {
   patchTemplatePhase,
   getDashboardData,
   deleteProjekt,
+  recalculateProjectPlan,
 
   // Wizard
   createProjekt,

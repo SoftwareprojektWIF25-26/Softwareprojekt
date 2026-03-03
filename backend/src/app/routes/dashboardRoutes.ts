@@ -2,9 +2,11 @@
 import { Router, Request, Response, NextFunction } from 'express';
 // src/app/routes/dashboardRoutes.ts
 import { DashboardService } from '../services/dashboard/dashboard.service.ts';
+import { ProjectService } from '../services/project/project.service.ts';
 
 const router = Router();
 const dashboardService = new DashboardService();
+const projectService = new ProjectService();
 
 /**
  * Hilfsfunktion:
@@ -260,5 +262,31 @@ router.post(
         }
     }
 );
+
+/**
+ * POST /api/dashboard/:id/recalculate
+ * Neuberechnung des Projektplans nach Änderungen an den Projektdaten.
+ * Frontend: recalculateProjectPlan(id)
+ */
+
+router.post(
+    '/:id/recalculate',
+    async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+        try {
+            const { id } = req.params;
+            const result = await projectService.recalculateProjectPlan(id);
+
+            res.json({
+                success: true,
+                data: result,
+                message: 'Projektplan erfolgreich neu berechnet'
+            });
+        } catch (error) {
+            console.error('Error in POST /api/dashboard/:id/recalculate', error);
+            next(error);
+        }
+    }
+);
+
 
 export default router;

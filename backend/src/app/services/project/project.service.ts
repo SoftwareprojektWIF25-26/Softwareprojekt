@@ -462,6 +462,63 @@ export class ProjectService {
     }
 
     /**
+     * Löscht den bestehenden Projektplan und berechnet ihn neu
+     * auf Basis der aktuellen Konfigurationsdaten.
+     */
+    async recalculateProjectPlan(projectId: string) {
+        const id = this.parseId(projectId, 'Projekt-ID');
+
+        const project = await prisma.project.findUnique({
+            where: { id },
+            include: {
+                businessUnderstanding: true,
+                dataCharacteristics: true,
+                analysisConfig: true,
+                deploymentConfig: true,
+                utilizationConfig: true
+            }
+        });
+
+        if (!project) throw new Error(`Projekt ${id} nicht gefunden`);
+
+        const inputs = mappingService.mapToCalculationInputs({
+            businessUnderstanding: project.businessUnderstanding,
+            dataCharacteristics: project.dataCharacteristics,
+            analysisConfig: project.analysisConfig,
+            deploymentConfig: project.deploymentConfig,
+            utilizationConfig: project.utilizationConfig
+        });
+
+        const projectType = mappingService.determineProjectType({
+            businessUnderstanding: project.businessUnderstanding,
+            dataCharacteristics: project.dataCharacteristics,
+            analysisConfig: project.analysisConfig
+        });
+
+        const settings = await this.loadWeightSettings();
+        const taskWeights = this.convertSettingsToTaskWeights(settings);
+        const inputWeights = settings?.defaultWeights || configDefaults.defaultWeights;
+
+        const metrics = calculationService.calculate({
+            inputs,
+            weights: inputWeights,
+            projectType,
+            teamSize: project.businessUnderstanding?.teamSize,
+            taskWeights
+        });
+
+        await this.createProjectPlanFromMetrics(String(id), metrics);
+
+        return {
+            success: true,
+            message: 'Projektplan erfolgreich neu berechnet',
+            projectId: id,
+            metrics
+        };
+    }
+
+
+    /**
      * Erstellt den Projektplan basierend auf den berechneten Metriken.
      * Löscht existierende Pläne, um saubere Neuberechnungen zu garantieren.
      */
@@ -544,6 +601,8 @@ export class ProjectService {
 
         console.log(`✅ ProjectPlan komplett erstellt mit allen Phasen und Tasks`);
     }
+
+
 
     // ======================================================
     // Task-Generierung
