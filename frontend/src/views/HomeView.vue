@@ -4,87 +4,124 @@ import { useRouter } from "vue-router";
 import api from "@/api";
 import type { ProjectListItem, ProjectStatistics } from "@/types";
 
+// ====================================
+// INITIALISIERUNG & STATE
+// ===============================
+
 const router = useRouter();
+
 const projects = ref<ProjectListItem[]>([]);
+const statistics = ref<ProjectStatistics | null>(null);
+
 const isLoading = ref(true);
 const error = ref<string | null>(null);
 
-// Statistiken direkt aus der API nutzen, falls verfügbar
-const statistics = ref<ProjectStatistics | null>(null);
-
-// Status Optionen
-const statusOptions = [
-  { value: 'PLANNING', label: 'Planung' },
-  { value: 'IN_PROGRESS', label: 'In Bearbeitung' },
-  { value: 'COMPLETED', label: 'Abgeschlossen' },
-  { value: 'ON_HOLD', label: 'Pausiert' },
-  { value: 'CANCELLED', label: 'Abgebrochen' }
-];
-
-// Multi-Select Filter State
 const selectedStatuses = ref<string[]>([]);
 const isFilterOpen = ref(false);
 
-// Filter Logik (Client-Side, da API alle Projekte liefert)
+// =========================================
+// KONFIGURATION & MAPPINGS
+// ============================================================================
+
+const STATUS_CONFIG = [
+  { value: 'PLANNING', label: 'Planung', badgeClass: 'badge-planning' },
+  { value: 'IN_PROGRESS', label: 'In Bearbeitung', badgeClass: 'badge-in-progress' },
+  { value: 'COMPLETED', label: 'Abgeschlossen', badgeClass: 'badge-completed' },
+  { value: 'ON_HOLD', label: 'Pausiert', badgeClass: 'badge-on-hold' },
+  { value: 'CANCELLED', label: 'Abgebrochen', badgeClass: 'badge-cancelled' }
+] as const;
+
+// ============================================================================
+// COMPUTED PROPERTIES
+// ===============================================
+
+/**
+ * Filtert die angezeigten Projekte basierend auf den ausgewählten Status-Checkboxen.
+ * Wenn nichts ausgewählt ist, werden alle Projekte angezeigt.
+ */
 const filteredProjects = computed(() => {
   if (selectedStatuses.value.length === 0) {
     return projects.value;
   }
-  return projects.value.filter(p => selectedStatuses.value.includes(p.status));
+  return projects.value.filter(project => selectedStatuses.value.includes(project.status));
 });
 
-// Toggle Filter Dropdown
-const toggleFilter = () => {
-  isFilterOpen.value = !isFilterOpen.value;
-};
-
-// Toggle Status Selection
-const toggleStatus = (status: string) => {
-  if (selectedStatuses.value.includes(status)) {
-    selectedStatuses.value = selectedStatuses.value.filter(s => s !== status);
-  } else {
-    selectedStatuses.value.push(status);
-  }
-};
-
-// Anzahl der Projekte pro Status
+/**
+ * Berechnet die Anzahl der Projekte pro Status lokal,
+ * falls die API keine expliziten Statistiken liefert.
+ */
 const localStatistics = computed(() => {
   const counts: Record<string, number> = {};
 
-  for (const option of statusOptions) {
+  // Initialisiere alle Zähler mit 0
+  STATUS_CONFIG.forEach(option => {
     counts[option.value] = 0;
-  }
+  });
 
-  for (const project of projects.value) {
+  // Zähle die Projekte
+  projects.value.forEach(project => {
     if (counts[project.status] !== undefined) {
       counts[project.status]++;
     }
-  }
+  });
 
   return counts;
 });
 
-// Daten laden
+// ============================================================================
+// LIFECYCLE & DATEN LADEN
+// ===========================================
+
 onMounted(async () => {
   try {
-    // 1. Projekte laden
-    projects.value = await api.getProjektListe();
+    isLoading.value = true;
+    error.value = null;
 
-    // 2. Statistiken laden (Optional, aber gut für Filter-Counts)
-    try {
-      statistics.value = await api.getStatistiken();
-    } catch (e) {
-      console.warn("Statistiken konnten nicht geladen werden, berechne lokal.");
+    // Führe beide API-Aufrufe parallel aus (Performance Boost).
+    // allSettled garantiert, dass die Projekte auch geladen werden,
+    // wenn der Statistik-Aufruf fehlschlägt.
+    const [projectsResult, statsResult] = await Promise.allSettled([
+      api.getProjektListe(),
+      api.getStatistiken()
+    ]);
+
+    if (projectsResult.status === 'fulfilled') {
+      projects.value = projectsResult.value;
+    } else {
+      throw new Error("Fehler beim Laden der Projektliste.");
     }
-  } catch (err: any) {
-    console.error("Fehler beim Laden:", err);
+
+    if (statsResult.status === 'fulfilled') {
+      statistics.value = statsResult.value;
+    } else {
+      console.warn("Statistiken konnten nicht vom Server geladen werden. Verwende lokale Berechnung.");
+    }
+
+  } catch (err) {
+    console.error("Daten-Ladefehler:", err);
     error.value = "Projekte konnten nicht geladen werden.";
   } finally {
     isLoading.value = false;
   }
 });
 
-// Navigation
+// ==============================================
+// METHODEN (UI INTERAKTION & NAVIGATION)
+// ============================================================================
+
+function toggleFilter() {
+  isFilterOpen.value = !isFilterOpen.value;
+}
+
+function toggleStatus(status: string) {
+  const index = selectedStatuses.value.indexOf(status);
+  if (index > -1) {
+    selectedStatuses.value.splice(index, 1);
+  } else {
+    selectedStatuses.value.push(status);
+  }
+}
+
 function goToProjektErstellen() {
   router.push({ name: "projekt-erstellen" });
 }
@@ -93,30 +130,26 @@ function openDashboard(projectId: number) {
   router.push({ name: "dashboard", params: { id: String(projectId) } });
 }
 
-// Helper für UI
+// ============================================================================
+// HILFSMETHODEN (FORMATIERUNG)
+// ============================================================================
+
 function getStatusLabel(status: string): string {
-  const option = statusOptions.find(o => o.value === status);
-  return option ? option.label : status;
+  return STATUS_CONFIG.find(o => o.value === status)?.label || status;
 }
 
 function getStatusBadgeClass(status: string): string {
-  const map: Record<string, string> = {
-    'PLANNING': 'badge-planning',
-    'IN_PROGRESS': 'badge-in-progress',
-    'ON_HOLD': 'badge-on-hold',
-    'COMPLETED': 'badge-completed',
-    'CANCELLED': 'badge-cancelled'
-  };
-  return map[status] || 'badge-planning';
+  return STATUS_CONFIG.find(o => o.value === status)?.badgeClass || 'badge-planning';
 }
 
-function formatDate(date: Date | string): string {
+function formatDate(date: Date | string | undefined | null): string {
   if (!date) return '-';
   return new Date(date).toLocaleDateString('de-DE', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
 }
 </script>
+
 
 <template>
   <div class="home-container">

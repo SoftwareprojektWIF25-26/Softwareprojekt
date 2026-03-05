@@ -9,7 +9,7 @@ import settingsRoutes from "./settingsRoutes.ts";
 
 const router = Router();
 
-// Alle Routes montieren
+// Alle Routen aufgelistet
 router.use('/projects', projectRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/homeview', startpageRoutes);

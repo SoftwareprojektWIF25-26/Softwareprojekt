@@ -1,12 +1,11 @@
 // src/constants.ts
 
 // --- 1. Business Understanding ---
-export const FORM_OF_PRODUCT_OPTIONS = ['REPORT', 'APPLICATION_SOFTWARE', 'AUTOMATED_DECISION_SYSTEM', 'INSIGHT_DOCUMENT', 'OTHER'] as const;
+export const FORM_OF_PRODUCT_OPTIONS =
+  ['REPORT', 'APPLICATION_SOFTWARE', 'OTHER'] as const;
 export const FORM_LABELS: Record<string, string> = {
   REPORT: 'Report / Documentation',
   APPLICATION_SOFTWARE: 'Software Application',
-  AUTOMATED_DECISION_SYSTEM: 'Automated Decision System',
-  INSIGHT_DOCUMENT: 'Insight Document',
   OTHER: 'Other'
 };
 

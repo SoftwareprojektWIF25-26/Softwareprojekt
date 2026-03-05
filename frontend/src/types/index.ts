@@ -58,8 +58,6 @@ export interface BusinessUnderstandingData {
 export type FormOfFinalProduct =
   | 'REPORT'
   | 'APPLICATION_SOFTWARE'
-  | 'AUTOMATED_DECISION_SYSTEM'
-  | 'INSIGHT_DOCUMENT'
   | 'OTHER';
 
 export type TeamRole =

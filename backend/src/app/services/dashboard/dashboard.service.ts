@@ -1,13 +1,17 @@
 import { PrismaClient, Prisma, ProjectStatus, TemplatePhaseStatus } from '@prisma/client';
 
-
-
 const prisma = new PrismaClient();
 
-// Type für vollständiges Projekt mit allen Relationen
+export type ConfigPhaseType =
+    | 'businessUnderstanding'
+    | 'dataCharacteristics'
+    | 'analysisConfig'
+    | 'deploymentConfig'
+    | 'utilizationConfig';
+
+// Typendefinition für ein vollständig geladenes Projekt inklusive aller relationalen Abhängigkeiten
 type ProjectWithAll = Prisma.ProjectGetPayload<{
     include: {
-
         businessUnderstanding: true;
         dataCharacteristics: true;
         analysisConfig: true;
@@ -28,21 +32,17 @@ type ProjectWithAll = Prisma.ProjectGetPayload<{
 }>;
 
 export class DashboardService {
-    /**
-     * Vollständiges Dashboard für ein spezifisches Projekt
-     */
-    async getProjectDashboard(projectId: string) {
-        // String zu Int konvertieren
-        const id = parseInt(projectId, 10);
 
-        if (isNaN(id)) {
-            throw new Error('Ungültige Projekt-ID');
-        }
+    /**
+     * Aggregiert alle relevanten Metriken, Konfigurationen und Planungsdaten
+     * für die Hauptansicht eines Projekts im Dashboard.
+     */
+    public async getProjectDashboard(projectId: string) {
+        const id = this.parseValidId(projectId, 'Projekt-ID');
 
         const project = await prisma.project.findUnique({
             where: { id },
             include: {
-
                 businessUnderstanding: true,
                 dataCharacteristics: true,
                 analysisConfig: true,
@@ -74,55 +74,16 @@ export class DashboardService {
             throw new Error(`Projekt mit ID ${id} nicht gefunden`);
         }
 
-        // Wizard-Fortschritt (0-6)
-        const wizardProgress = {
-            currentStep: project.wizardStep,
-            totalSteps: 6,
-            completed: project.wizardCompleted,
-            percentage: Math.round((project.wizardStep / 6) * 100)
-        };
-
-        // Template-Phasen Status
-        const templatePhases = [
-            {
-                name: 'Business Understanding',
-                status: project.businessUnderstanding?.status || 'BLOCKED',
-                completedAt: project.businessUnderstanding?.completedAt
-            },
-            {
-                name: 'Data Characteristics',
-                status: project.dataCharacteristics?.status || 'BLOCKED',
-                completedAt: project.dataCharacteristics?.completedAt
-            },
-            {
-                name: 'Analysis Configuration',
-                status: project.analysisConfig?.status || 'BLOCKED',
-                completedAt: project.analysisConfig?.completedAt
-            },
-            {
-                name: 'Deployment Configuration',
-                status: project.deploymentConfig?.status || 'BLOCKED',
-                completedAt: project.deploymentConfig?.completedAt
-            },
-            {
-                name: 'Utilization Configuration',
-                status: project.utilizationConfig?.status || 'BLOCKED',
-                completedAt: project.utilizationConfig?.completedAt
-            }
-        ];
-
+        const templatePhases = this.extractTemplatePhases(project);
         const completedTemplatePhases = templatePhases.filter(p => p.status === 'COMPLETED').length;
-        const templateProgress = Math.round((completedTemplatePhases / templatePhases.length) * 100);
 
-        // Projektplan Phasen (CRISP-DM)
         let projectPlanProgress = null;
         if (project.projectPlan) {
-            const totalPhases = project.projectPlan.phases.length;
             const totalTasks = project.projectPlan.tasks.length;
             const completedTasks = project.projectPlan.tasks.filter(t => t.status === 'DONE').length;
 
             projectPlanProgress = {
-                totalPhases,
+                totalPhases: project.projectPlan.phases.length,
                 totalTasks,
                 completedTasks,
                 percentage: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
@@ -131,39 +92,6 @@ export class DashboardService {
                 calculatedComplexity: project.projectPlan.calculatedComplexity
             };
         }
-
-        // Gantt-Daten für Timeline
-        const ganttData = project.projectPlan?.phases.map(phase => ({
-            id: phase.id,
-            name: phase.name,
-            phaseType: phase.phaseType,
-            description: phase.description,
-            orderIndex: phase.orderIndex,
-            startDate: phase.startDate,
-            endDate: phase.endDate,
-            estimatedDuration: phase.estimatedDuration,
-            estimatedEffort: phase.estimatedEffort,
-            tasks: phase.tasks.map(task => ({
-                id: task.id,
-                title: task.title || this.getTaskTitle(task.taskType),
-                taskType: task.taskType,
-                status: task.status,
-                estimatedDuration: task.estimatedDuration,
-                startDate: task.startDate,
-                endDate: task.endDate
-            }))
-        })) || [];
-
-        // Team-Informationen
-        const teamInfo = project.businessUnderstanding ? {
-            roles: project.businessUnderstanding.projectTeamRoles,
-            teamSize: project.businessUnderstanding.teamSize,
-            timeline: {
-                value: project.businessUnderstanding.timelineValue,
-                unit: project.businessUnderstanding.timelineUnit
-            },
-            estimatedCost: project.businessUnderstanding.estimatedCost
-        } : null;
 
         return {
             project: {
@@ -176,13 +104,25 @@ export class DashboardService {
                 createdAt: project.createdAt,
                 updatedAt: project.updatedAt
             },
-
-            wizardProgress,
+            wizardProgress: {
+                currentStep: project.wizardStep,
+                totalSteps: 6,
+                completed: project.wizardCompleted,
+                percentage: Math.round((project.wizardStep / 6) * 100)
+            },
             templatePhases,
-            templateProgress,
+            templateProgress: Math.round((completedTemplatePhases / templatePhases.length) * 100),
             projectPlanProgress,
-            ganttData,
-            team: teamInfo,
+            ganttData: this.buildGanttData(project.projectPlan),
+            team: project.businessUnderstanding ? {
+                roles: project.businessUnderstanding.projectTeamRoles,
+                teamSize: project.businessUnderstanding.teamSize,
+                timeline: {
+                    value: project.businessUnderstanding.timelineValue,
+                    unit: project.businessUnderstanding.timelineUnit
+                },
+                estimatedCost: project.businessUnderstanding.estimatedCost
+            } : null,
             configurations: {
                 businessUnderstanding: project.businessUnderstanding,
                 dataCharacteristics: project.dataCharacteristics,
@@ -193,10 +133,8 @@ export class DashboardService {
             evaluations: project.evaluations
         };
     }
-    /**
-     * Aktualisiert Projekt Titel & Domaine
-     */
-    async updateProjectDetails(projectId: number, data: { title?: string, domain?: string }) {
+
+    public async updateProjectDetails(projectId: number, data: { title?: string, domain?: string }) {
         return prisma.project.update({
             where: { id: projectId },
             data: {
@@ -206,58 +144,32 @@ export class DashboardService {
         });
     }
 
-
-
-
     /**
-     * Aktualisiert Projekt-Konfigurationen (Wizard-Daten), die User aus Dashboard gemacht hat
+     * Speichert benutzerspezifische Anpassungen innerhalb einer bestimmten
+     * Projektphase (z. B. Data Characteristics oder Analysis Config).
      */
-    async updateProjectConfig(
+    public async updateProjectConfig(
         projectId: string,
-        configType: 'businessUnderstanding' | 'dataCharacteristics' | 'analysisConfig' | 'deploymentConfig' | 'utilizationConfig',
+        configType: ConfigPhaseType,
         data: any
     ) {
-        const id = parseInt(projectId, 10);
-        if (isNaN(id)) throw new Error('Ungültige Projekt-ID');
+        const id = this.parseValidId(projectId, 'Projekt-ID');
+        const delegate = this.getPrismaDelegate(configType);
 
-        // Mapping von configType auf Prisma-Model-Delegates
-        // Wir nutzen hier 'any', da Prisma Client Typen dynamisch schwer zu mappen sind,
-        // aber zur Laufzeit funktioniert der Zugriff via Index.
-        const delegateMap: Record<string, any> = {
-            businessUnderstanding: prisma.businessUnderstanding,
-            dataCharacteristics: prisma.dataCharacteristics,
-            analysisConfig: prisma.analysisConfig,
-            deploymentConfig: prisma.deploymentConfig,
-            utilizationConfig: prisma.utilizationConfig
-        };
-
-        const delegate = delegateMap[configType];
-        if (!delegate) throw new Error(`Ungültiger Konfigurationstyp: ${configType}`);
-
-        // Update durchführen
-        // Wir nutzen update, da der Record existieren muss (wurde beim Wizard-Abschluss erstellt)
-        // Wir filtern 'id', 'projectId' und 'createdAt' aus den Daten sicherheitshalber raus
+        // Systemrelevante Identifikatoren dürfen nicht überschrieben werden
         const { id: _, projectId: __, createdAt: ___, ...updateData } = data;
 
-        const result = await delegate.update({
-            where: { projectId: id }, // Alle Config-Tabellen haben projectId @unique
+        return delegate.update({
+            where: { projectId: id },
             data: updateData
         });
-
-        return result;
     }
 
-
-
     /**
-     * Projekt-Timeline/Gantt-Daten
+     * Lädt die chronologische Abfolge der Projektphasen und Aufgaben für die Gantt-Chart-Darstellung.
      */
-    async getProjectTimeline(projectId: string) {
-        const id = parseInt(projectId, 10);
-
-        if (isNaN(id)) {
-            throw new Error('Ungültige Projekt-ID');
-        }
+    public async getProjectTimeline(projectId: string) {
+        const id = this.parseValidId(projectId, 'Projekt-ID');
 
         const projectPlan = await prisma.projectPlan.findFirst({
             where: { projectId: id },
@@ -267,9 +179,7 @@ export class DashboardService {
                         tasks: {
                             include: {
                                 dependenciesFrom: {
-                                    include: {
-                                        toTask: true
-                                    }
+                                    include: { toTask: true }
                                 }
                             }
                         }
@@ -317,124 +227,61 @@ export class DashboardService {
         };
     }
 
+    public async updateTaskStatus(taskId: string, status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE') {
+        const id = this.parseValidId(taskId, 'Task-ID');
 
-
-    /**
-     * Task-Status aktualisieren
-     */
-    async updateTaskStatus(taskId: string, status: 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE') {
-        const id = parseInt(taskId, 10);
-
-        if (isNaN(id)) {
-            throw new Error('Ungültige Task-ID');
-        }
-
-        const task = await prisma.phaseSteps.update({
+        return prisma.phaseSteps.update({
             where: { id },
             data: {
                 status,
                 updatedAt: new Date()
             }
         });
-
-        return task;
     }
 
-    /**
-     * Projektstatus ändern
-     */
-    async updateProjectStatus(projectId: string, status: ProjectStatus) {
-        const id = parseInt(projectId, 10);
+    public async updateProjectStatus(projectId: string, status: ProjectStatus) {
+        const id = this.parseValidId(projectId, 'Projekt-ID');
 
-        if (isNaN(id)) {
-            throw new Error('Ungültige Projekt-ID');
-        }
-
-        const project = await prisma.project.update({
+        return prisma.project.update({
             where: { id },
             data: {
                 status,
                 updatedAt: new Date()
             }
         });
-
-        return project;
     }
 
     /**
-     * Template-Phase-Status aktualisieren
+     * Markiert eine Konfigurationsphase als abgeschlossen oder ändert ihren Bearbeitungsstatus.
+     * Beim Abschluss wird zusätzlich ein Zeitstempel gesetzt.
      */
-    async updateTemplatePhaseStatus(
+    public async updateTemplatePhaseStatus(
         projectId: string,
-        phase: 'businessUnderstanding' | 'dataCharacteristics' | 'analysisConfig' | 'deploymentConfig' | 'utilizationConfig',
+        phase: ConfigPhaseType,
         status: TemplatePhaseStatus
     ) {
-        const id = parseInt(projectId, 10);
+        const id = this.parseValidId(projectId, 'Projekt-ID');
+        const delegate = this.getPrismaDelegate(phase);
 
-        if (isNaN(id)) {
-            throw new Error('Ungültige Projekt-ID');
-        }
-
-        const updateData: any = {
-            status
-        };
-
+        const updateData: any = { status };
         if (status === 'COMPLETED') {
             updateData.completedAt = new Date();
         }
 
-        let result;
-        switch (phase) {
-            case 'businessUnderstanding':
-                result = await prisma.businessUnderstanding.update({
-                    where: { projectId: id },
-                    data: updateData
-                });
-                break;
-            case 'dataCharacteristics':
-                result = await prisma.dataCharacteristics.update({
-                    where: { projectId: id },
-                    data: updateData
-                });
-                break;
-            case 'analysisConfig':
-                result = await prisma.analysisConfig.update({
-                    where: { projectId: id },
-                    data: updateData
-                });
-                break;
-            case 'deploymentConfig':
-                result = await prisma.deploymentConfig.update({
-                    where: { projectId: id },
-                    data: updateData
-                });
-                break;
-            case 'utilizationConfig':
-                result = await prisma.utilizationConfig.update({
-                    where: { projectId: id },
-                    data: updateData
-                });
-                break;
-        }
-
-        return result;
+        return delegate.update({
+            where: { projectId: id },
+            data: updateData
+        });
     }
 
-    /**
-     * Projekt-Evaluierung hinzufügen
-     */
-    async addProjectEvaluation(projectId: string, category: string, rating: number, notes?: string) {
-        const id = parseInt(projectId, 10);
-
-        if (isNaN(id)) {
-            throw new Error('Ungültige Projekt-ID');
-        }
+    public async addProjectEvaluation(projectId: string, category: string, rating: number, notes?: string) {
+        const id = this.parseValidId(projectId, 'Projekt-ID');
 
         if (rating < 1 || rating > 5) {
             throw new Error('Rating muss zwischen 1 und 5 liegen');
         }
 
-        const evaluation = await prisma.projectEvaluation.create({
+        return prisma.projectEvaluation.create({
             data: {
                 projectId: id,
                 category,
@@ -442,23 +289,113 @@ export class DashboardService {
                 notes
             }
         });
+    }
 
-        return evaluation;
+    // ============================================================================
+    // PRIVATE HILFSMETHODEN
+    // ============================================================================
+
+    /**
+     * Stellt sicher, dass die übergebene ID in einen gültigen Integer umgewandelt werden kann.
+     */
+    private parseValidId(id: string | number, entityName: string): number {
+        const parsedId = typeof id === 'string' ? parseInt(id, 10) : id;
+        if (isNaN(parsedId)) {
+            throw new Error(`Ungültige ${entityName}`);
+        }
+        return parsedId;
     }
 
     /**
-     * Hilfsfunktion: Task-Titel aus Enum generieren
+     * Mappt den Phasen-Typ auf das entsprechende Prisma-Model.
+     * Verhindert große und unübersichtliche switch/case-Anweisungen.
+     */
+    private getPrismaDelegate(phase: ConfigPhaseType): any {
+        const delegateMap: Record<ConfigPhaseType, any> = {
+            businessUnderstanding: prisma.businessUnderstanding,
+            dataCharacteristics: prisma.dataCharacteristics,
+            analysisConfig: prisma.analysisConfig,
+            deploymentConfig: prisma.deploymentConfig,
+            utilizationConfig: prisma.utilizationConfig
+        };
+
+        const delegate = delegateMap[phase];
+        if (!delegate) throw new Error(`Ungültiger Konfigurationstyp: ${phase}`);
+
+        return delegate;
+    }
+
+    /**
+     * Extrahiert die Phasenstati aus dem Projekt-Objekt für die Übersicht.
+     */
+    private extractTemplatePhases(project: any) {
+        return [
+            {
+                name: 'Business Understanding',
+                status: project.businessUnderstanding?.status || 'BLOCKED',
+                completedAt: project.businessUnderstanding?.completedAt
+            },
+            {
+                name: 'Data Characteristics',
+                status: project.dataCharacteristics?.status || 'BLOCKED',
+                completedAt: project.dataCharacteristics?.completedAt
+            },
+            {
+                name: 'Analysis Configuration',
+                status: project.analysisConfig?.status || 'BLOCKED',
+                completedAt: project.analysisConfig?.completedAt
+            },
+            {
+                name: 'Deployment Configuration',
+                status: project.deploymentConfig?.status || 'BLOCKED',
+                completedAt: project.deploymentConfig?.completedAt
+            },
+            {
+                name: 'Utilization Configuration',
+                status: project.utilizationConfig?.status || 'BLOCKED',
+                completedAt: project.utilizationConfig?.completedAt
+            }
+        ];
+    }
+
+    /**
+     * Bereitet die rohen Datenbankdaten für die Visualisierung in einem Gantt-Chart auf.
+     */
+    private buildGanttData(projectPlan: any) {
+        if (!projectPlan || !projectPlan.phases) return [];
+
+        return projectPlan.phases.map((phase: any) => ({
+            id: phase.id,
+            name: phase.name,
+            phaseType: phase.phaseType,
+            description: phase.description,
+            orderIndex: phase.orderIndex,
+            startDate: phase.startDate,
+            endDate: phase.endDate,
+            estimatedDuration: phase.estimatedDuration,
+            estimatedEffort: phase.estimatedEffort,
+            tasks: phase.tasks.map((task: any) => ({
+                id: task.id,
+                title: task.title || this.getTaskTitle(task.taskType),
+                taskType: task.taskType,
+                status: task.status,
+                estimatedDuration: task.estimatedDuration,
+                startDate: task.startDate,
+                endDate: task.endDate
+            }))
+        }));
+    }
+
+    /**
+     * Konvertiert systeminterne Task-Typen in lesbare Standardtitel.
      */
     private getTaskTitle(taskType: string): string {
         const taskTitles: Record<string, string> = {
-            // ========== BUSINESS UNDERSTANDING ==========
             'ASSESS_SITUATION': 'Assess Situation',
             'COMPOSE_PROJECT_TEAM': 'Compose Project Team',
             'SET_BUSINESS_OBJECTIVES': 'Set Business Objectives and Success Criteria',
             'DERIVE_DATA_SCIENCE_TARGETS': 'Derive Data Science Targets',
             'CREATE_PROJECT_PLAN': 'Create Project Plan',
-
-            // ========== DATA COLLECTION, EXPLORATION & PREPARATION ==========
             'IDENTIFY_DATA_SOURCES': 'Identify Data Sources',
             'ACQUIRE_DATA': 'Acquire Data',
             'DESCRIBE_DATA': 'Describe Data',
@@ -466,38 +403,27 @@ export class DashboardService {
             'ASSESS_DATA_QUALITY': 'Assess Data Quality',
             'PREPARE_DATA': 'Prepare Data',
             'DEVELOP_DATA_PIPELINE': 'Develop Data Pipeline',
-
-            // ========== MODELING/ANALYSIS ==========
             'DEFINE_HYPOTHESIS': 'Define Hypothesis',
             'SELECT_ANALYTICAL_MODEL': 'Select Analytical Model',
             'DESIGN_TEST_FOR_ANALYTICAL_MODEL': 'Design Test for Analytical Model',
             'DEVELOP_ANALYTICAL_MODEL': 'Develop Analytical Model',
             'ASSESS_ANALYTICAL_MODEL': 'Assess Analytical Model',
             'DEVELOP_ANALYTICAL_PIPELINE': 'Develop Analytical Pipeline',
-
-            // ========== EVALUATION ==========
             'ASSESS_ANALYTICAL_RESULTS': 'Assess Analytical Results',
             'EVALUATE_PROCESS': 'Evaluate Process and Perform Checkpoint Decision',
             'PERFORM_CHECKPOINT_DECISION': 'Perform Checkpoint Decision',
-
-            // ========== DEPLOYMENT ==========
             'PERFORM_IMPACT_ASSESSMENT': 'Perform Impact Assessment',
             'PLAN_DEPLOYMENT': 'Plan Deployment',
             'PLAN_MONITORING_AND_MAINTENANCE': 'Plan Monitoring and Maintenance',
             'TEST_DEPLOYMENT': 'Test Deployment',
             'PERFORM_BUSINESS_INTEGRATION': 'Perform Business Integration',
             'FINALIZE_PROJECT': 'Finalize Project',
-
-            // ========== UTILIZATION ==========
             'MONITOR_MODEL_PERFORMANCE': 'Monitor Model Performance',
             'MAINTAIN_DATA_PIPELINE': 'Maintain Data Pipeline',
             'UPDATE_MODEL': 'Update Model',
-
-            // Legacy
             'CUSTOM': 'Custom Task'
         };
 
         return taskTitles[taskType] || taskType;
     }
-
 }

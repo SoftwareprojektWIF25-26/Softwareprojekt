@@ -3,9 +3,21 @@ import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
-import axios from "axios";
-import type { FormOfFinalProduct, TeamRole, TimelineUnit } from "@/types";
 import { useToast } from "vue-toastification";
+
+// Importiere die Konstanten zentral
+import {
+  FORM_OF_PRODUCT_OPTIONS,
+  FORM_LABELS,
+  TEAM_ROLE_OPTIONS,
+  TEAM_ROLE_LABELS,
+  TIMELINE_UNITS,
+  UNIT_LABELS
+} from "@/utils/constants";
+
+// ============================================================================
+// INITIALISIERUNG & STATE
+// ============================================================================
 
 const draft = useProjectDraftStore();
 const router = useRouter();
@@ -14,113 +26,62 @@ const toast = useToast();
 const progress = computed(() => draft.businessProgress);
 const totalFields = 7; // businessGoal, formOfFinalProduct, teamRoles, teamSize, timeline, cost, tools
 
-// Form of Final Product Options
-const formOfProductOptions: FormOfFinalProduct[] = [
-  'REPORT',
-  'APPLICATION_SOFTWARE',
-  'OTHER'
-];
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
 
-const formLabels: { REPORT: string; APPLICATION_SOFTWARE: string; OTHER: string } = {
-  REPORT: 'Report / Dokumentation',
-  APPLICATION_SOFTWARE: 'Software-Anwendung',
-  OTHER: 'Andere'
-};
+onMounted(() => {
+  draft.loadDraft();
 
-// Team Roles
-const teamRoleOptions: TeamRole[] = [
-  'DATA_SCIENTIST',
-  'DATA_ENGINEER',
-  'PROJECT_MANAGER',
-  'DOMAIN_EXPERT',
-  'BUSINESS_ANALYST',
-  'IT_INFRASTRUCTURE',
-  'ML_ENGINEER'
-];
-
-const roleLabels: Record<TeamRole, string> = {
-  DATA_SCIENTIST: 'Data Scientist',
-  DATA_ENGINEER: 'Data Engineer',
-  PROJECT_MANAGER: 'Project Manager',
-  DOMAIN_EXPERT: 'Domain Expert',
-  BUSINESS_ANALYST: 'Business Analyst',
-  IT_INFRASTRUCTURE: 'IT Infrastructure',
-  ML_ENGINEER: 'ML Engineer'
-};
-
-// Timeline Units
-const timelineUnits: TimelineUnit[] = ['DAYS', 'WEEKS', 'MONTHS'];
-
-const unitLabels: Record<TimelineUnit, string> = {
-  DAYS: 'Tage',
-  WEEKS: 'Wochen',
-  MONTHS: 'Monate'
-};
-
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    return error.response?.data?.errors?.[0]?.msg
-      || error.response?.data?.message
-      || error.message
-      || "Netzwerkfehler beim Speichern";
+  // Sicherheitsprüfung: Ein Nutzer darf nicht mitten in den Wizard einsteigen.
+  if (!draft.id) {
+    toast.error("Kein aktives Projekt gefunden. Bitte starte von vorne.");
+    router.push({ name: "projekt-erstellen" });
   }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Unbekannter Fehler";
-}
+});
+
+// ============================================================================
+// NAVIGATION & AKTIONEN
+// ============================================================================
 
 function goBack() {
   router.push({ name: "projekt-erstellen" });
 }
 
+/**
+ * Speichert die aktuelle Konfiguration am Backend und navigiert zum nächsten Schritt.
+ */
 async function goNext() {
-  // Validierung: Projekt muss existieren
   if (!draft.id) {
-    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
-    router.push({ name: "projekt-erstellen-data" });
+    toast.error("Systemfehler: Keine Projekt-ID gefunden.");
     return;
   }
 
   try {
-    // Business Understanding speichern
-    await api.patchBusinessUnderstanding(
-      draft.id,
-      draft.businessUnderstanding
-    );
+    // API-Aufruf an das Backend
+    await api.patchBusinessUnderstanding(draft.id, draft.businessUnderstanding);
 
-    console.log("✅ Business Understanding gespeichert");
+    // Lokales Backup im Store/LocalStorage aktualisieren
     draft.saveDraft();
+
+    // Weiter zur Data Collection View
     router.push({ name: "projekt-erstellen-data" });
 
   } catch (error: unknown) {
-    console.error("❌ Fehler beim Speichern:", error);
-    const errorMessage = getErrorMessage(error);
+    console.error("Fehler beim Speichern des Business Understandings:", error);
+
+    // Die API-Ebene wirft standardisierte Error-Objekte
+    const errorMessage = error instanceof Error ? error.message : "Unbekannter Systemfehler";
     toast.error(`Speichern fehlgeschlagen: ${errorMessage}`);
   }
 }
-
-onMounted(() => {
-  // ERST laden...
-  draft.loadDraft();
-
-  // DANN validieren!
-  if (!draft.id) {
-    console.warn("⚠️ Keine Projekt-ID! Zurück zu Schritt 0");
-    router.push({ name: "projekt-erstellen" });
-    return;
-  }
-
-  console.log("✅ Draft geladen, Projekt-ID:", draft.id);
-});
-
-
-
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
+
+      <!-- HEADER -->
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 1 von 5</p>
         <h1>{{ draft.title || 'Projekt' }} – Business Understanding</h1>
@@ -141,8 +102,11 @@ onMounted(() => {
         </ol>
       </section>
 
+      <!-- HAUPTBEREICH (Formular & Vorschau) -->
       <section class="wizard-main">
-        <div class="form-card">
+
+        <!-- Nutzung von <form>, damit Enter-Taste den Submit auslöst -->
+        <form class="form-card" @submit.prevent="goNext">
           <h2>Business Understanding</h2>
 
           <div class="form-section">
@@ -158,6 +122,7 @@ onMounted(() => {
             </header>
 
             <div class="section-grid">
+
               <!-- Business Goal -->
               <div class="field field-full">
                 <label for="business-goal">Geschäftsziel</label>
@@ -165,7 +130,7 @@ onMounted(() => {
                   id="business-goal"
                   rows="3"
                   v-model="draft.businessUnderstanding.businessGoal"
-                  placeholder="z.B. Reduzierung der Kundenabwanderung um 20%, Optimierung der Lieferkette, Automatisierung der Dokumentenverarbeitung..."
+                  placeholder="z.B. Reduzierung der Kundenabwanderung um 20%, Optimierung der Lieferkette..."
                 />
                 <p class="field-help">
                   Was soll das Projekt aus Business-Perspektive erreichen?
@@ -181,11 +146,11 @@ onMounted(() => {
                 >
                   <option :value="undefined">Bitte wählen</option>
                   <option
-                    v-for="form in formOfProductOptions"
+                    v-for="form in FORM_OF_PRODUCT_OPTIONS"
                     :key="form"
                     :value="form"
                   >
-                    {{ formLabels[form] }}
+                    {{ FORM_LABELS[form] }}
                   </option>
                 </select>
                 <p class="field-help">
@@ -193,14 +158,13 @@ onMounted(() => {
                 </p>
               </div>
 
-              <!-- Team Roles (Multi-Checkbox - FINAL) -->
+              <!-- Team Roles (Multi-Checkbox) -->
               <div class="field field-full">
                 <label>Team-Rollen</label>
 
-                <!-- NEU: .multi-select-grid -->
                 <div class="multi-select-grid">
                   <label
-                    v-for="role in teamRoleOptions"
+                    v-for="role in TEAM_ROLE_OPTIONS"
                     :key="role"
                     class="select-card"
                     :class="{ selected: draft.businessUnderstanding.projectTeamRoles?.includes(role) }"
@@ -210,8 +174,7 @@ onMounted(() => {
                       :value="role"
                       v-model="draft.businessUnderstanding.projectTeamRoles"
                     />
-
-                    <span>{{ roleLabels[role] }}</span>
+                    <span>{{ TEAM_ROLE_LABELS[role] }}</span>
                   </label>
                 </div>
 
@@ -219,7 +182,6 @@ onMounted(() => {
                   Welche Rollen sind im Projektteam vertreten?
                 </p>
               </div>
-
 
               <!-- Team Size -->
               <div class="field">
@@ -254,11 +216,11 @@ onMounted(() => {
                     class="unit-select"
                   >
                     <option
-                      v-for="unit in timelineUnits"
+                      v-for="unit in TIMELINE_UNITS"
                       :key="unit"
                       :value="unit"
                     >
-                      {{ unitLabels[unit] }}
+                      {{ UNIT_LABELS[unit] }}
                     </option>
                   </select>
                 </div>
@@ -298,8 +260,9 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </div>
+        </form>
 
+        <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
           <h2>Business Understanding – Vorschau</h2>
           <p class="card-subtitle">
@@ -313,14 +276,14 @@ onMounted(() => {
 
             <div class="preview-item" v-if="draft.businessUnderstanding.formOfFinalProduct">
               <strong>Produktform:</strong>
-              <p>{{ formLabels[draft.businessUnderstanding.formOfFinalProduct] }}</p>
+              <p>{{ FORM_LABELS[draft.businessUnderstanding.formOfFinalProduct] }}</p>
             </div>
 
             <div class="preview-item" v-if="draft.businessUnderstanding.projectTeamRoles?.length">
               <strong>Team-Rollen:</strong>
               <ul>
                 <li v-for="role in draft.businessUnderstanding.projectTeamRoles" :key="role">
-                  {{ roleLabels[role] }}
+                  {{ TEAM_ROLE_LABELS[role] }}
                 </li>
               </ul>
             </div>
@@ -334,7 +297,7 @@ onMounted(() => {
               <strong>Projektdauer:</strong>
               <p>
                 {{ draft.businessUnderstanding.timelineValue }}
-                {{ unitLabels[draft.businessUnderstanding.timelineUnit || 'WEEKS'] }}
+                {{ UNIT_LABELS[draft.businessUnderstanding.timelineUnit || 'WEEKS'] }}
               </p>
             </div>
 
@@ -351,6 +314,7 @@ onMounted(() => {
         </aside>
       </section>
 
+      <!-- FOOTER -->
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
           ← Zurück
@@ -361,10 +325,9 @@ onMounted(() => {
           </button>
         </div>
       </section>
+
     </main>
   </div>
 </template>
 
-<style scoped>
 
-</style>

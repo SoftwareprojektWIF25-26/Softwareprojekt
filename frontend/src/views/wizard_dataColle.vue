@@ -1,188 +1,120 @@
 <!-- views/ProjektErstellenDataView.vue -->
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
-import axios from "axios";
-import type {
-  DataAccessType,
-  DataVelocity,
-  DataVeracity,
-  DataVariety,
-  DataVariability,
-  VolumeUnit,
-  DataPreparationStep
-} from "@/types";
 import { useToast } from "vue-toastification";
+
+// Importiere alle Konstanten zentral
+import {
+  DATA_ACCESS_OPTIONS,
+  DATA_ACCESS_LABELS,
+  VELOCITY_OPTIONS,
+  VELOCITY_LABELS,
+  VERACITY_OPTIONS,
+  VERACITY_LABELS,
+  VARIETY_OPTIONS,
+  VARIETY_LABELS,
+  VARIABILITY_OPTIONS,
+  VARIABILITY_LABELS,
+  VOLUME_UNITS,
+  PREPARATION_STEPS,
+  PREPARATION_LABELS
+} from "@/utils/constants";
+
+// ============================================================================
+// INITIALISIERUNG & STATE
+// ============================================================================
 
 const draft = useProjectDraftStore();
 const router = useRouter();
 const toast = useToast();
 
-// Computed für den Fortschritt
 const progress = computed(() => draft.dataProgress);
 const totalFields = 11;
-
-
-
-// Enums für die Dropdowns
-const dataAccessOptions: DataAccessType[] = ['INTERNAL', 'EXTERNAL', 'HYBRID'];
-const velocityOptions: DataVelocity[] = ['BATCH', 'DAILY', 'HOURLY', 'CONTINUOUS'];
-const veracityOptions: DataVeracity[] = ['POOR', 'MEDIUM', 'GOOD', 'EXCELLENT'];
-const varietyOptions: DataVariety[] = ['LOW', 'MEDIUM', 'HIGH'];
-const variabilityOptions: DataVariability[] = ['NEVER', 'YEARLY', 'MONTHLY', 'WEEKLY', 'DAILY', 'HOURLY'];
-const volumeUnits: VolumeUnit[] = ['RECORDS', 'KB','MB', 'GB', 'TB', 'PB'];
-const preparationSteps: DataPreparationStep[] = [
-  'JOINS',
-  'DEDUPLICATION',
-  'OUTLIER_DETECTION',
-  'NORMALIZATION',
-  'MISSING_VALUE_IMPUTATION',
-  'FEATURE_ENGINEERING',
-  'ONE_HOT_ENCODING',
-  'DATA_CLEANING',
-  'TRANSFORMATION'
-];
-const dataAccessLabels: Record<DataAccessType, string> = {
-  INTERNAL: "intern",
-  EXTERNAL: "extern",
-  HYBRID: "hybrid",
-}
-// Labels für bessere UX
-const velocityLabels: Record<DataVelocity, string> = {
-  BATCH: 'Batch (keine Echtzeit)',
-  DAILY: 'Täglich',
-  HOURLY: 'Stündlich',
-  CONTINUOUS: 'Continuous (Echtzeit/Streaming)'
-};
-
-const veracityLabels: Record<DataVeracity, string> = {
-  POOR: 'Schlecht',
-  MEDIUM: 'Mittel',
-  GOOD: 'Gut',
-  EXCELLENT: 'Exzellent'
-};
-
-const varietyLabels: Record<DataVariety, string> = {
-  LOW: 'Niedrig (ein Datentyp)',
-  MEDIUM: 'Mittel (zwei Datentypen)',
-  HIGH: 'Hoch (strukturiert, semi-strukturiert, unstrukturiert)'
-};
-
-const variabilityLabels: Record<DataVariability, string> = {
-  NEVER: 'Nie',
-  YEARLY: 'Jährlich',
-  MONTHLY: 'Monatlich',
-  WEEKLY: 'Wöchentlich',
-  DAILY: 'Täglich',
-  HOURLY: 'Stündlich'
-};
-
-const preparationLabels: Record<DataPreparationStep, string> = {
-  JOINS: 'Joins',
-  DEDUPLICATION: 'Deduplizierung',
-  OUTLIER_DETECTION: 'Ausreißer-Erkennung',
-  NORMALIZATION: 'Normalisierung',
-  MISSING_VALUE_IMPUTATION: 'Fehlende Werte ersetzen',
-  FEATURE_ENGINEERING: 'Feature Engineering',
-  ONE_HOT_ENCODING: 'One-Hot Encoding',
-  DATA_CLEANING: 'Datenbereinigung',
-  TRANSFORMATION: 'Transformation'
-};
-
-
-// State für den Klick auf "Weiter"
 const attemptedSubmit = ref(false);
 
-// State für den Klick auf "Weiter"
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
+
+/**
+ * Konvertiert das Array der Datenquellen in einen kommagetrennten String
+ * für das Textfeld und parst die Benutzereingabe zurück in ein bereinigtes Array.
+ */
 const dataSourcesText = computed({
   get() {
     if (!draft.dataCharacteristics.dataSources) return "";
-
-    return draft.dataCharacteristics.dataSources.join(",");
+    return draft.dataCharacteristics.dataSources.join(", ");
   },
   set(val: string) {
-    draft.dataCharacteristics.dataSources = val.split(",");
+    // Teilt am Komma, entfernt Leerzeichen und filtert leere Einträge heraus
+    draft.dataCharacteristics.dataSources = val
+      .split(",")
+      .map(s => s.trim())
+      .filter(Boolean);
   }
 });
 
-// Helper für Fehlerbehandlung
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    return error.response?.data?.errors?.[0]?.msg
-      || error.response?.data?.message
-      || error.message
-      || "Netzwerkfehler beim Speichern";
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+
+onMounted(() => {
+  draft.loadDraft();
+
+  // Sicherheitsprüfung: Nutzer darf nicht mitten in den Wizard springen
+  if (!draft.id) {
+    toast.error("Kein aktives Projekt gefunden. Bitte starte von vorne.");
+    router.push({ name: "projekt-erstellen" });
   }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Unbekannter Fehler";
-}
+});
+
+// ============================================================================
+// NAVIGATION & AKTIONEN
+// ============================================================================
 
 function goBack() {
   router.push({ name: "projekt-erstellen-business" });
 }
 
+/**
+ * Speichert die aktuelle Konfiguration am Backend und navigiert zum nächsten Schritt.
+ */
 async function goNext() {
   attemptedSubmit.value = true;
-  if (!draft.id) {
-    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
-    router.push({ name: "projekt-erstellen" });
-    return;
-  }
-  if (draft.dataCharacteristics.dataSources) {
-    draft.dataCharacteristics.dataSources = draft.dataCharacteristics.dataSources
-      .map(s => s.trim())
-      .filter(s => s.length > 0);
 
+  if (!draft.id) {
+    toast.error("Systemfehler: Keine Projekt-ID gefunden.");
+    return;
   }
 
   try {
-    // Data Characteristics speichern
-    await api.patchDataCharacteristics(
-      draft.id,
-      draft.dataCharacteristics
-    );
+    // API-Aufruf an das Backend
+    await api.patchDataCharacteristics(draft.id, draft.dataCharacteristics);
 
-    console.log("Data Characteristics gespeichert");
-
-    // Entwurf speichern
+    // Lokales Backup im Store aktualisieren
     draft.saveDraft();
 
-    // Weiter zur nächsten Seite
+    // Weiter zur Analysis View
     router.push({ name: "projekt-erstellen-analysis" });
 
   } catch (error: unknown) {
-    console.error("Fehler beim Speichern:", error);
-    const errorMessage = getErrorMessage(error);
+    console.error("Fehler beim Speichern der Data Characteristics:", error);
+
+    // Standardisiertes Error-Handling (API wirft echte Error-Objekte)
+    const errorMessage = error instanceof Error ? error.message : "Unbekannter Systemfehler";
     toast.error(`Speichern fehlgeschlagen: ${errorMessage}`);
   }
 }
-
-// hier wird aktueller Stataus des Wizard geladen
-onMounted(() => {
-
-  draft.loadDraft();
-
-
-  if (!draft.id) {
-    console.warn("⚠️ Keine Projekt-ID! Zurück zu Schritt 0");
-    router.push({ name: "projekt-erstellen" });
-    return;
-  }
-
-  console.log("✅ Draft geladen, Projekt-ID:", draft.id);
-});
-
-
-
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
+
+      <!-- HEADER -->
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 2 von 5</p>
         <h1>{{ draft.title || 'Projekt' }} – Data Collection, Exploration & Preparation</h1>
@@ -202,16 +134,18 @@ onMounted(() => {
         </ol>
       </section>
 
+      <!-- HAUPTBEREICH (Formular & Vorschau) -->
       <section class="wizard-main">
-        <div class="form-card">
+
+        <!-- Form Tag ermöglicht das Abschicken mit Enter -->
+        <form class="form-card" @submit.prevent="goNext">
           <h2>Data Characteristics</h2>
 
           <div class="form-section">
             <header class="section-header">
               <div>
-
                 <p class="section-description">
-                  Fülle die Informationen zu deinen Daten aus:Datenquellen, Qualität, Umfang und Vorbereitungsschritte.
+                  Fülle die Informationen zu deinen Daten aus: Datenquellen, Qualität, Umfang und Vorbereitungsschritte.
                 </p>
               </div>
               <div>
@@ -220,32 +154,26 @@ onMounted(() => {
             </header>
 
             <div class="section-grid">
+
               <!-- Data Sources -->
               <div class="field field-full">
-                <label for="data-sources">
-                  Datenquellen
-                </label>
+                <label for="data-sources">Datenquellen</label>
                 <textarea
                   id="data-sources"
                   rows="2"
                   v-model="dataSourcesText"
                   placeholder="z.B. PostgreSQL Datenbank, CSV Files, REST API, IoT Sensors"
-
                 />
+                <p class="field-help">Datenquellen durch Komma trennen</p>
+              </div>
 
-
-                <p class="field-help"> Datenquellen durch Komma trennen </p>
-
-            </div>
-
-
-              <!-- Data Access (Multi-Select - UPDATED) -->
+              <!-- Data Access (Multi-Select) -->
               <div class="field field-full">
                 <label>Datenzugriff</label>
 
                 <div class="multi-select-grid">
                   <label
-                    v-for="type in dataAccessOptions"
+                    v-for="type in DATA_ACCESS_OPTIONS"
                     :key="type"
                     class="select-card"
                     :class="{ selected: draft.dataCharacteristics.dataAccess?.includes(type) }"
@@ -255,7 +183,7 @@ onMounted(() => {
                       :value="type"
                       v-model="draft.dataCharacteristics.dataAccess"
                     />
-                    <span>{{ dataAccessLabels[type] }}</span>
+                    <span>{{ DATA_ACCESS_LABELS[type] }}</span>
                   </label>
                 </div>
               </div>
@@ -282,11 +210,11 @@ onMounted(() => {
                 >
                   <option :value="undefined">Bitte wählen</option>
                   <option
-                    v-for="option in velocityOptions"
+                    v-for="option in VELOCITY_OPTIONS"
                     :key="option"
                     :value="option"
                   >
-                    {{ velocityLabels[option] }}
+                    {{ VELOCITY_LABELS[option] }}
                   </option>
                 </select>
               </div>
@@ -300,11 +228,11 @@ onMounted(() => {
                 >
                   <option :value="undefined">Bitte wählen</option>
                   <option
-                    v-for="option in veracityOptions"
+                    v-for="option in VERACITY_OPTIONS"
                     :key="option"
                     :value="option"
                   >
-                    {{ veracityLabels[option] }}
+                    {{ VERACITY_LABELS[option] }}
                   </option>
                 </select>
               </div>
@@ -318,11 +246,11 @@ onMounted(() => {
                 >
                   <option :value="undefined">Bitte wählen</option>
                   <option
-                    v-for="option in varietyOptions"
+                    v-for="option in VARIETY_OPTIONS"
                     :key="option"
                     :value="option"
                   >
-                    {{ varietyLabels[option] }}
+                    {{ VARIETY_LABELS[option] }}
                   </option>
                 </select>
               </div>
@@ -344,7 +272,7 @@ onMounted(() => {
                     class="unit-select"
                   >
                     <option
-                      v-for="unit in volumeUnits"
+                      v-for="unit in VOLUME_UNITS"
                       :key="unit"
                       :value="unit"
                     >
@@ -364,38 +292,34 @@ onMounted(() => {
                 >
                   <option :value="undefined">Bitte wählen</option>
                   <option
-                    v-for="option in variabilityOptions"
+                    v-for="option in VARIABILITY_OPTIONS"
                     :key="option"
                     :value="option"
                   >
-                    {{ variabilityLabels[option] }}
+                    {{ VARIABILITY_LABELS[option] }}
                   </option>
                 </select>
               </div>
 
-              <!-- Data Preparation Steps (Multi-Select Update) -->
+              <!-- Data Preparation Steps (Multi-Select) -->
               <div class="field field-full">
                 <label>Data Preparation Steps</label>
 
-                <!-- NEUE KLASSEN: .multi-select-grid statt .checkbox-grid -->
                 <div class="multi-select-grid">
                   <label
-                    v-for="step in preparationSteps"
+                    v-for="step in PREPARATION_STEPS"
                     :key="step"
                     class="select-card"
-                    :class="{ selected: Array.isArray(draft.dataCharacteristics.dataPreparationSteps)
-              && draft.dataCharacteristics.dataPreparationSteps.includes(step) }"
+                    :class="{ selected: Array.isArray(draft.dataCharacteristics.dataPreparationSteps) && draft.dataCharacteristics.dataPreparationSteps.includes(step) }"
                   >
                     <input
                       type="checkbox"
                       :value="step"
                       v-model="draft.dataCharacteristics.dataPreparationSteps"
                     />
-                    <!-- KEIN .label-text mehr nötig, span reicht -->
-                    <span>{{ preparationLabels[step] }}</span>
+                    <span>{{ PREPARATION_LABELS[step] }}</span>
                   </label>
                 </div>
-
                 <p class="field-help">
                   Wählen Sie alle notwendigen Schritte der Datenaufbereitung aus.
                 </p>
@@ -424,14 +348,16 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </div>
+        </form>
 
+        <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
           <h2>Data Characteristics – Vorschau</h2>
           <p class="card-subtitle">
             Aktualisiert sich automatisch während du tippst.
           </p>
           <div class="preview-content">
+
             <div class="preview-item" v-if="draft.dataCharacteristics.dataSources?.length">
               <strong>Datenquellen:</strong>
               <ul>
@@ -445,10 +371,11 @@ onMounted(() => {
               <strong>Datenzugriff:</strong>
               <ul>
                 <li v-for="access in draft.dataCharacteristics.dataAccess" :key="access">
-                  {{dataAccessLabels[access]}}
+                  {{ DATA_ACCESS_LABELS[access] }}
                 </li>
               </ul>
             </div>
+
             <div class="preview-item" v-if="draft.dataCharacteristics.dataAvailability !== undefined">
               <strong>Verfügbarkeit:</strong>
               <p>{{ draft.dataCharacteristics.dataAvailability ? 'Verfügbar' : 'Nicht verfügbar' }}</p>
@@ -464,70 +391,59 @@ onMounted(() => {
 
             <div class="preview-item" v-if="draft.dataCharacteristics.velocity">
               <strong>Velocity:</strong>
-              <p>{{ velocityLabels[draft.dataCharacteristics.velocity] }}</p>
+              <p>{{ VELOCITY_LABELS[draft.dataCharacteristics.velocity] }}</p>
             </div>
 
             <div class="preview-item" v-if="draft.dataCharacteristics.veracity">
               <strong>Datenqualität:</strong>
-              <p>{{ veracityLabels[draft.dataCharacteristics.veracity] }}</p>
+              <p>{{ VERACITY_LABELS[draft.dataCharacteristics.veracity] }}</p>
             </div>
 
             <div class="preview-item" v-if="draft.dataCharacteristics.variety">
               <strong>Variety:</strong>
-              <p>{{ varietyLabels[draft.dataCharacteristics.variety] }}</p>
+              <p>{{ VARIETY_LABELS[draft.dataCharacteristics.variety] }}</p>
             </div>
 
-            <!-- Neu: Variabilität -->
             <div class="preview-item" v-if="draft.dataCharacteristics.variability">
               <strong>Variabilität:</strong>
-              <p>{{ variabilityLabels[draft.dataCharacteristics.variability] }}</p>
+              <p>{{ VARIABILITY_LABELS[draft.dataCharacteristics.variability] }}</p>
             </div>
 
-            <!-- dataPreparationSteps -->
             <div class="preview-item" v-if="draft.dataCharacteristics.dataPreparationSteps?.length">
               <strong>Vorbereitung:</strong>
-              <ul><li v-for="preparation in draft.dataCharacteristics.dataPreparationSteps" :key="preparation">
-                {{preparationLabels[preparation]}}
-              </li>
+              <ul>
+                <li v-for="preparation in draft.dataCharacteristics.dataPreparationSteps" :key="preparation">
+                  {{ PREPARATION_LABELS[preparation] }}
+                </li>
               </ul>
             </div>
 
-
-
-            <!-- Neu: Datensicherheit -->
             <div class="preview-item" v-if="draft.dataCharacteristics.dataSecurityConstraints">
               <strong>Datensicherheit:</strong>
               <p>{{ draft.dataCharacteristics.dataSecurityConstraints }}</p>
             </div>
 
-            <!-- Neu: Tools -->
             <div class="preview-item" v-if="draft.dataCharacteristics.toolsData">
               <strong>Tools:</strong>
               <p>{{ draft.dataCharacteristics.toolsData }}</p>
             </div>
 
-
-
           </div>
         </aside>
       </section>
 
+      <!-- FOOTER -->
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
           ← Zurück
         </button>
         <div class="footer-actions">
-
           <button type="button" class="btn-primary" @click="goNext">
             Speichern & Weiter →
           </button>
         </div>
       </section>
+
     </main>
   </div>
 </template>
-
-<style scoped>
-
-
-</style>

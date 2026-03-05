@@ -7,95 +7,85 @@ import api from "@/api";
 import axios from "axios";
 import { useToast } from "vue-toastification";
 
+// ============================================================================
+// INITIALISIERUNG & STATE
+// ============================================================================
+
 const draft = useProjectDraftStore();
 const router = useRouter();
 const toast = useToast();
 
-// Computed für den Fortschritt
 const progress = computed(() => draft.utilizationProgress);
 const totalFields = 3;
 
-// Helper für Fehlerbehandlung
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    return error.response?.data?.errors?.[0]?.msg
-      || error.response?.data?.message
-      || error.message
-      || "Netzwerkfehler beim Speichern";
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
+
+onMounted(() => {
+  draft.loadDraft();
+
+  // Sicherheitsprüfung: Ein Nutzer darf nicht mitten in den Wizard einsteigen.
+  if (!draft.id) {
+    toast.error("Kein aktives Projekt gefunden. Bitte starte von vorne.");
+    router.push({ name: "projekt-erstellen" });
   }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Unbekannter Fehler";
-}
+});
+
+// ============================================================================
+// NAVIGATION & AKTIONEN
+// ============================================================================
 
 function goBack() {
   router.push({ name: "projekt-erstellen-deployment" });
 }
 
+/**
+ * Speichert die letzte Konfiguration (Utilization), schließt den Wizard ab,
+ * triggert die Backend-Berechnung und leitet den Nutzer zum Dashboard weiter.
+ */
 async function finishWizard() {
-  // Validierung
   if (!draft.id) {
-    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
-    router.push({ name: "projekt-erstellen" });
+    toast.error("Systemfehler: Keine Projekt-ID gefunden.");
     return;
   }
 
-  // ✅ WICHTIG: ID sichern BEVOR draft gelöscht wird!
-  const id = draft.id;
+  // WICHTIG: Projekt-ID sichern, bevor der Draft nach Abschluss geleert wird!
+  const projectId: number = draft.id;
 
   try {
     // 1. Utilization Config speichern
-    await api.patchUtilizationConfig(
-      id,  // ✅ Lokale Variable verwenden
-      draft.utilizationConfig
-    );
+    await api.patchUtilizationConfig(projectId, draft.utilizationConfig);
 
-    console.log("✅ Utilization Config gespeichert");
+    // 2. Dem Backend signalisieren, dass der Wizard beendet ist (Startet die Gantt-Berechnung)
+    await api.completeWizard(projectId);
 
-    // 2. Wizard abschließen & Berechnung durchführen
-    const result = await api.completeWizard(id);  // ✅ Lokale Variable
-
-    console.log("✅ Wizard abgeschlossen!", result);
-    console.log("📊 Projektplan erstellt:", result.metrics);
-
-    // 3. JETZT erst Draft löschen
+    // 3. Draft aus dem LocalStorage und Store löschen (Aufräumen)
     draft.clearDraft();
 
-    // 4. Navigation mit gesicherter ID
+    toast.success("Projekt erfolgreich erstellt und berechnet!");
+
+    // 4. Navigation zum Projekt-Dashboard
     router.push({
       name: "dashboard",
-      params: { id: String(id) }  // ✅ Lokale Variable (als String!)
+      params: { id: String(projectId) }
     });
 
   } catch (error: unknown) {
-    console.error("❌ Fehler beim Abschließen:", error);
-    const errorMessage = getErrorMessage(error);
+    console.error("Fehler beim Abschließen des Projekts:", error);
+
+    // Die API-Ebene wirft standardisierte Error-Objekte
+    const errorMessage = error instanceof Error ? error.message : "Unbekannter Systemfehler";
     toast.error(`Projekt konnte nicht abgeschlossen werden: ${errorMessage}`);
   }
 }
-
-onMounted(() => {
-  // ERST laden...
-  draft.loadDraft();
-
-  // DANN validieren!
-  if (!draft.id) {
-    console.warn("⚠️ Keine Projekt-ID! Zurück zu Schritt 0");
-    router.push({ name: "projekt-erstellen" });
-    return;
-  }
-
-  console.log("✅ Draft geladen, Projekt-ID:", draft.id);
-});
-
-
-
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
+
+      <!-- HEADER -->
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 5 von 5</p>
         <h1>{{ draft.title || 'Projekt' }} – Utilization & Monitoring</h1>
@@ -115,8 +105,11 @@ onMounted(() => {
         </ol>
       </section>
 
+      <!-- HAUPTBEREICH (Formular & Vorschau) -->
       <section class="wizard-main">
-        <div class="form-card">
+
+        <!-- Nutzung von <form>, damit Enter-Taste den Submit auslöst -->
+        <form class="form-card" @submit.prevent="finishWizard">
           <h2>Utilization Configuration</h2>
 
           <div class="form-section">
@@ -132,6 +125,7 @@ onMounted(() => {
             </header>
 
             <div class="section-grid">
+
               <!-- Monitoring -->
               <div class="field field-full">
                 <label for="monitoring">Monitoring</label>
@@ -139,7 +133,7 @@ onMounted(() => {
                   id="monitoring"
                   rows="4"
                   v-model="draft.utilizationConfig.monitoring"
-                  placeholder="z.B. Model Drift Detection, Performance Monitoring, Data Quality Checks, Alerts bei Anomalien, KPI-Tracking, Log-Analyse..."
+                  placeholder="z.B. Model Drift Detection, Performance Monitoring, Data Quality Checks, Alerts bei Anomalien, KPI-Tracking..."
                 />
                 <p class="field-help">
                   Wie wird das System überwacht? Welche Metriken werden getrackt?
@@ -153,7 +147,7 @@ onMounted(() => {
                   id="maintenance"
                   rows="4"
                   v-model="draft.utilizationConfig.maintenance"
-                  placeholder="z.B. Retraining-Zyklen (monatlich), Modell-Updates, Feature Engineering Updates, Datenpflege, Performance-Optimierung..."
+                  placeholder="z.B. Retraining-Zyklen (monatlich), Modell-Updates, Feature Engineering Updates, Datenpflege..."
                 />
                 <p class="field-help">
                   Wie wird das System gewartet? Wie oft wird das Modell aktualisiert?
@@ -175,8 +169,9 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </div>
+        </form>
 
+        <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
           <h2>Utilization Config – Vorschau</h2>
           <p class="card-subtitle">
@@ -199,7 +194,7 @@ onMounted(() => {
             </div>
 
             <div class="preview-summary">
-              <h3> Wizard fast abgeschlossen!</h3>
+              <h3>🎉 Wizard fast abgeschlossen!</h3>
               <p>
                 Klicke auf "Abschließen", um dein Projekt zu speichern und zum Dashboard zu gelangen.
               </p>
@@ -208,21 +203,19 @@ onMounted(() => {
         </aside>
       </section>
 
+      <!-- FOOTER -->
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
           ← Zurück
         </button>
         <div class="footer-actions">
-
           <button type="button" class="btn-primary" @click="finishWizard">
-             Abschließen
+            Abschließen
           </button>
         </div>
       </section>
+
     </main>
   </div>
 </template>
 
-<style scoped>
-
-</style>

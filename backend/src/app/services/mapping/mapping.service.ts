@@ -10,19 +10,112 @@ interface TemplateData {
     utilizationConfig?: any;
 }
 
+// ============================================================================
+// KONSTANTEN & MAPPINGS
+// ============================================================================
+
+const VARIETY_MAP: Record<string, number> = {
+    'LOW': 3,
+    'MEDIUM': 6,
+    'HIGH': 10
+};
+
+const GB_CONVERSION_FACTORS: Record<string, number> = {
+    'RECORDS': 1 / (1024 * 1024), // Annahme: 1 Record ≈ 1 KB
+    'KB': 1 / (1024 * 1024),
+    'MB': 1 / 1024,
+    'GB': 1,
+    'TB': 1024,
+    'PB': 1024 * 1024
+};
+
+const PRODUCT_COMPLEXITY_MAP: Record<string, number> = {
+    'REPORT': 2,
+    'INSIGHT_DOCUMENT': 2,
+    'APPLICATION_SOFTWARE': 7,
+    'AUTOMATED_DECISION_SYSTEM': 9,
+    'OTHER': 5
+};
+
+const VELOCITY_MAP: Record<string, string> = {
+    'BATCH': 'batch',
+    'DAILY': 'near-realtime',
+    'HOURLY': 'near-realtime',
+    'CONTINUOUS': 'streaming'
+};
+
+const ANALYTICS_TYPE_MAP: Record<string, string> = {
+    'CLASSIFICATION': 'predictive',
+    'REGRESSION': 'predictive',
+    'CLUSTERING': 'diagnostic',
+    'ANOMALY_DETECTION': 'diagnostic',
+    'TIME_SERIES_FORECASTING': 'predictive',
+    'RECOMMENDATION': 'prescriptive',
+    'ASSOCIATION_RULE_LEARNING': 'diagnostic',
+    'OTHER': 'descriptive'
+};
+
+const DATA_QUALITY_MAP: Record<string, number> = {
+    'POOR': 40,
+    'MEDIUM': 70,
+    'GOOD': 85,
+    'EXCELLENT': 95
+};
+
+const MISSING_DATA_MAP: Record<string, number> = {
+    'NEVER': 5,
+    'YEARLY': 10,
+    'MONTHLY': 15,
+    'WEEKLY': 25,
+    'DAILY': 35,
+    'HOURLY': 50
+};
+
 export class MappingService {
 
     /**
-     * Konvertiert Template-Daten in Calculation-Inputs
+     * Konvertiert rohe Template-Daten aus dem System in normalisierte
+     * Eingabefelder für den Berechnungsalgorithmus der Projektschätzung.
      */
-    mapToCalculationInputs(templateData: TemplateData): InputField[] {
+    public mapToCalculationInputs(templateData: TemplateData): InputField[] {
         const inputs: InputField[] = [];
 
-        const { businessUnderstanding, dataCharacteristics, analysisConfig } = templateData;
+        this.mapReadinessFactors(templateData, inputs);
+        this.mapComplexityFactors(templateData, inputs);
+        this.mapUncertaintyFactors(templateData, inputs);
 
-        // === READINESS FACTORS ===
+        return inputs;
+    }
 
-        // Data Access/Availability
+    /**
+     * Analysiert den fachlichen Ansatz des Projekts, um das grundlegende
+     * Schätzmodell (z.B. Deep Learning vs. Classic ML) zu ermitteln.
+     */
+    public determineProjectType(templateData: TemplateData): ProjectType {
+        const type = templateData.analysisConfig?.typeOfAnalytics;
+
+        if (!type) {
+            return ProjectType.CLASSIC_ML;
+        }
+
+        if (['TIME_SERIES_FORECASTING', 'RECOMMENDATION'].includes(type)) {
+            return ProjectType.DEEP_LEARNING;
+        }
+
+        return ProjectType.CLASSIC_ML;
+    }
+
+    // ============================================================================
+    // PRIVATE MAPPING-METHODEN
+    // ============================================================================
+
+    /**
+     * Extrahiert Indikatoren für die Projektbereitschaft (Readiness), wie
+     * Datenzugriff, Infrastruktur und Stakeholder-Rückhalt.
+     */
+    private mapReadinessFactors(data: TemplateData, inputs: InputField[]): void {
+        const { businessUnderstanding, dataCharacteristics, analysisConfig } = data;
+
         if (dataCharacteristics?.dataAvailability !== undefined) {
             inputs.push({
                 id: 'data_availability',
@@ -33,10 +126,8 @@ export class MappingService {
             });
         }
 
-        // Data Access (aus dataAccess Array)
         if (dataCharacteristics?.dataAccess) {
-            const hasAccess = Array.isArray(dataCharacteristics.dataAccess)
-                && dataCharacteristics.dataAccess.length > 0;
+            const hasAccess = Array.isArray(dataCharacteristics.dataAccess) && dataCharacteristics.dataAccess.length > 0;
             inputs.push({
                 id: 'data_access',
                 label: 'Datenzugriff vorhanden',
@@ -46,14 +137,13 @@ export class MappingService {
             });
         }
 
-        // VERBESSERT: Stakeholder Support basierend auf projectTeamRoles
+        // Ein breiteres Team impliziert höheren Rückhalt im Unternehmen
         if (businessUnderstanding?.projectTeamRoles) {
             const roleCount = Array.isArray(businessUnderstanding.projectTeamRoles)
                 ? businessUnderstanding.projectTeamRoles.length
                 : 0;
 
-            const support = roleCount >= 4 ? 'hoch' :
-                roleCount >= 2 ? 'mittel' : 'niedrig';
+            const support = roleCount >= 4 ? 'hoch' : roleCount >= 2 ? 'mittel' : 'niedrig';
 
             inputs.push({
                 id: 'stakeholder_support',
@@ -65,13 +155,14 @@ export class MappingService {
             });
         }
 
+        // Prüft phasenübergreifend, ob ausreichend Werkzeuge definiert wurden
         const toolFields = [
             businessUnderstanding?.toolsBusinessUnderstanding,
             dataCharacteristics?.toolsData,
             analysisConfig?.toolsAnalysis,
-            templateData.deploymentConfig?.toolsDeployment,
-            templateData.utilizationConfig?.toolsUtilization
-        ].filter(field => field && typeof field === 'string' && field.trim().length > 0);
+            data.deploymentConfig?.toolsDeployment,
+            data.utilizationConfig?.toolsUtilization
+        ].filter(field => typeof field === 'string' && field.trim().length > 0);
 
         inputs.push({
             id: 'tools_available',
@@ -80,22 +171,21 @@ export class MappingService {
             value: toolFields.length >= 2,
             category: 'readiness'
         });
+    }
 
-        // === COMPLEXITY FACTORS ===
+    /**
+     * Bewertet technische und fachliche Hürden (Complexity), wie
+     * Datenmengen, Anzahl der Quellen und das finale Softwareprodukt.
+     */
+    private mapComplexityFactors(data: TemplateData, inputs: InputField[]): void {
+        const { businessUnderstanding, dataCharacteristics, analysisConfig } = data;
 
-        //VERBESSERT: Data Variety - Nutzt das variety Enum direkt
         if (dataCharacteristics?.variety) {
-            const varietyMap: Record<string, number> = {
-                'LOW': 3,      // Nur ein Datentyp
-                'MEDIUM': 6,   // Zwei Datentypen
-                'HIGH': 10     // Alle Datentypen
-            };
-
             inputs.push({
                 id: 'data_variety',
                 label: 'Datenvielfalt (1-10)',
                 type: 'number',
-                value: varietyMap[dataCharacteristics.variety] || 5,
+                value: VARIETY_MAP[dataCharacteristics.variety] || 5,
                 category: 'complexity',
                 isNegative: true,
                 min: 1,
@@ -103,11 +193,8 @@ export class MappingService {
             });
         }
 
-        // Number of Sources
         if (dataCharacteristics?.dataSources) {
-            const numSources = Array.isArray(dataCharacteristics.dataSources)
-                ? dataCharacteristics.dataSources.length
-                : 1;
+            const numSources = Array.isArray(dataCharacteristics.dataSources) ? dataCharacteristics.dataSources.length : 1;
             inputs.push({
                 id: 'num_sources',
                 label: 'Anzahl Datenquellen',
@@ -120,38 +207,16 @@ export class MappingService {
             });
         }
 
-// Data Volume Complexity – Engineering-Aufwand / Projektlänge
+        // Skaliert die Datenmenge logarithmisch, um Big-Data-Szenarien exponentiell stärker zu wichten
         if (dataCharacteristics?.volumeValue != null && dataCharacteristics?.volumeUnit) {
-            const { volumeValue, volumeUnit } = dataCharacteristics;
-
-            // Konvertierungsfaktoren zu GB (zentral definiert, wartbar)
-            const GB_CONVERSION_FACTORS: Record<string, number> = {
-                'RECORDS': 1 / (1024 * 1024), // Annahme: 1 Record ≈ 1 KB
-                'KB': 1 / (1024 * 1024),
-                'MB': 1 / 1024,
-                'GB': 1,
-                'TB': 1024,
-                'PB': 1024 * 1024
-            };
-
-            // Volumen auf GB normalisieren
-            const gbEstimate = volumeValue * (GB_CONVERSION_FACTORS[volumeUnit] || 0);
-
-            // Logarithmische Skala auf 1-10 mappen
-            // Idee:
-            //  - < 1 GB       →  Score 1-3  (kaum Impact)
-            //  - 1-10 GB      →  Score 3-5  (normales DS-Projekt)
-            //  - 10-100 GB    →  Score 5-7  (spürbar langsamer, evtl. Server nötig)
-            //  - 100 GB-10 TB →  Score 7-9  (Big Data, Cluster/Cloud)
-            //  - > 10 TB      →  Score 9-10 (sehr hoher Engineering-Aufwand)
+            const gbEstimate = dataCharacteristics.volumeValue * (GB_CONVERSION_FACTORS[dataCharacteristics.volumeUnit] || 0);
             const rawScore = Math.log10(gbEstimate + 1) * 3 + 1;
-            const volumeComplexity = Math.max(1, Math.min(10, Math.round(rawScore)));
 
             inputs.push({
                 id: 'data_volume_complexity',
                 label: 'Datenvolumen-Komplexität',
                 type: 'number',
-                value: volumeComplexity,
+                value: Math.max(1, Math.min(10, Math.round(rawScore))),
                 category: 'complexity',
                 isNegative: true,
                 min: 1,
@@ -159,16 +224,12 @@ export class MappingService {
             });
         }
 
-
-        //Data Preparation Complexity
         if (dataCharacteristics?.dataPreparationSteps?.length) {
-            const prepComplexity = Math.min(10, dataCharacteristics.dataPreparationSteps.length);
-
             inputs.push({
                 id: 'data_prep_complexity',
                 label: 'Datenaufbereitungs-Komplexität',
                 type: 'number',
-                value: prepComplexity,
+                value: Math.min(10, dataCharacteristics.dataPreparationSteps.length),
                 category: 'complexity',
                 isNegative: true,
                 min: 0,
@@ -176,21 +237,12 @@ export class MappingService {
             });
         }
 
-        //Form of Final Product Complexity
         if (businessUnderstanding?.formOfFinalProduct) {
-            const productComplexityMap: Record<string, number> = {
-                'REPORT': 2,                        // Einfach: Nur Dokumentation
-                'INSIGHT_DOCUMENT': 2,              // Einfach: Nur Insights
-                'APPLICATION_SOFTWARE': 7,          // Komplex: Software-Entwicklung
-                'AUTOMATED_DECISION_SYSTEM': 9,     // Sehr komplex: Autonomes System
-                'OTHER': 5                          // Mittel: Unbekannt
-            };
-
             inputs.push({
                 id: 'product_complexity',
                 label: 'Produkt-Komplexität',
                 type: 'number',
-                value: productComplexityMap[businessUnderstanding.formOfFinalProduct] || 5,
+                value: PRODUCT_COMPLEXITY_MAP[businessUnderstanding.formOfFinalProduct] || 5,
                 category: 'complexity',
                 isNegative: true,
                 min: 1,
@@ -198,146 +250,83 @@ export class MappingService {
             });
         }
 
-        // Data Velocity
         if (dataCharacteristics?.velocity) {
-            const velocityMap: Record<string, string> = {
-                'BATCH': 'batch',
-                'DAILY': 'near-realtime',
-                'HOURLY': 'near-realtime',
-                'CONTINUOUS': 'streaming'
-            };
             inputs.push({
                 id: 'data_velocity',
                 label: 'Datengeschwindigkeit',
                 type: 'select',
-                value: velocityMap[dataCharacteristics.velocity] || 'batch',
+                value: VELOCITY_MAP[dataCharacteristics.velocity] || 'batch',
                 category: 'complexity',
                 options: ['batch', 'near-realtime', 'streaming']
             });
         }
 
-        // Analytics Type
         if (analysisConfig?.typeOfAnalytics) {
-            const typeMap: Record<string, string> = {
-                'CLASSIFICATION': 'predictive',
-                'REGRESSION': 'predictive',
-                'CLUSTERING': 'diagnostic',
-                'ANOMALY_DETECTION': 'diagnostic',
-                'TIME_SERIES_FORECASTING': 'predictive',
-                'RECOMMENDATION': 'prescriptive',
-                'ASSOCIATION_RULE_LEARNING': 'diagnostic',
-                'OTHER': 'descriptive'
-            };
             inputs.push({
                 id: 'analytics_type',
                 label: 'Art der Analytik',
                 type: 'select',
-                value: typeMap[analysisConfig.typeOfAnalytics] || 'descriptive',
+                value: ANALYTICS_TYPE_MAP[analysisConfig.typeOfAnalytics] || 'descriptive',
                 category: 'complexity',
                 options: ['descriptive', 'diagnostic', 'predictive', 'prescriptive']
             });
         }
+    }
 
-        // === UNCERTAINTY FACTORS ===
+    /**
+     * Evaluiert Risiken und Unklarheiten (Uncertainty), wie
+     * schwammige Zielvorgaben, Datenschutzbedenken oder fehlende Daten.
+     */
+    private mapUncertaintyFactors(data: TemplateData, inputs: InputField[]): void {
+        const { businessUnderstanding, dataCharacteristics } = data;
 
-        // Data Quality (aus Veracity)
         if (dataCharacteristics?.veracity) {
-            const qualityMap: Record<string, number> = {
-                'POOR': 40,
-                'MEDIUM': 70,
-                'GOOD': 85,
-                'EXCELLENT': 95
-            };
             inputs.push({
                 id: 'data_quality',
                 label: 'Datenqualität (%)',
                 type: 'percentage',
-                value: qualityMap[dataCharacteristics.veracity] || 70,
+                value: DATA_QUALITY_MAP[dataCharacteristics.veracity] || 70,
                 category: 'uncertainty'
             });
         }
 
-        // Privacy Concerns (aus Security Constraints)
         if (dataCharacteristics?.dataSecurityConstraints !== undefined) {
-            const hasConcerns = typeof dataCharacteristics.dataSecurityConstraints === 'string'
-                && dataCharacteristics.dataSecurityConstraints.length > 0;
-            const level = hasConcerns ? 'hoch' : 'niedrig';
+            const hasConcerns = typeof dataCharacteristics.dataSecurityConstraints === 'string' &&
+                dataCharacteristics.dataSecurityConstraints.length > 0;
             inputs.push({
                 id: 'privacy_concerns',
                 label: 'Datenschutz-Bedenken',
                 type: 'select',
-                value: level,
+                value: hasConcerns ? 'hoch' : 'niedrig',
                 category: 'uncertainty',
                 isNegative: true,
                 options: ['niedrig', 'mittel', 'hoch', 'kritisch']
             });
         }
 
-        // Missing Data (aus Variability ableiten)
         if (dataCharacteristics?.variability) {
-            const missingMap: Record<string, number> = {
-                'NEVER': 5,
-                'YEARLY': 10,
-                'MONTHLY': 15,
-                'WEEKLY': 25,
-                'DAILY': 35,
-                'HOURLY': 50
-            };
             inputs.push({
                 id: 'missing_data',
                 label: 'Fehlende Daten (%)',
                 type: 'percentage',
-                value: missingMap[dataCharacteristics.variability] || 15,
+                value: MISSING_DATA_MAP[dataCharacteristics.variability] || 15,
                 category: 'uncertainty',
                 isNegative: true
             });
         }
 
-        //VERBESSERT aber Optional: Goal Clarity - Längere Beschreibung = klarere Ziele
+        // Geht davon aus, dass eine längere fachliche Beschreibung eine fundiertere Zielsetzung bedeutet
         if (businessUnderstanding?.businessGoal) {
-            const goalLength = businessUnderstanding.businessGoal?.length || 0;
-            const hasGoal = goalLength > 50; // Mindestens 50 Zeichen für klare Beschreibung
+            const hasClearGoal = (businessUnderstanding.businessGoal.length || 0) > 50;
 
             inputs.push({
                 id: 'goal_clarity',
                 label: 'Zielsetzung klar',
                 type: 'boolean',
-                value: hasGoal,
+                value: hasClearGoal,
                 category: 'uncertainty'
             });
         }
-
-        return inputs;
-    }
-
-    /**
-     * Bestimmt den Projekttyp basierend auf Template-Daten
-     */
-    determineProjectType(templateData: TemplateData): ProjectType {
-        const { analysisConfig } = templateData;
-
-        // Basierend auf Analytics Type
-        if (analysisConfig?.typeOfAnalytics) {
-            const type = analysisConfig.typeOfAnalytics;
-
-            // Deep Learning: Komplexe Modelle
-            if (type === 'TIME_SERIES_FORECASTING' || type === 'RECOMMENDATION') {
-                return ProjectType.DEEP_LEARNING;
-            }
-
-            // Classic ML: Standard ML-Aufgaben
-            if (type === 'CLASSIFICATION' || type === 'REGRESSION' || type === 'CLUSTERING') {
-                return ProjectType.CLASSIC_ML;
-            }
-
-            // Reporting: Deskriptive Analytik
-            if (type === 'ANOMALY_DETECTION' || type === 'ASSOCIATION_RULE_LEARNING') {
-                return ProjectType.CLASSIC_ML;
-            }
-        }
-
-        // Fallback: Classic ML
-        return ProjectType.CLASSIC_ML;
     }
 }
 

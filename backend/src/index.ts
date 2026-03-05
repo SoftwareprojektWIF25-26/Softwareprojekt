@@ -2,7 +2,7 @@
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import apiRoutes from './app/routes/index.js'; // ← NEU: Zentrale Route-Datei
+import apiRoutes from './app/routes/index.js'; // Zentrale Route-Datei
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

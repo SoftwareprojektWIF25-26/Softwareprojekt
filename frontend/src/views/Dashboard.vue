@@ -22,6 +22,10 @@ import {
   PROJECT_ISSUE_TYPES, ISSUE_LABELS
 } from "@/utils/constants";
 
+// ============================================================================
+// INITIALISIERUNG
+// ============================================================================
+
 const toast = useToast();
 const route = useRoute();
 const router = useRouter();
@@ -31,56 +35,57 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 const editableStatus = ref<string | null>(null);
 
-
-// Edit Mode
 const isEditing = ref(false);
 const localConfigs = ref<any>(null);
 
-// Computed
+// ============================================================================
+// COMPUTED PROPERTIES
+// ============================================================================
+
 const project = computed(() => dashboard.value?.project);
 const configs = computed(() => dashboard.value?.configurations);
 const progress = computed(() => dashboard.value?.projectPlanProgress);
 
-// --- Navigation ---
+// ============================================================================
+// NAVIGATION
+// ============================================================================
+
 function goBack() {
   router.push({ name: "home" });
 }
+
 function gotoGant() {
   router.push({ name: "Gant" });
 }
 
-// --- Edit Mode ---
+// ============================================================================
+// BEARBEITUNGS-MODUS (EDIT MODE)
+// ============================================================================
+
+/**
+ * Aktiviert den Bearbeitungsmodus und erstellt eine tiefe Kopie der Daten,
+ * damit Änderungen erst beim Klick auf "Speichern" ins Original übernommen werden.
+ */
 function startEditing() {
   if (!dashboard.value?.configurations) return;
 
-  localConfigs.value = JSON.parse(
-    JSON.stringify(dashboard.value.configurations)
-  );
+  // Deep Copy der Konfigurationen, um direkte Mutationen des States zu verhindern
+  localConfigs.value = JSON.parse(JSON.stringify(dashboard.value.configurations));
 
+  // Projektdaten in das gleiche Formular-Objekt hängen
   localConfigs.value.project = {
     title: dashboard.value.project.title,
     domain: dashboard.value.project.domain,
   };
 
-  if (!localConfigs.value.dataCharacteristics.dataAccess) {
-    localConfigs.value.dataCharacteristics.dataAccess = [];
-  }
+  const { dataCharacteristics, businessUnderstanding, deploymentConfig } = localConfigs.value;
 
-  if (
-    !Array.isArray(
-      localConfigs.value.dataCharacteristics.dataPreparationSteps
-    )
-  ) {
-    localConfigs.value.dataCharacteristics.dataPreparationSteps = [];
-  }
-
-  if (!localConfigs.value.businessUnderstanding.projectTeamRoles) {
-    localConfigs.value.businessUnderstanding.projectTeamRoles = [];
-  }
-
-  if (!localConfigs.value.deploymentConfig.projectIssues) {
-    localConfigs.value.deploymentConfig.projectIssues = [];
-  }
+  // Sicherstellen, dass Array-Felder existieren.
+  // Das verhindert Laufzeitfehler bei v-model="...Array" Checkbox-Bindungen.
+  dataCharacteristics.dataAccess ??= [];
+  dataCharacteristics.dataPreparationSteps ??= [];
+  businessUnderstanding.projectTeamRoles ??= [];
+  deploymentConfig.projectIssues ??= [];
 
   isEditing.value = true;
 }
@@ -90,6 +95,10 @@ function cancelEditing() {
   isEditing.value = false;
 }
 
+/**
+ * Sendet alle getätigten Änderungen parallel an das Backend.
+ * Anschließend wird die Gantt-Berechnung neu angestoßen.
+ */
 async function saveChanges() {
   if (!localConfigs.value || !dashboard.value) return;
 
@@ -97,59 +106,36 @@ async function saveChanges() {
 
   try {
     const projectId = dashboard.value.project.id;
+    const updates: Promise<any>[] = [];
 
+    // 1. Projektdetails (Titel, Domain) aktualisieren
     if (localConfigs.value.project) {
-      await api.updateProjectDetails(projectId, {
-        title: localConfigs.value.project.title,
-        domain: localConfigs.value.project.domain,
-      });
+      updates.push(api.updateProjectDetails(projectId, localConfigs.value.project));
     }
 
-    if (localConfigs.value.businessUnderstanding) {
-      await api.updateProjectConfig(
-        projectId,
-        "businessUnderstanding",
-        localConfigs.value.businessUnderstanding
-      );
-    }
+    // 2. Alle existierenden Phasen dynamisch aktualisieren
+    const phases = [
+      "businessUnderstanding",
+      "dataCharacteristics",
+      "analysisConfig",
+      "deploymentConfig",
+      "utilizationConfig"
+    ] as const;
 
-    if (localConfigs.value.dataCharacteristics) {
-      await api.updateProjectConfig(
-        projectId,
-        "dataCharacteristics",
-        localConfigs.value.dataCharacteristics
-      );
-    }
+    phases.forEach((phase) => {
+      if (localConfigs.value[phase]) {
+        updates.push(api.updateProjectConfig(projectId, phase, localConfigs.value[phase]));
+      }
+    });
 
-    if (localConfigs.value.analysisConfig) {
-      await api.updateProjectConfig(
-        projectId,
-        "analysisConfig",
-        localConfigs.value.analysisConfig
-      );
-    }
+    // Alle API-Requests gleichzeitig ausführen (spart enorm viel Ladezeit)
+    await Promise.all(updates);
 
-    if (localConfigs.value.deploymentConfig) {
-      await api.updateProjectConfig(
-        projectId,
-        "deploymentConfig",
-        localConfigs.value.deploymentConfig
-      );
-    }
-
-    if (localConfigs.value.utilizationConfig) {
-      await api.updateProjectConfig(
-        projectId,
-        "utilizationConfig",
-        localConfigs.value.utilizationConfig
-      );
-    }
-
-    // Projektplan (Gantt) auf Basis der neuen Daten neu berechnen ---
+    // 3. Projektplan (Gantt) auf Basis der neuen Daten neu berechnen
     await api.recalculateProjectPlan(projectId);
 
+    // 4. Frische Daten für das Dashboard laden
     dashboard.value = await api.getDashboardData(projectId);
-
 
     isEditing.value = false;
     localConfigs.value = null;
@@ -163,17 +149,20 @@ async function saveChanges() {
   }
 }
 
-// --- NEU: Projekt löschen ---
+// ============================================================================
+// PROJEKT & STATUS VERWALTUNG
+// ============================================================================
+
 async function deleteProject() {
   if (!dashboard.value?.project?.id) return;
 
-  // Bestätigung abfragen
-  if (!await confirmDeleteDialog()) return;
+  const userConfirmed = await confirmDeleteDialog();
+  if (!userConfirmed) return;
 
-  // Löschung durchführen
   try {
     const projectId = Number(route.params.id);
     await api.deleteProjekt(projectId);
+
     toast.success("Projekt erfolgreich gelöscht");
     router.push({ name: "home" });
   } catch (err) {
@@ -182,7 +171,6 @@ async function deleteProject() {
   }
 }
 
-// --- Status / Dropdown ---
 const statusOptions = [
   { value: "PLANNING", label: "Planung" },
   { value: "IN_PROGRESS", label: "In Bearbeitung" },
@@ -191,54 +179,34 @@ const statusOptions = [
   { value: "CANCELLED", label: "Abgebrochen" },
 ];
 
-const dropdownOpen = ref(false);
-
-function toggleDropdown() {
-  dropdownOpen.value = !dropdownOpen.value;
-}
-
-function selectStatus(value: string) {
-  editableStatus.value = value;
-  patchProjectStatus(value);
-  dropdownOpen.value = false;
-}
-
+/**
+ * Aktualisiert den globalen Projektstatus.
+ * Nutzt das Prinzip des "Optimistic UI Updates" und rollt die Änderung zurück,
+ * falls das Backend einen Fehler wirft.
+ */
 async function patchProjectStatus(newStatus: string) {
   if (!dashboard.value) return;
 
   const oldStatus = dashboard.value.project.status;
-
   dashboard.value.project.status = newStatus;
 
   try {
     await api.patchProjektStatus(Number(route.params.id), newStatus);
+    toast.success("Status aktualisiert");
   } catch (err) {
     console.error("Status-Update fehlgeschlagen:", err);
+
+    // Rollback bei Fehler
     dashboard.value.project.status = oldStatus;
     editableStatus.value = oldStatus;
     toast.error("Status konnte nicht geändert werden.");
   }
 }
 
-// --- Lifecycle ---
-onMounted(async () => {
-  try {
-    const projektId = Number(route.params.id);
-    dashboard.value = await api.getDashboardData(projektId);
-    editableStatus.value = dashboard.value.project.status;
-  } catch (err) {
-    console.error("Fehler beim Laden des Dashboards:", err);
-    error.value = "Dashboard konnte nicht geladen werden.";
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-// Hilfsfunktion für den Bestätigungsdialog
 async function confirmDeleteDialog(): Promise<boolean> {
   const result = await Swal.fire({
     title: 'Projekt löschen?',
-    html: `Möchtest du das Projekt <strong>"${dashboard.value.project.title}"</strong> wirklich löschen?<br><br>Diese Aktion kann nicht rückgängig gemacht werden.`,
+    html: `Möchtest du das Projekt <strong>"${dashboard.value?.project.title}"</strong> wirklich löschen?<br><br>Diese Aktion kann nicht rückgängig gemacht werden.`,
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#e53935',
@@ -252,10 +220,27 @@ async function confirmDeleteDialog(): Promise<boolean> {
   return result.isConfirmed;
 }
 
+// ============================================================================
+// LIFECYCLE HOOKS
+// ============================================================================
 
+onMounted(async () => {
+  try {
+    const projektId = Number(route.params.id);
+    dashboard.value = await api.getDashboardData(projektId);
 
-
+    if (dashboard.value) {
+      editableStatus.value = dashboard.value.project.status;
+    }
+  } catch (err) {
+    console.error("Fehler beim Laden des Dashboards:", err);
+    error.value = "Dashboard konnte nicht geladen werden.";
+  } finally {
+    isLoading.value = false;
+  }
+});
 </script>
+
 
 <template>
   <!-- Loading -->

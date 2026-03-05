@@ -4,128 +4,91 @@ import { computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useProjectDraftStore } from "@/stores/projektDraft";
 import api from "@/api";
-import axios from "axios";
-import type { TimelinessLevel, ProjectIssueType } from "@/types";
 import { useToast } from "vue-toastification";
+
+// Importiere alle Konstanten zentral
+import {
+  TIMELINESS_LEVELS,
+  TIMELINESS_LABELS,
+  PROJECT_ISSUE_TYPES,
+  ISSUE_LABELS
+} from "@/utils/constants";
+
+// ============================================================================
+// INITIALISIERUNG & STATE
+// ============================================================================
 
 const draft = useProjectDraftStore();
 const router = useRouter();
 const toast = useToast();
 
-// Computed für den Fortschritt
 const progress = computed(() => draft.deploymentProgress);
 const totalFields = 5;
 
-// Timeliness Level Optionen
-const timelinessLevels: TimelinessLevel[] = ['BATCH', 'DAILY', 'NEARREALTIME', 'REALTIME'];
+// ============================================================================
+// LIFECYCLE
+// ============================================================================
 
-// Project Issues Typen
-const projectIssueTypes: ProjectIssueType[] = [
-  'DATA_ACCESS',
-  'DATA_QUALITY',
-  'INSUFFICIENT_RESOURCES',
-  'UNCLEAR_REQUIREMENTS',
-  'TECHNICAL_COMPLEXITY',
-  'TIMELINE_CONSTRAINTS',
-  'TEAM_COORDINATION'
-];
+onMounted(() => {
+  draft.loadDraft();
 
-
-const timelinessLabels: Record<TimelinessLevel, string> = {
-  BATCH: 'Batch (einmalig/periodisch)',
-  DAILY: 'Daily (täglich)',
-  NEARREALTIME: 'Near-Realtime (nahezu in Echtzeit)',
-  REALTIME: 'Realtime (Echtzeit)'
-};
-
-const issueLabels: Record<ProjectIssueType, string> = {
-  DATA_ACCESS: 'Datenzugriff',
-  DATA_QUALITY: 'Datenqualität',
-  INSUFFICIENT_RESOURCES: 'Unzureichende Ressourcen',
-  UNCLEAR_REQUIREMENTS: 'Unklare Anforderungen',
-  TECHNICAL_COMPLEXITY: 'Technische Komplexität',
-  TIMELINE_CONSTRAINTS: 'Zeitliche Einschränkungen',
-  TEAM_COORDINATION: 'Team-Koordination'
-};
-
-// Helper für Fehlerbehandlung
-function getErrorMessage(error: unknown): string {
-  if (axios.isAxiosError(error)) {
-    return error.response?.data?.errors?.[0]?.msg
-      || error.response?.data?.message
-      || error.message
-      || "Netzwerkfehler beim Speichern";
+  // Sicherheitsprüfung: Ein Nutzer darf nicht mitten in den Wizard einsteigen.
+  if (!draft.id) {
+    toast.error("Kein aktives Projekt gefunden. Bitte starte von vorne.");
+    router.push({ name: "projekt-erstellen" });
   }
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return "Unbekannter Fehler";
-}
+});
+
+// ============================================================================
+// NAVIGATION & AKTIONEN
+// ============================================================================
 
 function goBack() {
   router.push({ name: "projekt-erstellen-analysis" });
 }
 
+/**
+ * Speichert die aktuelle Konfiguration am Backend und navigiert zum nächsten Schritt.
+ */
 async function goNext() {
-  // Validierung
   if (!draft.id) {
-    toast.error("Fehler: Kein Projekt gefunden. Bitte starte von Schritt 1.");
-    router.push({ name: "projekt-erstellen" });
+    toast.error("Systemfehler: Keine Projekt-ID gefunden.");
     return;
   }
 
   try {
-    // Deployment Config speichern
-    await api.patchDeploymentConfig(
-      draft.id,
-      draft.deploymentConfig
-    );
+    // API-Aufruf an das Backend
+    await api.patchDeploymentConfig(draft.id, draft.deploymentConfig);
 
-    console.log("Deployment Config gespeichert");
-
-    // Entwurf speichern
+    // Lokales Backup im Store aktualisieren
     draft.saveDraft();
 
-    // Weiter zur letzten Seite
+    // Weiter zur letzten Seite (Utilization)
     router.push({ name: "projekt-erstellen-utilization" });
 
   } catch (error: unknown) {
-    console.error("Fehler beim Speichern:", error);
-    const errorMessage = getErrorMessage(error);
+    console.error("Fehler beim Speichern der Deployment Config:", error);
+
+    // Standardisiertes Error-Handling (API wirft echte Error-Objekte)
+    const errorMessage = error instanceof Error ? error.message : "Unbekannter Systemfehler";
     toast.error(`Speichern fehlgeschlagen: ${errorMessage}`);
   }
 }
-
-onMounted(() => {
-  // ERST laden...
-  draft.loadDraft();
-
-  // DANN validieren!
-  if (!draft.id) {
-    console.warn("⚠️ Keine Projekt-ID! Zurück zu Schritt 0");
-    router.push({ name: "projekt-erstellen" });
-    return;
-  }
-
-  console.log("✅ Draft geladen, Projekt-ID:", draft.id);
-});
-
-
-
 </script>
 
 <template>
   <div class="wizard-page">
     <main class="wizard-container">
+
+      <!-- HEADER -->
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 4 von 5</p>
         <h1>{{ draft.title || 'Projekt' }} – Deployment</h1>
         <p class="wizard-subtitle">
           Beschreibe die Umsetzungsphase: Aktualität, Nutzer, Tests, Issues und Tools.
-          <!-- Auto-Save Indicator in JEDER View -->
           <span v-if="draft.lastSaved" class="auto-save-indicator">
-      💾 Gespeichert: {{ draft.lastSavedFormatted }}
-    </span>
+            💾 Gespeichert: {{ draft.lastSavedFormatted }}
+          </span>
         </p>
 
         <ol class="wizard-steps">
@@ -137,15 +100,16 @@ onMounted(() => {
         </ol>
       </section>
 
+      <!-- HAUPTBEREICH (Formular & Vorschau) -->
       <section class="wizard-main">
-        <div class="form-card">
-          <h2>Deployment Configuration</h2>
 
+        <!-- Nutzung von <form>, damit Enter-Taste den Submit auslöst -->
+        <form class="form-card" @submit.prevent="goNext">
+          <h2>Deployment Configuration</h2>
 
           <div class="form-section">
             <header class="section-header">
               <div>
-
                 <p class="section-description">
                   Definiere wie und an wen die Analytics-Ergebnisse bereitgestellt werden: Aktualität, Zielgruppe, Tests, Issues und Deployment-Tools.
                 </p>
@@ -156,6 +120,7 @@ onMounted(() => {
             </header>
 
             <div class="section-grid">
+
               <!-- Timeliness of Analytics -->
               <div class="field field-full">
                 <label for="timeliness">Timeliness of Analytics</label>
@@ -165,11 +130,11 @@ onMounted(() => {
                 >
                   <option :value="undefined">Bitte wählen</option>
                   <option
-                    v-for="level in timelinessLevels"
+                    v-for="level in TIMELINESS_LEVELS"
                     :key="level"
                     :value="level"
                   >
-                    {{ timelinessLabels[level] }}
+                    {{ TIMELINESS_LABELS[level] }}
                   </option>
                 </select>
                 <p class="field-help">
@@ -209,10 +174,9 @@ onMounted(() => {
               <div class="field field-full">
                 <label>Project Issues</label>
 
-                <!-- NEU: .multi-select-grid -->
                 <div class="multi-select-grid">
                   <label
-                    v-for="issue in projectIssueTypes"
+                    v-for="issue in PROJECT_ISSUE_TYPES"
                     :key="issue"
                     class="select-card"
                     :class="{ selected: draft.deploymentConfig.projectIssues?.includes(issue) }"
@@ -222,7 +186,7 @@ onMounted(() => {
                       :value="issue"
                       v-model="draft.deploymentConfig.projectIssues"
                     />
-                    <span>{{ issueLabels[issue] }}</span>
+                    <span>{{ ISSUE_LABELS[issue] }}</span>
                   </label>
                 </div>
 
@@ -246,8 +210,9 @@ onMounted(() => {
               </div>
             </div>
           </div>
-        </div>
+        </form>
 
+        <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
           <h2>Deployment Config – Vorschau</h2>
           <p class="card-subtitle">
@@ -256,7 +221,7 @@ onMounted(() => {
           <div class="preview-content">
             <div class="preview-item" v-if="draft.deploymentConfig.timelinessOfAnalytics">
               <strong>Timeliness:</strong>
-              <p>{{ timelinessLabels[draft.deploymentConfig.timelinessOfAnalytics] }}</p>
+              <p>{{ TIMELINESS_LABELS[draft.deploymentConfig.timelinessOfAnalytics] }}</p>
             </div>
 
             <div class="preview-item" v-if="draft.deploymentConfig.addressedUsers">
@@ -273,7 +238,7 @@ onMounted(() => {
               <strong>Project Issues:</strong>
               <ul>
                 <li v-for="issue in draft.deploymentConfig.projectIssues" :key="issue">
-                  {{ issueLabels[issue] }}
+                  {{ ISSUE_LABELS[issue] }}
                 </li>
               </ul>
             </div>
@@ -286,23 +251,18 @@ onMounted(() => {
         </aside>
       </section>
 
+      <!-- FOOTER -->
       <section class="wizard-footer">
         <button type="button" class="btn-secondary" @click="goBack">
           ← Zurück
         </button>
         <div class="footer-actions">
-
           <button type="button" class="btn-primary" @click="goNext">
             Speichern & Weiter →
           </button>
         </div>
       </section>
+
     </main>
   </div>
 </template>
-
-
-
-<style scoped>
-
-</style>
