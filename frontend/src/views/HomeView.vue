@@ -19,6 +19,8 @@ const error = ref<string | null>(null);
 const selectedStatuses = ref<string[]>([]);
 const isFilterOpen = ref(false);
 
+const searchQuery = ref<string>('');
+
 // =========================================
 // KONFIGURATION & MAPPINGS
 // ============================================================================
@@ -40,10 +42,23 @@ const STATUS_CONFIG = [
  * Wenn nichts ausgewählt ist, werden alle Projekte angezeigt.
  */
 const filteredProjects = computed(() => {
-  if (selectedStatuses.value.length === 0) {
-    return projects.value;
+  let result = projects.value;
+
+  // 1. Textsuche anwenden (Titel und Domain)
+  if (searchQuery.value.trim() !== '') {
+    const query = searchQuery.value.toLowerCase();
+    result = result.filter(project =>
+      project.title.toLowerCase().includes(query) ||
+      (project.domain && project.domain.toLowerCase().includes(query))
+    );
   }
-  return projects.value.filter(project => selectedStatuses.value.includes(project.status));
+
+  // 2. Status-Filter anwenden
+  if (selectedStatuses.value.length > 0) {
+    result = result.filter(project => selectedStatuses.value.includes(project.status));
+  }
+
+  return result;
 });
 
 /**
@@ -159,7 +174,19 @@ function formatDate(date: Date | string | undefined | null): string {
 
       <div class="sidebar-header">
         <h2>Projekte</h2>
-        <div class="filter-wrapper">
+
+          <!-- Suchfeld -->
+          <div style="margin-bottom: 1rem;">
+            <input
+              type="text"
+              v-model="searchQuery"
+              placeholder="Nach Titel oder Domain suchen..."
+              class="form-input"
+              style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;"
+            >
+          </div>
+
+            <div class="filter-wrapper">
           <button class="filter-toggle-btn" @click="toggleFilter" :class="{ active: isFilterOpen }">
             <span class="icon">🔽</span> Filter
             <span v-if="selectedStatuses.length" class="filter-count">{{ selectedStatuses.length }}</span>
@@ -168,7 +195,7 @@ function formatDate(date: Date | string | undefined | null): string {
           <!-- Dropdown Menu -->
           <div v-if="isFilterOpen" class="filter-dropdown">
             <div
-              v-for="option in statusOptions"
+              v-for="option in STATUS_CONFIG"
               :key="option.value"
               class="filter-option"
               @click="toggleStatus(option.value)"
@@ -182,7 +209,7 @@ function formatDate(date: Date | string | undefined | null): string {
 
               <!-- Anzahl anzeigen (aus Statistik oder berechnet) -->
               <span class="count-badge" v-if="statistics">
-                 {{ localStatistics[option.value] }}
+                 {{ localStatistics[option.value] || 0 }}
               </span>
             </div>
           </div>
