@@ -462,7 +462,7 @@ onMounted(async () => {
 
             <!-- 1. Initiale Schätzung -->
             <div class="field">
-              <strong>Initiale Schätzung</strong>
+              <strong>Projektdauer (User-Schätzung)</strong>
               <p v-if="!isEditing">
                 {{ configs.businessUnderstanding.timelineValue }}
                 {{ configs.businessUnderstanding.timelineUnit === 'MONTHS' ? 'Monate' : configs.businessUnderstanding.timelineUnit === 'WEEKS' ? 'Wochen' : 'Tage' }}
@@ -479,7 +479,7 @@ onMounted(async () => {
 
             <!-- 2. Berechnete Werte aus dem Gantt-Chart -->
             <div class="field" v-if="progress">
-              <strong>Projektdauer (Gantt)</strong>
+              <strong>Projektdauer (System-Ergebnis) </strong>
               <p>
                 {{ progress.estimatedDuration }} Tage (Dauer)<br>
                 <span style="color: #6b7280; font-size: 0.9em;">
@@ -1229,24 +1229,25 @@ onMounted(async () => {
 
 .form-input.small,
 .form-select.small {
-  width: auto;
+
   display: inline-block;
-  margin-right: 0.5rem;
+
 }
 
 .flex-row {
   display: flex;
   align-items: center;
-}
-
-.flex-row.nowrap {
-  flex-wrap: nowrap;
   gap: 0.5rem;
+  width: 100%;
 }
 
-textarea.form-input {
-  min-height: 80px;
-  resize: vertical;
+.flex-row .form-input.small {
+  flex: 1;
+  min-width: 60px;
+}
+.flex-row .form-select.small {
+  flex: 1;
+  min-width: 100px;
 }
 
 /* Tags */
