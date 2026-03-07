@@ -460,37 +460,34 @@ onMounted(async () => {
               />
             </div>
 
+            <!-- 1. Initiale Schätzung -->
             <div class="field">
-              <strong>Projektdauer</strong>
+              <strong>Initiale Schätzung</strong>
               <p v-if="!isEditing">
-                {{ configs.businessUnderstanding.timelineValue || "–" }}
-                {{
-                  configs.businessUnderstanding.timelineUnit
-                    ? UNIT_LABELS[configs.businessUnderstanding.timelineUnit]
-                    : ""
-                }}
+                {{ configs.businessUnderstanding.timelineValue }}
+                {{ configs.businessUnderstanding.timelineUnit === 'MONTHS' ? 'Monate' : configs.businessUnderstanding.timelineUnit === 'WEEKS' ? 'Wochen' : 'Tage' }}
               </p>
               <div v-else class="flex-row">
-                <input
-                  type="number"
-                  v-model.number="localConfigs.businessUnderstanding.timelineValue"
-                  class="form-input small"
-                  placeholder="Wert"
-                />
-                <select
-                  v-model="localConfigs.businessUnderstanding.timelineUnit"
-                  class="form-select small"
-                >
-                  <option
-                    v-for="u in TIMELINE_UNITS"
-                    :key="u"
-                    :value="u"
-                  >
-                    {{ UNIT_LABELS[u] }}
-                  </option>
+                <input type="number" v-model.number="localConfigs.businessUnderstanding.timelineValue" class="form-input small" placeholder="Wert">
+                <select v-model="localConfigs.businessUnderstanding.timelineUnit" class="form-select small">
+                  <option value="DAYS">Tage</option>
+                  <option value="WEEKS">Wochen</option>
+                  <option value="MONTHS">Monate</option>
                 </select>
               </div>
             </div>
+
+            <!-- 2. Berechnete Werte aus dem Gantt-Chart -->
+            <div class="field" v-if="progress">
+              <strong>Projektdauer (Gantt)</strong>
+              <p>
+                {{ progress.estimatedDuration }} Tage (Dauer)<br>
+                <span style="color: #6b7280; font-size: 0.9em;">
+      {{ progress.estimatedEffort ? progress.estimatedEffort.toFixed(1) : 0 }} PW (Aufwand)
+    </span>
+              </p>
+            </div>
+
 
             <div class="field full-width">
               <strong>Tools</strong>
