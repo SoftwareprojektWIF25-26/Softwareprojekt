@@ -481,10 +481,7 @@ onMounted(async () => {
             <div class="field" v-if="progress">
               <strong>Projektdauer (System-Ergebnis) </strong>
               <p>
-                {{ progress.estimatedDuration }} Tage (Dauer)<br>
-                <span style="color: #6b7280; font-size: 0.9em;">
-      {{ progress.estimatedEffort ? progress.estimatedEffort.toFixed(1) : 0 }} PW (Aufwand)
-    </span>
+                {{ progress.estimatedDuration }} Tage <br>
               </p>
             </div>
 
