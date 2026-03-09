@@ -24,7 +24,7 @@ const router = useRouter();
 const toast = useToast();
 
 const progress = computed(() => draft.businessProgress);
-const totalFields = 7; // businessGoal, formOfFinalProduct, teamRoles, teamSize, timeline, cost, tools
+const totalFields = 7; // businessGoal, formOfFinalProduct, teamRoles, teamSize, timeline, cost,
 
 // ============================================================================
 // LIFECYCLE
