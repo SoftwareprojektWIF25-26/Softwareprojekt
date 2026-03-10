@@ -220,6 +220,9 @@ async function goNext() {
               </div>
 
               <!-- Veracity (Data Quality) -->
+              <!-- Veracity (Data Quality) -->
+              <!-- Veracity (Data Quality) -->
+              <!-- Veracity (Data Quality) -->
               <div class="field">
                 <label for="veracity">Veracity (Datenqualität)</label>
                 <select
@@ -233,9 +236,14 @@ async function goNext() {
                     :value="option"
                   >
                     {{ VERACITY_LABELS[option] }}
+                    {{ String(option).toLowerCase() === 'poor' ? '(Niedrig) - Viele Fehler, Bereinigung nötig' : '' }}
+                    {{ String(option).toLowerCase() === 'medium' ? '(Mittel) - Lücken/Rauschen, Vorverarbeitung nötig' : '' }}
+                    {{ String(option).toLowerCase() === 'good' ? '(Hoch) - Sehr konsistent, kaum Bereinigung' : '' }}
                   </option>
                 </select>
               </div>
+
+
 
               <!-- Variety -->
               <div class="field">
@@ -254,6 +262,7 @@ async function goNext() {
                   </option>
                 </select>
               </div>
+
 
               <!-- Volume -->
               <div class="field">
