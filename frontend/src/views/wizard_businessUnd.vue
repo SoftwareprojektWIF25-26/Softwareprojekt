@@ -201,7 +201,7 @@ async function goNext() {
 
               <!-- Timeline (Value + Unit) -->
               <div class="field">
-                <label for="timeline">Projektdauer</label>
+                <label for="timeline">Projektdauer (Schätzung o. Vorgabe)</label>
                 <div class="input-group">
                   <input
                     id="timeline"
@@ -231,7 +231,7 @@ async function goNext() {
 
               <!-- Estimated Cost -->
               <div class="field field-full">
-                <label for="cost">Geschätzte Kosten (€)</label>
+                <label for="cost">Kosten € (Schätzung o. Vorgabe)</label>
                 <input
                   id="cost"
                   type="number"

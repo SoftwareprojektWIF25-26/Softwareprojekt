@@ -219,9 +219,7 @@ async function goNext() {
                 </select>
               </div>
 
-              <!-- Veracity (Data Quality) -->
-              <!-- Veracity (Data Quality) -->
-              <!-- Veracity (Data Quality) -->
+
               <!-- Veracity (Data Quality) -->
               <div class="field">
                 <label for="veracity">Veracity (Datenqualität)</label>
