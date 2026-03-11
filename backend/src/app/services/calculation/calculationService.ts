@@ -116,14 +116,32 @@ export class ProjectCalculationService {
         return scores as CategoryScore;
     }
 
+    private readonly OVERALL_SCORE_WEIGHTS = {
+        readiness:   0.4,
+        complexity:  0.3,
+        uncertainty: 0.3
+    } as const;
+
     public calculateOverallScore(categoryScores: CategoryScore): number {
-        // Ein höherer Gesamtscore signalisiert einen günstigen Projektzustand (hohe Readiness, geringe Komplexität/Unsicherheit)
+        const w = this.OVERALL_SCORE_WEIGHTS;
+        // Summe der Gewichte zur Laufzeit prüfen
+        const weightSum = w.readiness + w.complexity + w.uncertainty;
+
         return (
-            categoryScores.readiness * 0.4 +
-            (1 - categoryScores.complexity) * 0.3 +
-            (1 - categoryScores.uncertainty) * 0.3
-        );
+            categoryScores.readiness        * w.readiness  +
+            (1 - categoryScores.complexity) * w.complexity +
+            (1 - categoryScores.uncertainty)* w.uncertainty
+        ) / weightSum; // Division normalisiert automatisch
     }
+
+    /** Steuerungsparameter für die Aufwandsschätzung. */
+    private readonly EFFORT_WEIGHTS = {
+        readinessMidpoint:     0.5, // Neutralpunkt: kein Aufwand-Malus bei readiness = 0.5
+        complexityImpact:      0.8, // Komplexität erhöht Aufwand um max. 80%
+        uncertaintyImpact:     0.6, // Unsicherheit erhöht Aufwand um max. 60%
+        lowReadinessThreshold: 0.3, // Unter diesem Wert greift der Readiness-Malus
+        lowReadinessPenalty:   1.2  // 20% Aufschlag bei sehr schlechter Readiness
+    } as const;
 
     public estimateEffort(
         projectType: ProjectType,
@@ -131,12 +149,14 @@ export class ProjectCalculationService {
         includeRiskBuffer = true
     ): number {
         const baseEffort = BASE_EFFORT[projectType];
+        const ew = this.EFFORT_WEIGHTS;
 
-        // Kernskalierung des Aufwands basierend auf den Kategoriebewertungen
-        const readinessFactor = 1 + (0.5 - categoryScores.readiness);
-        const complexityFactor = 1 + (categoryScores.complexity * 0.8);
-        const uncertaintyFactor = 1 + (categoryScores.uncertainty * 0.6);
-        const readinessPenalty = categoryScores.readiness < 0.3 ? 1.2 : 1.0;
+        const readinessFactor = Math.max(0.8, Math.min(1.5, 1 + (ew.readinessMidpoint - categoryScores.readiness)));
+        const complexityFactor = 1 + (categoryScores.complexity  * ew.complexityImpact);
+        const uncertaintyFactor= 1 + (categoryScores.uncertainty * ew.uncertaintyImpact);
+        const readinessPenalty = categoryScores.readiness < ew.lowReadinessThreshold
+            ? ew.lowReadinessPenalty
+            : 1.0;
 
         let effort = baseEffort * readinessFactor * complexityFactor * uncertaintyFactor * readinessPenalty;
 
@@ -355,38 +375,84 @@ export class ProjectCalculationService {
      * und Anpassungsfaktoren zu. Verschiedene Phasen reagieren unterschiedlich
      * auf Readiness, Komplexität und Unsicherheit des Projekts.
      */
+
+    private readonly PHASE_WEIGHTS = {
+        business: {
+            adjustment: { readinessDeficit: 0.7, uncertainty: 0.3 },
+            risk:       { readinessDeficit: 0.7, uncertainty: 0.3 }
+        },
+        data: {
+            adjustment: { uncertainty: 0.6, readinessDeficit: 0.4 },
+            risk:       { uncertainty: 0.8, readinessDeficit: 0.2 }
+        },
+        modeling: {
+            adjustment: { complexity: 0.7, uncertainty: 0.3 },
+            risk:       { complexity: 0.6, uncertainty: 0.4 }
+        },
+        evaluation: {
+            adjustment: { complexity: 0.5, uncertainty: 0.5 },
+            risk:       { complexity: 0.7, uncertainty: 0.3 }
+        },
+        deployment: {
+            adjustment: { readinessDeficit: 0.5, complexity: 0.5 },
+            risk:       { readinessDeficit: 0.5, complexity: 0.5 }
+        },
+        monitoring: {
+            adjustment: { complexity: 0.5, uncertainty: 0.5 },
+            risk:       { complexity: 0.6, uncertainty: 0.4 }
+        }
+    } as const;
+
     private calculatePhaseMetrics(categoryScores: CategoryScore): PhaseMetrics[] {
         const { readiness, complexity, uncertainty } = categoryScores;
         const readinessDeficit = 1 - readiness;
+        const w = this.PHASE_WEIGHTS;
 
         return DSLC_PHASES_WITH_TASKS.map(phase => {
-            const nameLower = phase.name.toLowerCase();
+            const n = phase.name.toLowerCase();
             let adjustmentFactor = 1;
             let riskWeight = 0;
 
-            if (nameLower.includes('business') || nameLower.includes('understanding')) {
-                adjustmentFactor += readinessDeficit * 0.7 + uncertainty * 0.3;
-                riskWeight = readinessDeficit * 0.7 + uncertainty * 0.3;
-            } else if (nameLower.includes('data') &&
-                (nameLower.includes('collection') || nameLower.includes('exploration') || nameLower.includes('preparation'))) {
-                adjustmentFactor += uncertainty * 0.6 + readinessDeficit * 0.4;
-                riskWeight = uncertainty * 0.8 + readinessDeficit * 0.2;
-            } else if (nameLower.includes('analysis') || nameLower.includes('modeling')) {
-                adjustmentFactor += complexity * 0.7 + uncertainty * 0.3;
-                riskWeight = complexity * 0.6 + uncertainty * 0.4;
-            } else if (nameLower.includes('evaluation') || nameLower.includes('testing')) {
-                adjustmentFactor += complexity * 0.5 + uncertainty * 0.5;
-                riskWeight = complexity * 0.7 + uncertainty * 0.3;
-            } else if (nameLower.includes('deployment')) {
-                adjustmentFactor += readinessDeficit * 0.4 + complexity * 0.4;
-                riskWeight = readinessDeficit * 0.5 + complexity * 0.5;
-            } else if (nameLower.includes('utilization') || nameLower.includes('monitoring')) {
-                adjustmentFactor += complexity * 0.5 + uncertainty * 0.5;
-                riskWeight = complexity * 0.6 + uncertainty * 0.4;
+            if (n.includes('business') || n.includes('understanding')) {
+                adjustmentFactor += readinessDeficit * w.business.adjustment.readinessDeficit
+                    + uncertainty      * w.business.adjustment.uncertainty;
+                riskWeight        = readinessDeficit * w.business.risk.readinessDeficit
+                    + uncertainty      * w.business.risk.uncertainty;
+
+            } else if (n.includes('data') && (n.includes('collection') || n.includes('exploration') || n.includes('preparation'))) {
+                adjustmentFactor += uncertainty      * w.data.adjustment.uncertainty
+                    + readinessDeficit * w.data.adjustment.readinessDeficit;
+                riskWeight        = uncertainty      * w.data.risk.uncertainty
+                    + readinessDeficit * w.data.risk.readinessDeficit;
+
+            } else if (n.includes('analysis') || n.includes('modeling')) {
+                adjustmentFactor += complexity  * w.modeling.adjustment.complexity
+                    + uncertainty * w.modeling.adjustment.uncertainty;
+                riskWeight        = complexity  * w.modeling.risk.complexity
+                    + uncertainty * w.modeling.risk.uncertainty;
+
+            } else if (n.includes('evaluation') || n.includes('testing')) {
+                adjustmentFactor += complexity  * w.evaluation.adjustment.complexity
+                    + uncertainty * w.evaluation.adjustment.uncertainty;
+                riskWeight        = complexity  * w.evaluation.risk.complexity
+                    + uncertainty * w.evaluation.risk.uncertainty;
+
+            } else if (n.includes('deployment')) {
+                adjustmentFactor += readinessDeficit * w.deployment.adjustment.readinessDeficit
+                    + complexity       * w.deployment.adjustment.complexity;
+                riskWeight        = readinessDeficit * w.deployment.risk.readinessDeficit
+                    + complexity       * w.deployment.risk.complexity;
+
+            } else if (n.includes('utilization') || n.includes('monitoring')) {
+                adjustmentFactor += complexity  * w.monitoring.adjustment.complexity
+                    + uncertainty * w.monitoring.adjustment.uncertainty;
+                riskWeight        = complexity  * w.monitoring.risk.complexity
+                    + uncertainty * w.monitoring.risk.uncertainty;
+
             } else {
                 const avgFactor = (complexity + uncertainty + readinessDeficit) / 3;
                 adjustmentFactor += avgFactor * 0.5;
-                riskWeight = avgFactor;
+                riskWeight        = avgFactor;
             }
 
             return {
