@@ -210,11 +210,15 @@ export class ProjectCalculationService {
         const normalizedPhases = this.normalizePhaseMetrics(phaseMetrics);
         const bufferDistribution = this.distributeBuffer(normalizedPhases, riskBufferTotal);
 
+        const minDuration = DSLC_PHASES_WITH_TASKS.length * this.MIN_PHASE_DURATION;
+        const safeDuration = Math.max(durationWeeks, minDuration);
+
         return this.buildPhasesWithPreciseDuration(
             normalizedPhases,
             baseEffort,
-            durationWeeks,
+            safeDuration,
             bufferDistribution,
+            riskBufferTotal,
             taskWeights
         );
     }
@@ -234,7 +238,7 @@ export class ProjectCalculationService {
             errors.push("Teamgröße muss eine gültige Zahl ≥ 1 sein.");
         }
 
-        if (request.productivityFactor && (request.productivityFactor <= 0 || request.productivityFactor > 1)) {
+        if (request.productivityFactor !== undefined && (request.productivityFactor <= 0 || request.productivityFactor > 1)) {
             errors.push("Produktivitätsfaktor muss zwischen 0 und 1 liegen.");
         }
 
@@ -510,15 +514,21 @@ export class ProjectCalculationService {
         baseEffort: number,
         durationWeeks: number,
         bufferDistribution: Record<string, number>,
+        riskBufferTotal: number,
         taskWeights?: TaskWeightConfig
     ): ProjectPhase[] {
         const phases: ProjectPhase[] = [];
         let remainingDuration = durationWeeks;
+        let remainingBuffer = riskBufferTotal; //Ausgleichpuffer, um Rundungsfehler zu kompensieren.
         let currentWeek = 0;
 
         normalizedPhases.forEach((phase, idx) => {
+            const isLastPhase = idx === normalizedPhases.length - 1;
             const phaseBaseEffort = baseEffort * phase.percentage;
-            const phaseBufferEffort = bufferDistribution[phase.name] || 0;
+            const phaseBufferEffort = isLastPhase
+                ? this.round(remainingBuffer)
+                : this.round(bufferDistribution[phase.name] || 0);
+            if (!isLastPhase) remainingBuffer -= phaseBufferEffort;
             const phaseTotalEffort = phaseBaseEffort + phaseBufferEffort;
 
             const calculatedTasks = this.calculatePhaseTasks(
@@ -528,8 +538,8 @@ export class ProjectCalculationService {
                 taskWeights?.[phase.name]
             );
 
-            let phaseDuration = idx === normalizedPhases.length - 1
-                ? this.round(Math.max(this.MIN_PHASE_DURATION, remainingDuration))
+            const phaseDuration = isLastPhase
+                ? parseFloat((durationWeeks - currentWeek).toFixed(1))
                 : this.round(Math.max(this.MIN_PHASE_DURATION, durationWeeks * phase.percentage));
 
             if (idx !== normalizedPhases.length - 1) {
@@ -553,7 +563,7 @@ export class ProjectCalculationService {
                 tasks: calculatedTasks
             });
 
-            currentWeek += phaseDuration;
+            currentWeek = parseFloat((currentWeek + phaseDuration).toFixed(1));
         });
 
         return phases;
