@@ -8,7 +8,8 @@ echo ========================================
 echo.
 
 REM Setze Projektpfad
-set "PROJECT_ROOT=%~dp0"
+set "START_TOOL_PATH=%~dp0"
+set "PROJECT_ROOT=%~dp0..\"
 set "BACKEND_PATH=%PROJECT_ROOT%backend"
 set "FRONTEND_PATH=%PROJECT_ROOT%frontend"
 
