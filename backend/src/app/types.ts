@@ -98,6 +98,13 @@ export interface ProjectPhase {
     tasks: CalculatedTask[];       // NEU: Tasks mit Aufwand
 }
 
+export interface NormalizedPhase {
+    name: string;
+    tasks: PhaseTask[];
+    percentage: number;
+    riskWeight: number;
+}
+
 export interface ProjectMetrics {
     // Scores
     categoryScores: CategoryScore;
@@ -254,7 +261,7 @@ export const PHASE_TRANSLATIONS: Record<string, string> = {
     'Utilization': 'Betrieb & Monitoring'
 };
 
-export interface UpdateWeightsSettingsDto {
+/*export interface UpdateWeightsSettingsDto {
     defaultWeights: DefaultWeights
     businessTasks: BusinessUnderstandingTask
     dataTasks: DataTasks
@@ -263,4 +270,4 @@ export interface UpdateWeightsSettingsDto {
     deploymentTasks: DeploymentTask
     productivity: Productivity
     cost: Cost
-}
+}*/

@@ -13,7 +13,8 @@ import {
     CalculationRequest,
     TaskWeightConfig,
     CalculatedTask,
-    PhaseTask
+    PhaseTask,
+    NormalizedPhase
 } from '../../types.ts';
 
 /**
@@ -151,11 +152,16 @@ export class ProjectCalculationService {
         const baseEffort = BASE_EFFORT[projectType];
         const ew = this.EFFORT_WEIGHTS;
 
+        //Faktor bleibt zwischen 0.8 (beste Readiness) und 1.5 (schlechteste)
         const readinessFactor = Math.max(0.8, Math.min(1.5, 1 + (ew.readinessMidpoint - categoryScores.readiness)));
         const complexityFactor = 1 + (categoryScores.complexity  * ew.complexityImpact);
         const uncertaintyFactor= 1 + (categoryScores.uncertainty * ew.uncertaintyImpact);
+        // Bei readiness=0.0  → penalty = 1.2 (voller Aufschlag)
+        // Bei readiness=0.15 → penalty = 1.1 (halber Aufschlag)
+        // Bei readiness=0.30 → penalty = 1.0 (kein Sprung mehr)
         const readinessPenalty = categoryScores.readiness < ew.lowReadinessThreshold
-            ? ew.lowReadinessPenalty
+            ? 1.0 + (ew.lowReadinessPenalty - 1.0) *
+            (1 - categoryScores.readiness / ew.lowReadinessThreshold)
             : 1.0;
 
         let effort = baseEffort * readinessFactor * complexityFactor * uncertaintyFactor * readinessPenalty;
@@ -182,12 +188,12 @@ export class ProjectCalculationService {
     }
 
     public calculateBacklog(
-        effortPersonWeeks: number,
+        baseEffort: number,// immer der Reine Aufwand, ohne die Puffer
         teamSize: number,
         velocityPerSprint?: number
     ): { storyPoints: number; sprintCount: number } {
         const effectiveVelocity = velocityPerSprint ?? teamSize * this.VELOCITY_PER_PERSON;
-        const storyPoints = Math.round(effortPersonWeeks * this.STORY_POINTS_PER_PERSON_WEEK);
+        const storyPoints = Math.round(baseEffort * this.STORY_POINTS_PER_PERSON_WEEK);
         const sprintCount = Math.ceil(storyPoints / effectiveVelocity);
         return { storyPoints, sprintCount };
     }
@@ -224,8 +230,8 @@ export class ProjectCalculationService {
             errors.push("Projekttyp muss angegeben werden.");
         }
 
-        if (request.teamSize < 1) {
-            errors.push("Teamgröße muss mindestens 1 sein.");
+        if (!Number.isFinite(request.teamSize) || request.teamSize < 1) {
+            errors.push("Teamgröße muss eine gültige Zahl ≥ 1 sein.");
         }
 
         if (request.productivityFactor && (request.productivityFactor <= 0 || request.productivityFactor > 1)) {
@@ -281,7 +287,7 @@ export class ProjectCalculationService {
             effortPersonWeeks,
             durationWeeks,
             projectSize: this.classifyProjectSize(effortPersonWeeks),
-            ...this.calculateBacklog(effortPersonWeeks, teamSize, velocityPerSprint),
+            ...this.calculateBacklog(effortWithoutBuffer, teamSize, velocityPerSprint),
             phases: this.generatePhases(effortPersonWeeks, durationWeeks, categoryScores, riskBufferTotal, taskWeights),
             effortBreakdown: {
                 baseEffort: effortWithoutBuffer,
@@ -500,7 +506,7 @@ export class ProjectCalculationService {
      * mit der Projektschätzung übereinstimmt.
      */
     private buildPhasesWithPreciseDuration(
-        normalizedPhases: any[],
+        normalizedPhases: NormalizedPhase[],
         baseEffort: number,
         durationWeeks: number,
         bufferDistribution: Record<string, number>,
@@ -527,11 +533,11 @@ export class ProjectCalculationService {
                 : this.round(Math.max(this.MIN_PHASE_DURATION, durationWeeks * phase.percentage));
 
             if (idx !== normalizedPhases.length - 1) {
-                remainingDuration -= phaseDuration;
+                remainingDuration = Math.max(0, remainingDuration - phaseDuration);
             }
 
             const effortRatio = phaseTotalEffort > 0 ? phaseBaseEffort / phaseTotalEffort : 1;
-            const baseDuration = Math.max(phaseDuration < 1 ? 0 : this.MIN_PHASE_DURATION, phaseDuration * effortRatio);
+            const baseDuration = Math.max(phaseTotalEffort > 0 ? this.MIN_PHASE_DURATION : 0, phaseDuration * effortRatio);
             const bufferDuration = phaseDuration - baseDuration;
 
             phases.push({
