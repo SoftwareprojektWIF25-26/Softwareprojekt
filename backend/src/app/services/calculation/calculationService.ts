@@ -29,6 +29,25 @@ interface PhaseMetrics {
 
 export class ProjectCalculationService {
 
+    // Konstanten können hier angepasst werden
+    /** Prozentualer Risikoaufschlag auf den Aufwand pro Risikoeinheit (0–1). 0.15 = max. 15% Puffer bei vollem Risiko. */
+    private readonly RISK_BUFFER_FACTOR = 0.15;
+
+    /** Umrechnungsfaktor von Personenwochen in Story Points. 1 PW = 8 SP (entspricht ca.1 Tag pro SP). */
+    private readonly STORY_POINTS_PER_PERSON_WEEK = 8;
+
+    /** Erwartete Story Points pro Person pro Sprint. Wird genutzt wenn keine manuelle Velocity angegeben wird. */
+    private readonly VELOCITY_PER_PERSON = 7;
+
+    /** Minimale Phasendauer in Wochen. Verhindert unrealistisch kurze Phasen im Gantt-Diagramm. */
+    private readonly MIN_PHASE_DURATION = 0.5;
+
+    /** Maximaler Anpassungsfaktor für Phasenaufwand. Eine Phase kann maximal doppelt so aufwändig werden wie geplant. */
+    private readonly MAX_ADJUSTMENT_FACTOR = 2.0;
+
+    /** Minimaler Anpassungsfaktor für Phasenaufwand. Eine Phase kann auf mindestens 50% ihres geplanten Aufwands schrumpfen. */
+    private readonly MIN_ADJUSTMENT_FACTOR = 0.5;
+
     /**
      * Normalisiert Benutzereingaben auf eine Skala von 0.0 bis 1.0.
      * Bei negativen Indikatoren wird die Skala umgekehrt, sodass ein höherer Wert
@@ -123,7 +142,7 @@ export class ProjectCalculationService {
 
         if (includeRiskBuffer) {
             const riskLevel = (categoryScores.complexity + categoryScores.uncertainty) / 2;
-            effort *= (1 + riskLevel * 0.15);
+            effort *= (1 + riskLevel * this.RISK_BUFFER_FACTOR);
         }
 
         return this.round(effort);
@@ -144,10 +163,12 @@ export class ProjectCalculationService {
 
     public calculateBacklog(
         effortPersonWeeks: number,
-        velocityPerSprint = 20
+        teamSize: number,
+        velocityPerSprint?: number
     ): { storyPoints: number; sprintCount: number } {
-        const storyPoints = Math.round(effortPersonWeeks * 8);
-        const sprintCount = Math.ceil(storyPoints / velocityPerSprint);
+        const effectiveVelocity = velocityPerSprint ?? teamSize * this.VELOCITY_PER_PERSON;
+        const storyPoints = Math.round(effortPersonWeeks * this.STORY_POINTS_PER_PERSON_WEEK);
+        const sprintCount = Math.ceil(storyPoints / effectiveVelocity);
         return { storyPoints, sprintCount };
     }
 
@@ -217,7 +238,7 @@ export class ProjectCalculationService {
             projectType,
             teamSize,
             productivityFactor = 0.6,
-            velocityPerSprint = 20,
+            velocityPerSprint,
             taskWeights,
             includeRiskBuffer = true
         } = request;
@@ -228,7 +249,7 @@ export class ProjectCalculationService {
 
         const effortWithoutBuffer = this.estimateEffort(projectType, categoryScores, false);
         const riskLevel = (categoryScores.complexity + categoryScores.uncertainty) / 2;
-        const bufferPercentage = includeRiskBuffer ? riskLevel * 0.15 : 0;
+        const bufferPercentage = includeRiskBuffer ? riskLevel * this.RISK_BUFFER_FACTOR : 0;
         const riskBufferTotal = effortWithoutBuffer * bufferPercentage;
         const effortPersonWeeks = effortWithoutBuffer + riskBufferTotal;
 
@@ -240,7 +261,7 @@ export class ProjectCalculationService {
             effortPersonWeeks,
             durationWeeks,
             projectSize: this.classifyProjectSize(effortPersonWeeks),
-            ...this.calculateBacklog(effortPersonWeeks, velocityPerSprint),
+            ...this.calculateBacklog(effortPersonWeeks, teamSize, velocityPerSprint),
             phases: this.generatePhases(effortPersonWeeks, durationWeeks, categoryScores, riskBufferTotal, taskWeights),
             effortBreakdown: {
                 baseEffort: effortWithoutBuffer,
@@ -371,7 +392,7 @@ export class ProjectCalculationService {
             return {
                 name: phase.name,
                 tasks: phase.tasks,
-                adjustmentFactor: Math.max(0.5, Math.min(2.0, adjustmentFactor)),
+                adjustmentFactor: Math.max(this.MIN_ADJUSTMENT_FACTOR, Math.min(this.MAX_ADJUSTMENT_FACTOR, adjustmentFactor)),
                 riskWeight: Math.max(0, Math.min(1, riskWeight))
             };
         });
@@ -436,15 +457,15 @@ export class ProjectCalculationService {
             );
 
             let phaseDuration = idx === normalizedPhases.length - 1
-                ? this.round(Math.max(0.1, remainingDuration))
-                : this.round(Math.max(0.1, durationWeeks * phase.percentage));
+                ? this.round(Math.max(this.MIN_PHASE_DURATION, remainingDuration))
+                : this.round(Math.max(this.MIN_PHASE_DURATION, durationWeeks * phase.percentage));
 
             if (idx !== normalizedPhases.length - 1) {
                 remainingDuration -= phaseDuration;
             }
 
             const effortRatio = phaseTotalEffort > 0 ? phaseBaseEffort / phaseTotalEffort : 1;
-            const baseDuration = Math.max(phaseDuration < 1 ? 0 : 0.1, phaseDuration * effortRatio);
+            const baseDuration = Math.max(phaseDuration < 1 ? 0 : this.MIN_PHASE_DURATION, phaseDuration * effortRatio);
             const bufferDuration = phaseDuration - baseDuration;
 
             phases.push({
