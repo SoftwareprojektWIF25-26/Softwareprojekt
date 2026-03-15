@@ -38,6 +38,19 @@ export type ProjectStatus =
   | 'COMPLETED'
   | 'CANCELLED';
 
+export interface ProjectCategory {
+  id?: number;
+  name: string;
+  color: string;
+}
+
+// Interface für Typsicherheit
+interface CategoryPayload {
+  id?: number;
+  name: string;
+  color: string;
+}
+
 // ============================================
 // WIZARD SCHRITT 1: BUSINESS UNDERSTANDING
 // ============================================
@@ -432,6 +445,7 @@ export interface ProjectListItem {
   updatedAt: Date | string;
   startDate: Date | string | null;
   endDate: Date | string | null;
+  category?: { id: number, name: string, color: string }
 }
 
 export interface StartPageData {

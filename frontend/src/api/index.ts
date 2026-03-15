@@ -1,4 +1,4 @@
-// api/index.ts
+
 import axios, { AxiosError } from 'axios';
 import type {
   ApiResponse,
@@ -25,6 +25,7 @@ import type {
   EvaluationTask,
   DeploymentTask,
   ProjectListItem,
+  ProjectCategory,
 } from '@/types';
 
 // ============================================================================
@@ -366,12 +367,59 @@ async function patchWeights(data: WeightsPayload): Promise<WeightsPayload> {
   }
 }
 
+// ==========================================
+// KATEGORIE-MANAGEMENT
+// ==========================================
+
+// Lädt alle verfügbaren Projekt-Kategorien.
+async function getCategories(): Promise<ProjectCategory[]> {
+  try {
+    // ÄNDERUNG: /categories statt /projects/categories
+    const response = await apiClient.get<ProjectCategory[]>('/categories');
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Fehler beim Laden der Kategorien');
+  }
+}
+
+// Erstellt oder aktualisiert eine Kategorie.
+async function saveCategory(data: ProjectCategory): Promise<ProjectCategory> {
+  try {
+    // ÄNDERUNG: /categories
+    const response = await apiClient.post<ProjectCategory>('/categories', data);
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Fehler beim Speichern der Kategorie');
+  }
+}
+
+// Löscht eine Kategorie.
+async function deleteCategory(id: number): Promise<void> {
+  try {
+    // ÄNDERUNG: /categories/:id
+    await apiClient.delete(`/categories/${id}`);
+  } catch (error) {
+    handleApiError(error, 'Fehler beim Löschen der Kategorie');
+  }
+}
+
+// Weist einem Projekt eine Kategorie zu.
+// (Das bleibt bei /projects, weil wir ein Projekt updaten)
+async function patchProjectCategory(projectId: number, categoryId: number | null): Promise<any> {
+  try {
+    const response = await apiClient.patch(`/projects/${projectId}/category`, { categoryId });
+    return response.data;
+  } catch (error) {
+    handleApiError(error, 'Fehler beim Zuweisen der Kategorie zum Projekt');
+  }
+}
+
+
 // ============================================================================
 // HILFSMETHODEN (HELPERS)
 // ============================================================================
 
-/**
- * Standardisierte Fehlerbehandlung für API-Aufrufe.
+/** * Standardisierte Fehlerbehandlung für API-Aufrufe.
  * Versucht die genaue Ursache aus dem Backend-Payload zu extrahieren.
  */
 function handleApiError(error: unknown, fallbackMessage: string): never {
@@ -441,4 +489,9 @@ export default {
 
   getWeights,
   patchWeights,
+
+  getCategories,
+  saveCategory,
+  deleteCategory,
+  patchProjectCategory
 };

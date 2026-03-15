@@ -38,6 +38,7 @@ const editableStatus = ref<string | null>(null);
 const isEditing = ref(false);
 const localConfigs = ref<any>(null);
 
+const categories = ref([]);
 // ============================================================================
 // COMPUTED PROPERTIES
 // ============================================================================
@@ -45,6 +46,7 @@ const localConfigs = ref<any>(null);
 const project = computed(() => dashboard.value?.project);
 const configs = computed(() => dashboard.value?.configurations);
 const progress = computed(() => dashboard.value?.projectPlanProgress);
+
 
 // ============================================================================
 // NAVIGATION
@@ -220,6 +222,16 @@ async function confirmDeleteDialog(): Promise<boolean> {
   return result.isConfirmed;
 }
 
+async function updateCategory(categoryId) {
+  try {
+    await api.patchProjectCategory(Number(route.params.id), categoryId);
+    toast.success('Kategorie aktualisiert');
+    dashboard.value.project.category = categories.value.find(c => c.id === categoryId);
+  } catch (err) {
+    toast.error('Fehler beim Aktualisieren der Kategorie');
+  }
+}
+
 // ============================================================================
 // LIFECYCLE HOOKS
 // ============================================================================
@@ -232,6 +244,9 @@ onMounted(async () => {
     if (dashboard.value) {
       editableStatus.value = dashboard.value.project.status;
     }
+
+    categories.value = await api.getCategories();
+
   } catch (err) {
     console.error("Fehler beim Laden des Dashboards:", err);
     error.value = "Dashboard konnte nicht geladen werden.";
@@ -315,9 +330,32 @@ onMounted(async () => {
           </div>
         </div>
 
+        <div class="category-control ml-2">
+          <div class="custom-select-wrapper">
+            <select
+              :value="project?.categoryId || ''"
+              @change="updateCategory($event.target.value ? Number($event.target.value) : null)"
+              class="custom-select category-select"
+              :style="{
+        backgroundColor: project?.category?.color || '#6c757d', /* Standardfarbe Grau, wenn keine Kategorie */
+        color: '#ffffff' /* Text immer weiß */
+      }"
+            >
+              <option value="">Keine Kategorie</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">
+                {{ cat.name }}
+              </option>
+            </select>
+            <span class="custom-arrow">▼</span>
+          </div>
+        </div>
+
+
         <button class="btn-danger ml-2" @click="deleteProject">
           Projekt löschen
         </button>
+
+
       </div>
     </header>
 
@@ -1436,4 +1474,16 @@ onMounted(async () => {
     transform: rotate(360deg);
   }
 }
+
+/* Breite für das Kategorie-Dropdown festlegen */
+.category-control {
+  width: 200px; /* Gleiche Breite wie .status-control */
+}
+
+/* Optional: Fallback für Hover/Fokus, damit es nicht unsichtbar wird */
+.category-select:focus {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  outline: 2px solid var(--color-primary); /* Zeigt Fokus an */
+}
+
 </style>

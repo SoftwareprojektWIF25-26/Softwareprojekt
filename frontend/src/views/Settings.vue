@@ -6,11 +6,53 @@ import {
   DeploymentTask,
   EvaluationTask,
   DataTasks,
+  CategoryPayload,
 } from '@/types'
-import { reactive, onMounted, computed } from 'vue'
+import { reactive, onMounted, computed, ref } from 'vue' // 'ref' hinzugefügt
 import api from '@/api'
 import { useToast } from 'vue-toastification'
 
+// --- KATEGORIEN ---
+const categories = ref<CategoryPayload[]>([]);
+
+// State für die Erstellung einer neuen Kategorie (Standardfarbe z.B. Blau)
+const newCategory = reactive({
+  name: '',
+  color: '#3b82f6'
+});
+
+async function addCategory() {
+  if (!newCategory.name.trim()) {
+    toast.warning('Bitte gib einen Namen für die Kategorie ein.');
+    return;
+  }
+
+  try {
+    await api.saveCategory({ name: newCategory.name, color: newCategory.color });
+    toast.success('Kategorie erfolgreich erstellt');
+    // Zurücksetzen
+    newCategory.name = '';
+    // Reload
+    categories.value = await api.getCategories();
+  } catch (err) {
+    toast.error('Fehler beim Erstellen der Kategorie');
+  }
+}
+
+async function removeCategory(id?: number) {
+  if (!id) return;
+
+  try {
+    await api.deleteCategory(id);
+    toast.success('Kategorie gelöscht');
+    // Reload
+    categories.value = await api.getCategories();
+  } catch (err) {
+    toast.error('Fehler beim Löschen der Kategorie');
+  }
+}
+
+// --- RESTLICHE LOGIK ---
 const toast = useToast()
 const productivity = reactive({
   productivity: 0,
@@ -19,6 +61,7 @@ const productivity = reactive({
 const cost = reactive({
   hourly_rate: 0,
 })
+
 function save() {
   const payload = {
     defaultWeights: { ...weights },
@@ -35,6 +78,7 @@ function save() {
     .patchWeights(payload)
     .then(() => {
       console.log('Gewichtungen gespeichert')
+      toast.success('Gewichtungen erfolgreich gespeichert')
     })
     .catch((err) => {
       console.error('Fehler beim Speichern der Gewichtungen:', err)
@@ -174,6 +218,7 @@ const isSaveDisabled = computed(
     totalEvaluationTasks.value > 1 ||
     totalDeploymentTasks.value > 1,
 )
+
 onMounted(async () => {
   try {
     const data = await api.getWeights()
@@ -188,7 +233,16 @@ onMounted(async () => {
     if (data.cost) Object.assign(cost, data.cost)
 
     console.log('✅ Weights erfolgreich geladen')
-  } catch (err) {
+
+    // Projektkategorien laden
+    try {
+      const catData = await api.getCategories();
+      categories.value = catData;
+    } catch (catErr) {
+      console.error('Fehler beim Laden der Kategorien', catErr);
+    }
+
+  } catch (err: any) {
     console.error('❌ Fehler beim Laden der Gewichtungen:', err)
     toast.error(err.message || 'Fehler beim Laden der Gewichtungen')
   }
@@ -224,6 +278,7 @@ function scrollToSection(sectionId: string) {
 }
 </script>
 
+
 <template>
   <div class="page-container">
     <aside class="sidebar">
@@ -243,6 +298,7 @@ function scrollToSection(sectionId: string) {
         <li><a @click.prevent="scrollToSection('deployment-tasks')">Deployment</a></li>
         <li><a @click.prevent="scrollToSection('productivity')">Produktivität</a></li>
         <li><a @click.prevent="scrollToSection('cost')">Personalkosten</a></li>
+        <li><a @click.prevent="scrollToSection('categories')">Projekt-Kategorien</a></li>
       </ul>
       <div class="sidebar-footer">
         <button class="btn-primary" :disabled="isSaveDisabled" @click="save">Speichern</button>
@@ -771,6 +827,68 @@ function scrollToSection(sectionId: string) {
           </div>
         </div>
       </div>
+
+      <div class="form-card" id="categories">
+        <h2>Projekt-Kategorien</h2>
+
+        <!-- Neue Kategorie erstellen (im gleichen Grid-Layout wie der Rest) -->
+        <div class="section-grid" style="margin-bottom: 2.5rem;">
+          <!-- Feld 1: Farbe -->
+          <div class="field" style="max-width: 40px;">
+            <label>Farbe</label>
+            <input
+              type="color"
+              v-model="newCategory.color"
+              style="width: 100%; height: 38px; padding: 2px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px;"
+            />
+          </div>
+
+          <!-- Feld 2: Name & Button zusammen -->
+          <div class="field" style="grid-column: span 2;">
+            <label>Kategorie</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <input
+                type="text"
+                v-model="newCategory.name"
+                class="form-input"
+                @keyup.enter="addCategory"
+              />
+              <button
+                class="btn-primary"
+                @click="addCategory"
+                :disabled="!newCategory.name.trim()"
+                style="white-space: nowrap;"
+              >
+                Hinzufügen
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vorhandene Kategorien -->
+        <div class="field">
+          <label>Vorhandene Kategorien ({{ categories.length }})</label>
+
+          <div v-if="categories.length === 0" style="color: #888; font-style: italic; margin-top: 0.5rem;">
+
+          </div>
+
+          <div v-else class="category-list" style="margin-top: 0.5rem;">
+            <div v-for="cat in categories" :key="cat.id" class="category-list-item">
+              <div class="category-info">
+                <div class="category-color-dot" :style="{ backgroundColor: cat.color }"></div>
+                <span class="category-name">{{ cat.name }}</span>
+              </div>
+              <button class="btn-delete-icon" @click="removeCategory(cat.id)" title="Kategorie löschen">
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
     </main>
   </div>
 </template>
@@ -877,4 +995,69 @@ html {
   scroll-behavior: smooth;
   scroll-padding-top: 100px; /* Offset für fixierte Header/Sidebar */
 }
+
+/* Styling für die neue Kategorie-Liste */
+.category-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+}
+
+.category-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 1px solid var(--color-border, #ddd);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.category-list-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  border-color: #bbb;
+}
+
+.category-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.category-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.1); /* leichter Rand für sehr helle Farben */
+}
+
+.category-name {
+  font-weight: 500;
+  color: #333;
+}
+
+.btn-delete-icon {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.btn-delete-icon:hover {
+  color: #e53935;
+  background-color: #ffebee;
+}
+
+.btn-success:disabled {
+  background-color: #a5d6a7;
+  cursor: not-allowed;
+}
+
 </style>

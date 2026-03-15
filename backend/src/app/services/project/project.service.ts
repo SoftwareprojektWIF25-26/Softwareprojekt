@@ -431,6 +431,59 @@ export class ProjectService {
         }
     }
 
+
+
+
+
+    // ==========================================
+    // Kategorie-Management
+    // ==========================================
+
+    // Holt alle definierten Kategorien
+    public async getCategories() {
+        return prisma.projectCategory.findMany({
+            orderBy: { name: 'asc' }
+        });
+    }
+
+    // Erstellt oder aktualisiert eine Kategorie
+    public async saveCategory(data: { id?: number; name: string; color: string }) {
+        if (data.id) {
+            return prisma.projectCategory.update({
+                where: { id: data.id },
+                data: { name: data.name, color: data.color }
+            });
+        } else {
+            return prisma.projectCategory.create({
+                data: { name: data.name, color: data.color }
+            });
+        }
+    }
+
+    // Löscht eine Kategorie und entfernt die Verknüpfung aus Projekten
+    public async deleteCategory(categoryId: number) {
+        // Da Prisma referentielle Integrität wahrt, werden Projekte, die diese
+        // Kategorie haben, auf categoryId = null gesetzt (durch Prisma konfiguriert)
+        return prisma.projectCategory.delete({
+            where: { id: categoryId }
+        });
+    }
+
+    // Weist einem Projekt eine Kategorie zu (oder entfernt sie bei categoryId = null)
+    public async assignCategoryToProject(projectId: number, categoryId: number | null) {
+        await this.ensureProjectExists(projectId);
+        return prisma.project.update({
+            where: { id: projectId },
+            data: { projectCategoryId: categoryId },
+            select: {
+                id: true,
+                projectCategoryId: true,
+                ProjectCategory: true
+            }
+        });
+    }
+
+
     // ======================================================
     // Private Hilfsmethoden
     // ======================================================

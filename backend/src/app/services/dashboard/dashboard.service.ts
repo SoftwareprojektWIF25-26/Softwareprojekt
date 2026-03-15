@@ -1,13 +1,10 @@
 import { PrismaClient, Prisma, ProjectStatus, TemplatePhaseStatus } from '@prisma/client';
+import {ConfigPhaseType} from "../../types.ts";
+
 
 const prisma = new PrismaClient();
 
-export type ConfigPhaseType =
-    | 'businessUnderstanding'
-    | 'dataCharacteristics'
-    | 'analysisConfig'
-    | 'deploymentConfig'
-    | 'utilizationConfig';
+
 
 // Typendefinition für ein vollständig geladenes Projekt inklusive aller relationalen Abhängigkeiten
 type ProjectWithAll = Prisma.ProjectGetPayload<{
@@ -43,6 +40,7 @@ export class DashboardService {
         const project = await prisma.project.findUnique({
             where: { id },
             include: {
+                ProjectCategory: true,
                 businessUnderstanding: true,
                 dataCharacteristics: true,
                 analysisConfig: true,
@@ -102,7 +100,9 @@ export class DashboardService {
                 startDate: project.startDate,
                 endDate: project.endDate,
                 createdAt: project.createdAt,
-                updatedAt: project.updatedAt
+                updatedAt: project.updatedAt,
+                categoryId: project.projectCategoryId,
+                category: project.ProjectCategory
             },
             wizardProgress: {
                 currentStep: project.wizardStep,

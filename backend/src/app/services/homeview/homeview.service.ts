@@ -4,7 +4,7 @@ import { PrismaClient, Prisma, ProjectStatus } from '@prisma/client';
 const prisma = new PrismaClient();
 
 interface StartPageFilters {
-    // workspaceId entfernt
+
     search?: string;
     status?: ProjectStatus;
     sortBy: 'updatedAt' | 'createdAt' | 'title';
@@ -51,12 +51,13 @@ export class HomeviewService {
                         status: true,
                         projectTeamRoles: true
                     }
-                }
+                },
+                ProjectCategory: true
             },
             orderBy: { [filters.sortBy]: filters.sortOrder }
         });
 
-        // 4. Projekte aufbereiten (Mapping bleibt gleich)
+        // 4. Projekte aufbereiten
         const projectList = projects.map(project => {
             // Wizard-Fortschritt
             const wizardProgress = Math.round((project.wizardStep / 6) * 100);
@@ -86,7 +87,12 @@ export class HomeviewService {
                 createdAt: project.createdAt,
                 updatedAt: project.updatedAt,
                 startDate: project.startDate,
-                endDate: project.endDate
+                endDate: project.endDate,
+                category: project.ProjectCategory ? {
+                    id: project.ProjectCategory.id,
+                    name: project.ProjectCategory.name,
+                    color: project.ProjectCategory.color
+                } : null
             };
         });
 
@@ -101,7 +107,7 @@ export class HomeviewService {
         };
 
         return {
-            // Workspace-Objekt entfernt, da nicht mehr existent
+
             projects: projectList,
             statistics,
             totalCount: projectList.length
@@ -111,7 +117,7 @@ export class HomeviewService {
     /**
      * Statistiken (Global)
      */
-    async getStatistics() { // Parameter entfernt
+    async getStatistics() {
         // Einfach alle Projekte laden (evtl. optimiert nur Status abfragen)
         const projects = await prisma.project.findMany({
             select: { status: true }
@@ -130,7 +136,7 @@ export class HomeviewService {
     /**
      * Zuletzt bearbeitete Projekte
      */
-    async getRecentProjects(limit: number = 5) { // WorkspaceId Parameter entfernt
+    async getRecentProjects(limit: number = 5) {
 
         const projects = await prisma.project.findMany({
             orderBy: { updatedAt: 'desc' },

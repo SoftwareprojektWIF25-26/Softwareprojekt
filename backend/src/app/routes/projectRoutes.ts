@@ -274,4 +274,22 @@ router.patch(
     }
 );
 
+// PATCH /api/projects/:id/category -> Projekt einer Kategorie zuweisen
+router.patch('/:id/category', async (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+    try {
+        const projectId = parseInt(req.params.id, 10);
+        const { categoryId } = req.body;
+
+
+        const updatedProject = await projectService.assignCategoryToProject(projectId, categoryId);
+
+        res.json({ success: true, data: updatedProject });
+    } catch (error) {
+        next(error);
+    }
+});
+
+
+
+
 export default router;

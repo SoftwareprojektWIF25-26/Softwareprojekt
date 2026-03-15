@@ -42,6 +42,8 @@ model Project {
   utilizationConfig     UtilizationConfig?
   projectPlan           ProjectPlan?
   evaluations           ProjectEvaluation[]
+  ProjectCategory       ProjectCategory?       @relation(fields: [projectCategoryId], references: [id], onDelete: SetNull)
+  projectCategoryId     Int?
 
   // Index für schnelle Sortierung auf dem Dashboard (Zuletzt bearbeitet)
   @@index([updatedAt])
@@ -56,6 +58,16 @@ enum ProjectStatus {
   ON_HOLD
   COMPLETED
   CANCELLED
+}
+
+model ProjectCategory {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  color     String // z.B. "#FF5733" oder "blue"
+  createdAt DateTime @default(now())
+
+  // Relationen
+  projects Project[] // Eine Kategorie kann viele Projekte haben
 }
 
 // ========================================
@@ -565,14 +577,14 @@ model WeightsSettings {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  defaultWeights        DefaultWeights?
-  businessTasks BusinessUnderstandingTask?
-  dataTasks             DataTasks?
-  analysisTasks         AnalysisTask?
-  evaluationTasks       EvaluationTask?
-  deploymentTasks       DeploymentTask?
-  productivity          Productivity?
-  cost                  Cost?
+  defaultWeights  DefaultWeights?
+  businessTasks   BusinessUnderstandingTask?
+  dataTasks       DataTasks?
+  analysisTasks   AnalysisTask?
+  evaluationTasks EvaluationTask?
+  deploymentTasks DeploymentTask?
+  productivity    Productivity?
+  cost            Cost?
 }
 
 model DefaultWeights {
@@ -580,18 +592,18 @@ model DefaultWeights {
   settingsId Int             @unique
   settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
 
-  data_access         Float
-  data_availability   Float
-  stakeholder_support Float
-  tools_available     Float
-  data_variety        Float
-  data_velocity       Float
-  num_sources         Float
-  analytics_type      Float
-  data_quality        Float
-  privacy_concerns    Float
-  missing_data        Float
-  goal_clarity        Float
+  data_access            Float
+  data_availability      Float
+  stakeholder_support    Float
+  tools_available        Float
+  data_variety           Float
+  data_velocity          Float
+  num_sources            Float
+  analytics_type         Float
+  data_quality           Float
+  privacy_concerns       Float
+  missing_data           Float
+  goal_clarity           Float
   data_volume_complexity Float
   data_prep_complexity   Float
   product_complexity     Float
@@ -641,8 +653,8 @@ model EvaluationTask {
   settingsId Int             @unique
   settings   WeightsSettings @relation(fields: [settingsId], references: [id], onDelete: Cascade)
 
-  assess_results   Float
-  evaluate_process Float
+  assess_results              Float
+  evaluate_process            Float
   perform_checkpoint_decision Float
 }
 

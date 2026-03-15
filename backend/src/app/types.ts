@@ -12,6 +12,13 @@ import type {
     TaskType
 } from '@prisma/client';
 
+export type ConfigPhaseType =
+    | 'businessUnderstanding'
+    | 'dataCharacteristics'
+    | 'analysisConfig'
+    | 'deploymentConfig'
+    | 'utilizationConfig';
+
 export interface UpdateWeightsSettingsDto {
     defaultWeights: Omit<DefaultWeights, 'id' | 'settingsId'>;
     businessTasks: Omit<BusinessUnderstandingTask, 'id' | 'settingsId'>;
@@ -90,7 +97,7 @@ export interface ProjectPhase {
     effortPersonWeeks: number;
     percentage: number;
 
-    // NEU: Aufschlüsselung für Visualisierung
+    // Aufschlüsselung für Visualisierung
     baseEffort?: number;           // Basis-Aufwand ohne Puffer
     bufferEffort?: number;         // Nur der Puffer
     baseDuration?: number;         // Basis-Dauer in Wochen

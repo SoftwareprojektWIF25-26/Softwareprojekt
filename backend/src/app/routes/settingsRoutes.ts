@@ -1,6 +1,6 @@
 // settings.routes.ts
 import {Router, Request, Response, NextFunction} from 'express';
-import {validationResult} from "express-validator";
+import {body, validationResult} from "express-validator";
 import {SettingsService} from "../services/settings/settings.service.ts";
 
 const router = Router();
@@ -46,5 +46,6 @@ router.patch('/', async (req: Request, res: Response, next: NextFunction) => {
         next(error);
     }
 });
+
 
 export default router;

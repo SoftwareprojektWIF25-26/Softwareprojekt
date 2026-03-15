@@ -44,13 +44,20 @@ const STATUS_CONFIG = [
 const filteredProjects = computed(() => {
   let result = projects.value;
 
-  // 1. Textsuche anwenden (Titel und Domain)
+  // 1. Textsuche anwenden (Titel, Domain und Kategorie)
   if (searchQuery.value.trim() !== '') {
     const query = searchQuery.value.toLowerCase();
-    result = result.filter(project =>
-      project.title.toLowerCase().includes(query) ||
-      (project.domain && project.domain.toLowerCase().includes(query))
-    );
+    result = result.filter(project => {
+      // Titel prüfen
+      const matchTitle = project.title.toLowerCase().includes(query);
+      // Domain prüfen (falls vorhanden)
+      const matchDomain = project.domain && project.domain.toLowerCase().includes(query);
+      // Kategorie prüfen (falls vorhanden)
+      const matchCategory = project.category && project.category.name && project.category.name.toLowerCase().includes(query);
+
+      // Gibt true zurück, wenn mindestens eines der Felder den Suchbegriff enthält
+      return matchTitle || matchDomain || matchCategory;
+    });
   }
 
   // 2. Status-Filter anwenden
@@ -60,6 +67,7 @@ const filteredProjects = computed(() => {
 
   return result;
 });
+
 
 /**
  * Berechnet die Anzahl der Projekte pro Status lokal,
@@ -180,7 +188,7 @@ function formatDate(date: Date | string | undefined | null): string {
             <input
               type="text"
               v-model="searchQuery"
-              placeholder="Nach Titel oder Domain suchen..."
+              placeholder="Nach Titel, Domain oder Kategorie suchen..."
               class="form-input"
               style="width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 8px;"
             >
@@ -228,19 +236,24 @@ function formatDate(date: Date | string | undefined | null): string {
           Keine Projekte gefunden
         </div>
 
-        <div
-          v-else
-          v-for="project in filteredProjects"
-          :key="project.id"
-          class="list-item-card"
-          @click="openDashboard(project.id)"
-        >
+        <div v-for="project in filteredProjects" :key="project.id"
+             class="list-item-card"
+             @click="openDashboard(project.id)">
           <div class="item-header">
-            <h3 class="item-title">{{ project.title }}</h3>
-            <span :class="['status-dot', getStatusBadgeClass(project.status)]" :title="getStatusLabel(project.status)"></span>
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+              <h3 class="item-title">{{ project.title }}</h3>
+              <!-- Neue Kategorie Anzeige -->
+              <div v-if="project.category" class="item-category">
+                <span class="category-dot" :style="{ backgroundColor: project.category.color }"></span>
+                <span class="category-name">{{ project.category.name }}</span>
+              </div>
+            </div>
+            <!-- Status Dot -->
+            <span class="status-dot" :class="getStatusBadgeClass(project.status)" :title="getStatusLabel(project.status)"></span>
           </div>
 
           <p class="item-domain">{{ project.domain || 'Keine Domain angegeben' }}</p>
+
 
           <div class="item-meta">
             <span>{{ getStatusLabel(project.status) }}</span>
@@ -539,6 +552,28 @@ function formatDate(date: Date | string | undefined | null): string {
   margin-right: 10px;
   vertical-align: middle;
 }
+
+/* Styling für die Kategorie auf der Projekt-Karte */
+.item-category {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.category-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.category-name {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #666;
+}
+
 
 
 @keyframes spin {
