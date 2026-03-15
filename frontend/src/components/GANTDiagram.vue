@@ -15,7 +15,8 @@ import {
   eachYearOfInterval,
   differenceInDays,
   startOfMonth,
-  startOfYear
+  startOfYear,
+  addYears,
 } from 'date-fns'
 import { de } from 'date-fns/locale'
 
@@ -116,13 +117,26 @@ const timelineHeaders = computed(() => {
   const pct = (date: Date) => `${(Math.max(0, differenceInDays(date, start)) / days) * 100}%`
 
   if (zoom.value === 'years') {
+    const years = eachYearOfInterval({
+      start: startOfYear(start),
+      end,
+    })
+
     return {
       upper: [],
-      lower: eachYearOfInterval({ start, end }).map(date => ({
-        label: format(date, 'yyyy'),
-        left: pct(date),
-        width: `${(365 / days) * 100}%`,
-      }))
+      lower: years.map((yearStart) => {
+        const segmentStart = yearStart < start ? start : yearStart
+        const yearEnd = addYears(yearStart, 1)
+        const segmentEnd = yearEnd > end ? end : yearEnd
+
+        const segmentDays = Math.max(1, differenceInDays(segmentEnd, segmentStart))
+
+        return {
+          label: format(yearStart, 'yyyy'),
+          left: pct(segmentStart),
+          width: `${(segmentDays / days) * 100}%`,
+        }
+      }),
     }
   }
 
@@ -236,7 +250,12 @@ const closeTaskModal = () => {
 // Helfer für UI-Anzeige
 const getTaskTitle = (taskType: string) => TASK_LABELS[taskType] || taskType.replace(/_/g, ' ')
 const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = { TODO: '#9ca3af', IN_PROGRESS: '#3b82f6', BLOCKED: '#ef4444', DONE: '#10b981' }
+  const colors: Record<string, string> = {
+    TODO: '#9ca3af',
+    IN_PROGRESS: '#3b82f6',
+    BLOCKED: '#ef4444',
+    DONE: '#10b981',
+  }
   return colors[status] || '#6b7280'
 }
 const formatDuration = (days: number | null): string => {
@@ -248,7 +267,16 @@ const formatDuration = (days: number | null): string => {
 
 /** Exportiert die Gantt-Daten als CSV-Datei */
 const exportToCSV = () => {
-  const headers = ['Phase', 'Start', 'Ende', 'Basisaufwand (Wochen)', 'Puffer (Wochen)', 'Gesamtdauer (Wochen)', 'Aufwand (PW)', 'Anzahl Tasks']
+  const headers = [
+    'Phase',
+    'Start',
+    'Ende',
+    'Basisaufwand (Wochen)',
+    'Puffer (Wochen)',
+    'Gesamtdauer (Wochen)',
+    'Aufwand (PW)',
+    'Anzahl Tasks',
+  ]
 
   const rows = phases.value.map((p) => {
     const phaseStart = addDays(projectStartDate.value, p.startDay ?? p.startWeek * 7)
@@ -265,7 +293,7 @@ const exportToCSV = () => {
     ]
   })
 
-  const csvContent = '\uFEFF' + [headers, ...rows].map(row => row.join(';')).join('\r\n')
+  const csvContent = '\uFEFF' + [headers, ...rows].map((row) => row.join(';')).join('\r\n')
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
 
@@ -289,7 +317,16 @@ const exportToCSV = () => {
 
     <!-- Legende & Zoom-Einstellungen -->
     <div class="form-card">
-      <div style="margin-top: 16px; display: flex; gap: 20px; align-items: center; font-size: 14px; flex-wrap: wrap;">
+      <div
+        style="
+          margin-top: 16px;
+          display: flex;
+          gap: 20px;
+          align-items: center;
+          font-size: 14px;
+          flex-wrap: wrap;
+        "
+      >
         <div style="display: flex; align-items: center; gap: 6px">
           <div style="width: 16px; height: 16px; background: #3b82f6; border-radius: 3px"></div>
           <span>Basisaufwand</span>
@@ -354,24 +391,39 @@ const exportToCSV = () => {
           <div class="timeline-body">
             <!-- Grid-Hintergrundlinien -->
             <div class="grid">
-              <div v-for="(h, i) in timelineHeaders.lower" :key="i" class="grid-column"
-                   :style="{ position: 'absolute', left: h.left, width: h.width || '1px', height: '100%' }">
-              </div>
+              <div
+                v-for="(h, i) in timelineHeaders.lower"
+                :key="i"
+                class="grid-column"
+                :style="{
+                  position: 'absolute',
+                  left: h.left,
+                  width: h.width || '1px',
+                  height: '100%',
+                }"
+              ></div>
             </div>
 
             <!-- Basisaufwand-Balken -->
-            <div v-if="phase.baseDurationDays > 0"
-                 class="GanttBalken basis clickable"
-                 :style="{ left: barLeft(phase.startDay), width: barWidth(phase.baseDurationDays) }"
-                 @click="openTaskModal(phase)"
-                 title="Klicken für Task-Details">
+            <div
+              v-if="phase.baseDurationDays > 0"
+              class="GanttBalken basis clickable"
+              :style="{ left: barLeft(phase.startDay), width: barWidth(phase.baseDurationDays) }"
+              @click="openTaskModal(phase)"
+              title="Klicken für Task-Details"
+            >
               {{ phase.name }}
             </div>
 
             <!-- Puffer-Balken -->
-            <div v-if="phase.bufferDurationDays > 0"
-                 class="GanttBalken puffer"
-                 :style="{ left: barLeft(phase.startDay + phase.baseDurationDays), width: barWidth(phase.bufferDurationDays) }">
+            <div
+              v-if="phase.bufferDurationDays > 0"
+              class="GanttBalken puffer"
+              :style="{
+                left: barLeft(phase.startDay + phase.baseDurationDays),
+                width: barWidth(phase.bufferDurationDays),
+              }"
+            >
               Puffer
             </div>
           </div>
@@ -399,7 +451,6 @@ const exportToCSV = () => {
       <Transition name="modal-fade">
         <div v-if="showTaskModal && selectedPhase" class="modal-overlay" @click="closeTaskModal">
           <div class="modal-container" @click.stop>
-
             <div class="modal-header">
               <h2>{{ selectedPhase.name || 'Phase Details' }}</h2>
               <button class="modal-close" @click="closeTaskModal">✕</button>
@@ -410,7 +461,9 @@ const exportToCSV = () => {
               <div class="phase-info">
                 <div class="info-item">
                   <span class="info-label">Gesamt-Aufwand:</span>
-                  <span class="info-value">{{ selectedPhase.effortPersonWeeks?.toFixed(1) || '0.0' }} PW</span>
+                  <span class="info-value"
+                    >{{ selectedPhase.effortPersonWeeks?.toFixed(1) || '0.0' }} PW</span
+                  >
                 </div>
                 <div class="info-item">
                   <span class="info-label">Anzahl Tasks:</span>
@@ -430,14 +483,20 @@ const exportToCSV = () => {
                 <div v-for="task in selectedPhase.tasks" :key="task.id" class="task-item">
                   <div class="task-header">
                     <span class="task-title">{{ task.title || getTaskTitle(task.taskType) }}</span>
-                    <span class="task-status-badge" :style="{ backgroundColor: getStatusColor(task.status) }"></span>
+                    <span
+                      class="task-status-badge"
+                      :style="{ backgroundColor: getStatusColor(task.status) }"
+                    ></span>
                   </div>
                   <div class="task-details">
                     <div class="task-detail-item">
                       <span class="detail-icon">⏱️</span>
                       <span>{{ formatDuration(task.estimatedDuration) }}</span>
                     </div>
-                    <div v-if="task.taskType && task.taskType !== 'CUSTOM'" class="task-detail-item">
+                    <div
+                      v-if="task.taskType && task.taskType !== 'CUSTOM'"
+                      class="task-detail-item"
+                    >
                       <span class="detail-icon">🏷️</span>
                       <span class="task-type">{{ task.taskType.replace(/_/g, ' ') }}</span>
                     </div>
@@ -467,128 +526,404 @@ const exportToCSV = () => {
   margin-top: 40px;
   margin-bottom: 64px;
 }
-.action-bar { display: flex; gap: 12px; margin-bottom: 24px; }
+.action-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
 
 /* ========================================================================== */
 /* ZOOM TOGGLE BUTTONS                                                        */
 /* ========================================================================== */
 .zoom-toggle {
-  display: flex; gap: 4px; background: #f3f4f6; border-radius: 8px; padding: 4px;
+  display: flex;
+  gap: 4px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
 }
 .zoom-btn {
-  padding: 6px 16px; border: none; border-radius: 6px; background: transparent;
-  font-size: 13px; cursor: pointer; color: #6b7280; transition: all 0.15s; font-weight: 500;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s;
+  font-weight: 500;
 }
 .zoom-btn.active {
-  background: white; color: #1f2937; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  background: white;
+  color: #1f2937;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
-.zoom-btn:hover:not(.active) { color: #374151; background: #e5e7eb; }
+.zoom-btn:hover:not(.active) {
+  color: #374151;
+  background: #e5e7eb;
+}
 
 /* ========================================================================== */
 /* GANTT TIMELINE & SCROLLBAR                                                 */
 /* ========================================================================== */
-.timeline-scroll { overflow-x: auto; width: 100%; }
+.timeline-scroll {
+  overflow-x: auto;
+  width: 100%;
+}
 
 /* Scrollbar Styling */
-.timeline-scroll { scrollbar-width: auto; scrollbar-color: #3b82f6 #e5e7eb; }
-.timeline-scroll::-webkit-scrollbar { height: 12px; }
-.timeline-scroll::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 8px; margin: 0 4px; }
-.timeline-scroll::-webkit-scrollbar-thumb { background-color: #9ca3af; border-radius: 8px; border: 3px solid #f3f4f6; }
-.timeline-scroll::-webkit-scrollbar-thumb:hover { background-color: #3b82f6; }
+.timeline-scroll {
+  scrollbar-width: auto;
+  scrollbar-color: #3b82f6 #e5e7eb;
+}
+.timeline-scroll::-webkit-scrollbar {
+  height: 12px;
+}
+.timeline-scroll::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 8px;
+  margin: 0 4px;
+}
+.timeline-scroll::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+  border-radius: 8px;
+  border: 3px solid #f3f4f6;
+}
+.timeline-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #3b82f6;
+}
 
 /* Header & Grid */
 .timeline-header {
-  display: flex; border-bottom: 1px solid #ccc; background: #e5e5e5;
-  font-weight: bold; border-top-left-radius: 20px; border-top-right-radius: 20px;
+  display: flex;
+  border-bottom: 1px solid #ccc;
+  background: #e5e5e5;
+  font-weight: bold;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
 }
-.timeline-weeks { flex-grow: 1; width: 100%; }
+.timeline-weeks {
+  flex-grow: 1;
+  width: 100%;
+}
 .header-upper-item {
-  position: absolute; font-size: 11px; color: #6b7280; font-weight: 600;
-  padding-left: 4px; border-left: 1px dashed #d1d5db; white-space: nowrap; line-height: 20px;
+  position: absolute;
+  font-size: 11px;
+  color: #6b7280;
+  font-weight: 600;
+  padding-left: 4px;
+  border-left: 1px dashed #d1d5db;
+  white-space: nowrap;
+  line-height: 20px;
 }
 .week-column {
-  border-left: 1px solid #fff; text-align: left; padding-left: 4px; border-left: 1px solid #ccc;
-  height: 100%; font-size: 11px; white-space: nowrap;
+  border-left: 1px solid #fff;
+  text-align: left;
+  padding-left: 4px;
+  border-left: 1px solid #ccc;
+  height: 100%;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 /* Fixierte linke Spalte (Sticky) */
 .timeline-label {
-  width: 220px; padding: 8px; flex-shrink: 0; display: flex; flex-direction: column;
-  justify-content: center; overflow: hidden; min-width: 220px; background: white;
-  position: sticky; left: 0; z-index: 10; border-right: 1px solid #e5e7eb;
+  width: 220px;
+  padding: 8px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+  min-width: 220px;
+  background: white;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  border-right: 1px solid #e5e7eb;
 }
-.timeline-header .timeline-label { background: #e5e5e5; z-index: 20; }
-.phase-name { font-weight: bold; font-size: 14px; line-height: 1.2; }
-.phase-pw { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.timeline-header .timeline-label {
+  background: #e5e5e5;
+  z-index: 20;
+}
+.phase-name {
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 1.2;
+}
+.phase-pw {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
 
 /* Zeilen & Balken */
-.timeline-row { display: flex; border-bottom: 1px solid #eee; height: 60px; position: relative; background: #fff; }
-.timeline-body { flex: 1; position: relative; height: 100%; }
-.grid { display: flex; position: absolute; inset: 0; width: 100%; }
-.grid-column { border-left: 1px solid #f0f0f0; flex: 0 0 auto; box-sizing: border-box; }
+.timeline-row {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  height: 60px;
+  position: relative;
+  background: #fff;
+}
+.timeline-body {
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+.grid {
+  display: flex;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+}
+.grid-column {
+  border-left: 1px solid #f0f0f0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+}
 
 .GanttBalken {
-  top: 6px; height: 40px; line-height: 40px; text-align: center; color: white;
-  border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.15); position: absolute;
-  padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  font-size: 13px; font-weight: 500;
+  top: 6px;
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  color: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  position: absolute;
+  padding: 0 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 500;
 }
-.GanttBalken.basis { background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%); }
-.GanttBalken.puffer { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
-.GanttBalken.clickable { cursor: pointer; transition: all 0.2s ease; }
-.GanttBalken.clickable:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.25); filter: brightness(1.1); }
+.GanttBalken.basis {
+  background: linear-gradient(135deg, #0070c9 0%, #00a8ff 100%);
+}
+.GanttBalken.puffer {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+.GanttBalken.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.GanttBalken.clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+  filter: brightness(1.1);
+}
 
 /* ========================================================================== */
 /* AUFWANDS-ZUSAMMENFASSUNG (FOOTER)                                          */
 /* ========================================================================== */
-.weeks, .labels { display: flex; justify-content: space-around; width: 100%; }
-.labels { font-weight: bold; margin-bottom: 4px; }
-.weeks div { flex: 1; text-align: center; padding: 4px 0; font-size: 20px; font-weight: bold; }
-.weeks .basis { color: #3b82f6; }
-.weeks .puffer { color: #10b981; }
-.labels div { flex: 1; text-align: center; padding: 4px 0; }
+.weeks,
+.labels {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+}
+.labels {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+.weeks div {
+  flex: 1;
+  text-align: center;
+  padding: 4px 0;
+  font-size: 20px;
+  font-weight: bold;
+}
+.weeks .basis {
+  color: #3b82f6;
+}
+.weeks .puffer {
+  color: #10b981;
+}
+.labels div {
+  flex: 1;
+  text-align: center;
+  padding: 4px 0;
+}
 
 /* ========================================================================== */
 /* MODAL STYLING                                                              */
 /* ========================================================================== */
 .modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6);
-  display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 .modal-container {
-  background: white; border-radius: 12px; width: 90%; max-width: 700px; max-height: 85vh;
-  display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: modalSlideIn 0.3s ease;
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.3s ease;
 }
 @keyframes modalSlideIn {
-  from { opacity: 0; transform: translateY(-20px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #e5e7eb; }
-.modal-header h2 { margin: 0; font-size: 1.5rem; color: #1f2937; }
-.modal-close { background: none; border: none; font-size: 1.5rem; color: #9ca3af; cursor: pointer; padding: 0.25rem 0.5rem; border-radius: 4px; transition: all 0.2s; }
-.modal-close:hover { background: #f3f4f6; color: #374151; }
-.modal-body { padding: 1.5rem; overflow-y: auto; flex: 1; }
-.phase-info { display: flex; gap: 2rem; padding: 1rem; background: #f9fafb; border-radius: 8px; margin-bottom: 1.5rem; }
-.info-item { display: flex; flex-direction: column; gap: 0.25rem; }
-.info-label { font-size: 0.875rem; color: #6b7280; font-weight: 500; }
-.info-value { font-size: 1.125rem; font-weight: 600; color: #1f2937; }
-.task-list h3 { margin-bottom: 1rem; font-size: 1.125rem; color: #374151; }
-.task-item { padding: 1rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 0.75rem; transition: all 0.2s; }
-.task-item:hover { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 2px 4px rgba(59,130,246,0.1); }
-.task-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
-.task-title { font-weight: 600; color: #1f2937; font-size: 1rem; }
-.task-status-badge { padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: white; text-transform: uppercase; }
-.task-details { display: flex; gap: 1.5rem; flex-wrap: wrap; }
-.task-detail-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: #6b7280; }
-.task-type { font-family: 'Courier New', monospace; font-size: 0.75rem; color: #6b7280; text-transform: capitalize; }
-.no-tasks { text-align: center; padding: 3rem 1rem; color: #9ca3af; }
-.modal-footer { padding: 1rem 1.5rem; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; }
-.modal-fade-enter-active .modal-container, .modal-fade-leave-active .modal-container { transition: transform 0.3s ease; }
-.modal-fade-enter-from .modal-container, .modal-fade-leave-to .modal-container { transform: translateY(-20px) scale(0.95); }
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #1f2937;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.modal-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+.phase-info {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.info-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+.info-value {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+.task-list h3 {
+  margin-bottom: 1rem;
+  font-size: 1.125rem;
+  color: #374151;
+}
+.task-item {
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  transition: all 0.2s;
+}
+.task-item:hover {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.task-title {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 1rem;
+}
+.task-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+.task-details {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+.task-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+.task-type {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: capitalize;
+}
+.no-tasks {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #9ca3af;
+}
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+.modal-fade-enter-active .modal-container,
+.modal-fade-leave-active .modal-container {
+  transition: transform 0.3s ease;
+}
+.modal-fade-enter-from .modal-container,
+.modal-fade-leave-to .modal-container {
+  transform: translateY(-20px) scale(0.95);
+}
 
 @media (max-width: 768px) {
-  .modal-container { width: 95%; max-height: 90vh; }
-  .phase-info { flex-direction: column; gap: 1rem; }
-  .task-details { flex-direction: column; gap: 0.5rem; }
+  .modal-container {
+    width: 95%;
+    max-height: 90vh;
+  }
+  .phase-info {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .task-details {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
 }
 </style>
