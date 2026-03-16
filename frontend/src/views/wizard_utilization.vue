@@ -97,6 +97,7 @@ async function finishWizard() {
         </p>
 
         <ol class="wizard-steps">
+          <li class="is-done">Projekt-Erstellung</li>
           <li class="is-done">Business Understanding</li>
           <li class="is-done">Data Collection, Exploration & Preparation</li>
           <li class="is-done">Analysis</li>
@@ -110,7 +111,7 @@ async function finishWizard() {
 
         <!-- Nutzung von <form>, damit Enter-Taste den Submit auslöst -->
         <form class="form-card" @submit.prevent="finishWizard">
-          <h2>Utilization Configuration</h2>
+          <h2>Utilization </h2>
 
           <div class="form-section">
             <header class="section-header">
@@ -173,9 +174,9 @@ async function finishWizard() {
 
         <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
-          <h2>Utilization Config – Vorschau</h2>
+          <h2>Utilization  – Vorschau</h2>
           <p class="card-subtitle">
-            Aktualisiert sich automatisch während du tippst.
+
           </p>
           <div class="preview-content">
             <div class="preview-item" v-if="draft.utilizationConfig.monitoring">

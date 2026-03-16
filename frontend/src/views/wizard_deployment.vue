@@ -92,6 +92,7 @@ async function goNext() {
         </p>
 
         <ol class="wizard-steps">
+          <li class="is-done">Projekt-Erstellung</li>
           <li class="is-done">Business Understanding</li>
           <li class="is-done">Data Collection, Exploration & Preparation</li>
           <li class="is-done">Analysis</li>
@@ -105,7 +106,7 @@ async function goNext() {
 
         <!-- Nutzung von <form>, damit Enter-Taste den Submit auslöst -->
         <form class="form-card" @submit.prevent="goNext">
-          <h2>Deployment Configuration</h2>
+          <h2>Deployment</h2>
 
           <div class="form-section">
             <header class="section-header">
@@ -214,9 +215,9 @@ async function goNext() {
 
         <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
-          <h2>Deployment Config – Vorschau</h2>
+          <h2>Deployment  – Vorschau</h2>
           <p class="card-subtitle">
-            Aktualisiert sich automatisch während du tippst.
+
           </p>
           <div class="preview-content">
             <div class="preview-item" v-if="draft.deploymentConfig.timelinessOfAnalytics">

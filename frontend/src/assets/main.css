@@ -23,3 +23,9 @@ a,
   }
 }
 
+/* Erzwingt die Schriftart für alle UI-Elemente global */
+*, *::before, *::after, input, button, textarea, select {
+  font-family: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+

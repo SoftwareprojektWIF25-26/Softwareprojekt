@@ -86,7 +86,7 @@ async function goNext() {
         <p class="wizard-step">Projekt-Wizard · Schritt 1 von 5</p>
         <h1>{{ draft.title || 'Projekt' }} – Business Understanding</h1>
         <p class="wizard-subtitle">
-          Beschreibe Geschäftsziel, Team, Zeitrahmen und erwartete Kosten.
+
           <span v-if="draft.lastSaved" class="auto-save-indicator">
             💾 Automatisch gespeichert: {{ draft.lastSavedFormatted }}
           </span>
@@ -113,7 +113,8 @@ async function goNext() {
             <header class="section-header">
               <div>
                 <p class="section-description">
-                  Fülle die Basisinformationen aus: Geschäftsziel, Produktform, Team und Budget.
+                  Fülle die Basisinformationen aus: Geschäftsziel, Produktform, Team, Budget,
+                  geschätzte Dauer, Tools
                 </p>
               </div>
               <div>
@@ -201,7 +202,7 @@ async function goNext() {
 
               <!-- Timeline (Value + Unit) -->
               <div class="field">
-                <label for="timeline">Projektdauer (Schätzung o. Vorgabe)</label>
+                <label for="timeline">Projektdauer (Schätzung)</label>
                 <div class="input-group">
                   <input
                     id="timeline"
@@ -231,7 +232,7 @@ async function goNext() {
 
               <!-- Estimated Cost -->
               <div class="field field-full">
-                <label for="cost">Kosten € (Schätzung o. Vorgabe)</label>
+                <label for="cost">Kosten € (Schätzung)</label>
                 <input
                   id="cost"
                   type="number"
@@ -266,7 +267,7 @@ async function goNext() {
         <aside class="preview-card">
           <h2>Business Understanding – Vorschau</h2>
           <p class="card-subtitle">
-            Aktualisiert sich automatisch während du tippst.
+
           </p>
           <div class="preview-content">
             <div class="preview-item" v-if="draft.businessUnderstanding.businessGoal">

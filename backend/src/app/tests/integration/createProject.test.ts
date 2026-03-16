@@ -5,7 +5,7 @@ import { PrismaClient } from '@prisma/client';
 
 
 // Pfad ggf. anpassen, falls deine Ordnerstruktur anders ist
-import projectRoutes from '../../routes/CRUD-Project.ts';
+import projectRoutes from '../../routes/projectRoutes.ts';
 
 const app = express();
 app.use(express.json());

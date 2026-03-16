@@ -94,7 +94,7 @@ async function saveProjectAndProceed() {
         <p class="wizard-step">Projekt-Wizard · Schritt 0 von 5</p>
         <h1>Neues Projekt erstellen</h1>
         <p class="wizard-subtitle">
-          Beginne mit einem Projektnamen und optional einer Domain.
+          Beginne mit einem Projektnamen und optional einer Domain
           <span v-if="draft.lastSaved" class="auto-save-indicator">
             💾 Automatisch gespeichert: {{ draft.lastSavedFormatted }}
           </span>
@@ -141,7 +141,7 @@ async function saveProjectAndProceed() {
                   {{ titleError }}
                 </p>
                 <p class="field-help">
-                  Ein aussagekräftiger Name, der das Projekt beschreibt.
+                  Projektname eintragen (Pflichtfeld)
                 </p>
               </div>
 
@@ -155,7 +155,7 @@ async function saveProjectAndProceed() {
                   placeholder="z.B. Retail, Finance, Healthcare, Public Services"
                 />
                 <p class="field-help">
-                  In welcher Branche oder Domäne ist das Projekt angesiedelt?
+                  In welcher Branche ist das Projekt angesiedelt?
                 </p>
               </div>
             </div>
@@ -166,7 +166,7 @@ async function saveProjectAndProceed() {
         <aside class="preview-card">
           <h2>Projekt – Vorschau</h2>
           <p class="card-subtitle">
-            So wird dein Projekt angelegt.
+
           </p>
           <div class="preview-content">
             <div class="preview-item" v-if="draft.title">
@@ -209,6 +209,3 @@ async function saveProjectAndProceed() {
   </div>
 </template>
 
-<style scoped>
-
-</style>

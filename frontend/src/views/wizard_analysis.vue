@@ -97,7 +97,7 @@ async function goNext() {
       <!-- HEADER -->
       <section class="wizard-header">
         <p class="wizard-step">Projekt-Wizard · Schritt 3 von 5</p>
-        <h1>{{ draft.title || 'Projekt' }} – Analysis & Modeling</h1>
+        <h1>{{ draft.title || 'Projekt' }} – Analysis</h1>
         <p class="wizard-subtitle">
           Beschreibe die Data Science Ziele, den Analytics-Typ und die Bewertungsmetriken.
           <span v-if="draft.lastSaved" class="auto-save-indicator">
@@ -106,6 +106,7 @@ async function goNext() {
         </p>
 
         <ol class="wizard-steps">
+          <li class="is-done">Projekt-Erstellung</li>
           <li class="is-done">Business Understanding</li>
           <li class="is-done">Data Collection, Exploration & Preparation</li>
           <li class="is-active">Analysis</li>
@@ -119,7 +120,7 @@ async function goNext() {
 
         <!-- Nutzung von <form>, damit Enter-Taste den Submit auslöst -->
         <form class="form-card" @submit.prevent="goNext">
-          <h2>Analysis Configuration</h2>
+          <h2>Analysis</h2>
 
           <div class="form-section">
             <header class="section-header">
@@ -203,9 +204,9 @@ async function goNext() {
 
         <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
-          <h2>Analysis Config – Vorschau</h2>
+          <h2>Analysis  – Vorschau</h2>
           <p class="card-subtitle">
-            Aktualisiert sich automatisch während du tippst.
+
           </p>
           <div class="preview-content">
             <div class="preview-item" v-if="draft.analysisConfig.dataScienceGoals">
@@ -251,6 +252,3 @@ async function goNext() {
   </div>
 </template>
 
-<style scoped>
-
-</style>

@@ -22,6 +22,7 @@ import {
   PREPARATION_STEPS,
   PREPARATION_LABELS
 } from "@/utils/constants";
+import Projekt_erstellen from '@/views/projekt_erstellen.vue'
 
 // ============================================================================
 // INITIALISIERUNG & STATE
@@ -126,6 +127,7 @@ async function goNext() {
         </p>
 
         <ol class="wizard-steps">
+          <li class="is-done">Projekt-Erstellung</li>
           <li class="is-done">Business Understanding</li>
           <li class="is-active">Data Collection, Exploration & Preparation</li>
           <li>Analysis</li>
@@ -139,7 +141,7 @@ async function goNext() {
 
         <!-- Form Tag ermöglicht das Abschicken mit Enter -->
         <form class="form-card" @submit.prevent="goNext">
-          <h2>Data Characteristics</h2>
+          <h2>Data Collection, Exploration and Preparation </h2>
 
           <div class="form-section">
             <header class="section-header">
@@ -359,9 +361,9 @@ async function goNext() {
 
         <!-- SEITENLEISTE (Vorschau) -->
         <aside class="preview-card">
-          <h2>Data Characteristics – Vorschau</h2>
+          <h2>Data Collection, Exploration and Preparation  – Vorschau</h2>
           <p class="card-subtitle">
-            Aktualisiert sich automatisch während du tippst.
+
           </p>
           <div class="preview-content">
 

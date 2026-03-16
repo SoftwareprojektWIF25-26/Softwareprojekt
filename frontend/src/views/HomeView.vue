@@ -337,7 +337,8 @@ function formatDate(date: Date | string | undefined | null): string {
 .filter-toggle-btn {
   width: 100%;
   padding: 0.75rem;
-  background: var(--color-background);
+  background: white;
+  color: #2c3e50;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   text-align: left;
