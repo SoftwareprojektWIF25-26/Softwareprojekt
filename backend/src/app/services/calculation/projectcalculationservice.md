@@ -53,7 +53,7 @@ Jetzt wird der eigentliche Aufwand in Personenwochen berechnet. Als Ausgangspunk
 
 Dieser Basisaufwand wird mit drei Faktoren multipliziert, die jeweils aus den Kategoriescores abgeleitet werden:
 
-- Der Readiness-Faktor erhöht den Aufwand, wenn die Vorbereitung schlecht ist (Formel: 1 + (0,5 – Readiness), begrenzt auf [0,8 – 1,5]). Bei sehr schlechter Vorbereitung unter 30 % greift zusätzlich ein gleitender Strafaufschlag von bis zu 20 %:
+- Der **Readiness-Faktor** erhöht den Aufwand, wenn die Vorbereitung schlecht ist (Formel: 1 + (0,5 – Readiness), begrenzt auf [0,8 – 1,5]). Bei sehr schlechter Vorbereitung unter 30 % greift zusätzlich ein gleitender Strafaufschlag von bis zu 20 %:
   Je näher die Readiness an 0 liegt, desto höher der Aufschlag – bei Readiness = 0 beträgt er die vollen 20 %, bei Readiness = 0,15 etwa 10 %, und ab 30 % entfällt er vollständig.
 - Der **Complexity-Faktor** skaliert mit der Projektkomplexität (Formel: `1 + Complexity × 0,8`).
 - Der **Uncertainty-Faktor** skaliert mit der Unsicherheit (Formel: `1 + Uncertainty × 0,6`).

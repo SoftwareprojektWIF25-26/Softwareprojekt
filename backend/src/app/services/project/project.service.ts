@@ -525,7 +525,7 @@ export class ProjectService {
             inputs,
             weights: inputWeights,
             projectType,
-            teamSize: project.businessUnderstanding?.teamSize || 3,
+            teamSize: project.businessUnderstanding?.teamSize || 2,
             taskWeights
         });
     }
