@@ -70,7 +70,7 @@ Das Ergebnis ist eine Schätzung in Personenwochen, die beschreibt, wie viel Ges
 
 Aus dem Aufwand in Personenwochen wird die kalendarische Dauer berechnet. Der Gesamtaufwand wird berechnet, indem Gesamtaufwand dividiert wird durch das Produkt von Teamgröße und Produktivitätsfaktor. Der Produktivitätsfaktor liegt standardmäßig bei 0,6 – das bedeutet, dass ein Teammitglied in der Praxis nur 60 % seiner Zeit direkt produktiv am Projekt arbeitet, der Rest fällt für Meetings, Abstimmungen und andere Tätigkeiten an. Das Ergebnis wird aufgerundet, da eine Projektwoche immer eine ganze Woche ist.
 
-Parallel dazu wird der Aufwand in Story Points umgerechnet (1 Personenwoche entspricht 8 Story Points), die dann auf Sprints verteilt werden. Das liefert eine Einschätzung, wie viele Sprints das Projekt voraussichtlich umfassen wird.
+Parallel dazu wird der Aufwand in Story Points umgerechnet (1 Personenwoche entspricht 7 Story Points), die dann auf Sprints verteilt werden. Das liefert eine Einschätzung, wie viele Sprints das Projekt voraussichtlich umfassen wird.
 
 ---
 
