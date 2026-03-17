@@ -381,7 +381,7 @@ export class ProjectService {
                 estimatedDuration: Math.round(metrics.durationWeeks * 7),
                 estimatedEffort: metrics.effortPersonWeeks,
                 calculatedComplexity: Math.round(metrics.categoryScores.complexity * 100),
-                bufferPercentage: 15,
+                bufferPercentage: Math.round(metrics.effortBreakdown.bufferPercentage * 100),
                 phaseWeights: {
                     categoryScores: metrics.categoryScores,
                     overallScore: metrics.overallScore ?? null,

@@ -35,7 +35,7 @@ export class ProjectCalculationService {
     private readonly RISK_BUFFER_FACTOR = 0.15;
 
     /** Umrechnungsfaktor von Personenwochen in Story Points. 1 PW = 8 SP (entspricht ca.1 Tag pro SP). */
-    private readonly STORY_POINTS_PER_PERSON_WEEK = 8;
+    private readonly STORY_POINTS_PER_PERSON_WEEK = 7;
 
     /** Erwartete Story Points pro Person pro Sprint. Wird genutzt wenn keine manuelle Velocity angegeben wird. */
     private readonly VELOCITY_PER_PERSON = 7;
