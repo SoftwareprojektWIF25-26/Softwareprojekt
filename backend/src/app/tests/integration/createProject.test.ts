@@ -2,14 +2,12 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import projectRoutes from '../../routes/projectRoutes';
 
-
-// Pfad ggf. anpassen, falls deine Ordnerstruktur anders ist
-import projectRoutes from '../../routes/projectRoutes.ts';
 
 const app = express();
 app.use(express.json());
-// Wir mounten die Routes genau wie in PathRouting.ts
+
 app.use('/api/projects', projectRoutes);
 
 const prisma = new PrismaClient();
@@ -30,11 +28,15 @@ describe('E2E Project Wizard Flow', () => {
     // 1. Projekt erstellen
     it('Schritt 1: Sollte ein neues Projekt erstellen', async () => {
         const response = await request(app)
-            .post('/api/projects')
+            .post('/api/projects/create')
             .send({
                 title: 'Integration Test Flow Project',
                 domain: 'E2E Testing'
             });
+
+        if (response.status !== 201) {
+            console.error("💥 Server-Fehler Payload:", response.body);
+        }
 
         expect(response.status).toBe(201);
         expect(response.body.success).toBe(true);

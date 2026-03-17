@@ -1,8 +1,20 @@
 ### 1. Health Check
 GET http://localhost:8080/api/health
 
-### 2. Projekt erstellen
-POST http://localhost:8080/api/projects
+### 1b. Kategorien abrufen
+GET http://localhost:8080/api/categories
+
+### 1c. Neue Kategorie erstellen
+POST http://localhost:8080/api/categories
+Content-Type: application/json
+
+{
+  "name": "Machine Learning",
+  "color": "#3b82f6"
+}
+
+### 2. Projekt erstellen (Routen-Pfad: /api/projects/create)
+POST http://localhost:8080/api/projects/create
 Content-Type: application/json
 
 {
@@ -10,10 +22,18 @@ Content-Type: application/json
   "domain": "Healthcare"
 }
 
-### 3. Projekt abrufen
+### 3. Projekt abrufen (Basisdaten & Setup-Status)
 GET http://localhost:8080/api/projects/1
 
-### 4. Business Understanding
+### 3b. Kategorie einem Projekt zuweisen
+PATCH http://localhost:8080/api/projects/1/category
+Content-Type: application/json
+
+{
+  "categoryId": 1
+}
+
+### 4. Business Understanding (Wizard Step 1)
 PATCH http://localhost:8080/api/projects/1/business-understanding
 Content-Type: application/json
 
@@ -27,7 +47,7 @@ Content-Type: application/json
   "toolsBusinessUnderstanding": "Jira"
 }
 
-### 5. Data Characteristics
+### 5. Data Characteristics (Wizard Step 2)
 PATCH http://localhost:8080/api/projects/1/data-characteristics
 Content-Type: application/json
 
@@ -42,11 +62,11 @@ Content-Type: application/json
   "volumeUnit": "RECORDS",
   "variability": "SOMETIMES",
   "dataAccess": ["INTERNAL"],
-  "dataPreparationSteps": "JOINS",
+  "dataPreparationSteps": ["JOINS"],
   "toolsData": "PostgreSQL"
 }
 
-### 6. Analysis Config
+### 6. Analysis Config (Wizard Step 3)
 PATCH http://localhost:8080/api/projects/1/analysis-config
 Content-Type: application/json
 
@@ -57,11 +77,11 @@ Content-Type: application/json
   "toolsAnalysis": "Python, scikit-learn"
 }
 
-### 7. 🎯 WIZARD ABSCHLIESSEN
+### 7. 🎯 WIZARD ABSCHLIESSEN (Triggert Kalkulation)
 POST http://localhost:8080/api/projects/1/complete-wizard
 
-### 8. Dashboard
+### 8. Dashboard (Das Objekt fürs Frontend)
 GET http://localhost:8080/api/dashboard/1
 
-### 9. Timeline
+### 9. Timeline (Für das Gantt-Chart)
 GET http://localhost:8080/api/dashboard/1/timeline

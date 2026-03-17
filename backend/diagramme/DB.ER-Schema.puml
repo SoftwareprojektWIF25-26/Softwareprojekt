@@ -1,6 +1,5 @@
 @startuml DS-Projektplanungstool-ER-Schema
 
-
 !define PRIMARY_KEY(x) <u>x</u>
 !define FOREIGN_KEY(x) <i>x</i>
 
@@ -8,7 +7,8 @@ skinparam linetype ortho
 skinparam backgroundColor #FEFEFE
 
 entity "Project" as project {
-  PRIMARY_KEY(id) : String
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectCategoryId) : Int?
   --
   title : String
   domain : String?
@@ -21,9 +21,17 @@ entity "Project" as project {
   updatedAt : DateTime
 }
 
+entity "ProjectCategory" as projectCategory {
+  PRIMARY_KEY(id) : Int
+  --
+  name : String
+  color : String
+  createdAt : DateTime
+}
+
 entity "BusinessUnderstanding" as business {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   businessGoal : String?
   formOfFinalProduct : FormOfFinalProduct?
@@ -38,8 +46,8 @@ entity "BusinessUnderstanding" as business {
 }
 
 entity "DataCharacteristics" as data {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   dataAccess : DataAccessType[]
   dataAvailability : Boolean?
@@ -50,17 +58,17 @@ entity "DataCharacteristics" as data {
   variety : DataVariety?
   volumeValue : Float?
   volumeUnit : VolumeUnit
-  variability : DataVariability
-  dataPreparationSteps : DataPreparationStep
+  variability : DataVariability?
+  dataPreparationSteps : DataPreparationStep[]
   toolsData : String?
   status : TemplatePhaseStatus
   completedAt : DateTime?
   updatedAt : DateTime
 }
 
-entity "Analysis" as analysis {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+entity "AnalysisConfig" as analysis {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   dataScienceGoals : String?
   typeOfAnalytics : AnalyticsType?
@@ -71,9 +79,9 @@ entity "Analysis" as analysis {
   updatedAt : DateTime
 }
 
-entity "Deployment" as deployment {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+entity "DeploymentConfig" as deployment {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   timelinessOfAnalytics : TimelinessLevel?
   addressedUsers : String?
@@ -84,9 +92,9 @@ entity "Deployment" as deployment {
   completedAt : DateTime?
 }
 
-entity "Utilization" as utilization {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+entity "UtilizationConfig" as utilization {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   monitoring : String?
   maintenance : String?
@@ -96,8 +104,8 @@ entity "Utilization" as utilization {
 }
 
 entity "ProjectPlan" as plan {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   estimatedDuration : Int?
   estimatedEffort : Float?
@@ -109,8 +117,8 @@ entity "ProjectPlan" as plan {
 }
 
 entity "ProjectPhase" as phase {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectPlanId) : String
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectPlanId) : Int
   --
   name : String
   phaseType : PhaseType
@@ -118,17 +126,21 @@ entity "ProjectPhase" as phase {
   orderIndex : Int
   estimatedDuration : Int?
   estimatedEffort : Float?
+  baseEffort : Float?
+  bufferEffort : Float?
+  baseDuration : Int?
+  bufferDuration : Int?
   startDate : DateTime?
   endDate : DateTime?
   createdAt : DateTime
 }
 
-entity "PhaseTask" as task {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectPlanId) : String
-  FOREIGN_KEY(phaseId) : String?
+entity "PhaseSteps" as task {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectPlanId) : Int
+  FOREIGN_KEY(phaseId) : Int
   --
-  taskType : StandardTaskType
+  taskType : TaskType
   customTitle : String?
   title : String?
   description : String?
@@ -141,11 +153,11 @@ entity "PhaseTask" as task {
   updatedAt : DateTime
 }
 
-entity "TaskDependency" as dependency {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectPlanId) : String
-  FOREIGN_KEY(fromTaskId) : String
-  FOREIGN_KEY(toTaskId) : String
+entity "PhaseTaskDependency" as dependency {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectPlanId) : Int
+  FOREIGN_KEY(fromTaskId) : Int
+  FOREIGN_KEY(toTaskId) : Int
   --
   dependencyType : DependencyType
   lag : Int
@@ -153,8 +165,8 @@ entity "TaskDependency" as dependency {
 }
 
 entity "ProjectEvaluation" as evaluation {
-  PRIMARY_KEY(id) : String
-  FOREIGN_KEY(projectId) : String
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(projectId) : Int
   --
   category : String
   rating : Int
@@ -162,7 +174,108 @@ entity "ProjectEvaluation" as evaluation {
   createdAt : DateTime
 }
 
+entity "WeightsSettings" as weightsSettings {
+  PRIMARY_KEY(id) : Int
+  --
+  createdAt : DateTime
+  updatedAt : DateTime
+}
+
+entity "DefaultWeights" as defaultWeights {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  data_access : Float
+  data_availability : Float
+  stakeholder_support : Float
+  tools_available : Float
+  data_variety : Float
+  data_velocity : Float
+  num_sources : Float
+  analytics_type : Float
+  data_quality : Float
+  privacy_concerns : Float
+  missing_data : Float
+  goal_clarity : Float
+  data_volume_complexity : Float
+  data_prep_complexity : Float
+  product_complexity : Float
+}
+
+entity "BusinessUnderstandingTask" as businessTasks {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  assess_situation : Float
+  create_project_plan : Float
+  compose_team : Float
+  set_criteria_objectives : Float
+  derive_targets : Float
+}
+
+entity "DataTasks" as dataTasks {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  identify_sources : Float
+  acquire_data : Float
+  describe_data : Float
+  explore_data : Float
+  asses_data_quality : Float
+  prepare_data : Float
+  develop_pipeline : Float
+}
+
+entity "AnalysisTask" as analysisTasks {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  define_hypothesis : Float
+  select_model : Float
+  design_test : Float
+  develop_model : Float
+  assess_model : Float
+  develop_pipeline : Float
+}
+
+entity "EvaluationTask" as evaluationTasks {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  assess_results : Float
+  evaluate_process : Float
+  perform_checkpoint_decision : Float
+}
+
+entity "DeploymentTask" as deploymentTasks {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  perform_assessment : Float
+  plan_deployment : Float
+  plan_monitoring_maintenance : Float
+  test_deployment : Float
+  perform_integration : Float
+  finalize_project : Float
+}
+
+entity "Productivity" as productivity {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  productivity : Float
+}
+
+entity "Cost" as cost {
+  PRIMARY_KEY(id) : Int
+  FOREIGN_KEY(settingsId) : Int
+  --
+  hourly_rate : Float
+}
+
 ' Relationships mit Kardinalitäten [min,max]
+projectCategory "[0,1]" -- "[0,*]" project
+
 project "[1,1]" -- "[0,1]" business
 project "[1,1]" -- "[0,1]" data
 project "[1,1]" -- "[0,1]" analysis
@@ -175,9 +288,18 @@ plan "[1,1]" -- "[0,*]" phase
 plan "[1,1]" -- "[0,*]" task
 plan "[1,1]" -- "[0,*]" dependency
 
-phase "[0,1]" -- "[0,*]" task
+phase "[1,1]" -- "[0,*]" task
 
-task "[1,1]" -- "[0,*]" dependency
-task "[1,1]" -- "[0,*]" dependency
+task "[1,1]" -- "[0,*]" dependency : fromTask
+task "[1,1]" -- "[0,*]" dependency : toTask
+
+weightsSettings "[1,1]" -- "[0,1]" defaultWeights
+weightsSettings "[1,1]" -- "[0,1]" businessTasks
+weightsSettings "[1,1]" -- "[0,1]" dataTasks
+weightsSettings "[1,1]" -- "[0,1]" analysisTasks
+weightsSettings "[1,1]" -- "[0,1]" evaluationTasks
+weightsSettings "[1,1]" -- "[0,1]" deploymentTasks
+weightsSettings "[1,1]" -- "[0,1]" productivity
+weightsSettings "[1,1]" -- "[0,1]" cost
 
 @enduml

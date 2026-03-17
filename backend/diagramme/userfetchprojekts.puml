@@ -4,7 +4,7 @@ title Startseite aufrufen - Alle Projekte abrufen
 actor "User" as user
 participant "Browser/\nFrontend" as browser
 participant "Express\nRouter" as router
-participant "StartPage\nService" as service
+participant "Homeview\nService" as service
 database "PostgreSQL\nDatenbank" as db
 
 == Initialisierung ==
@@ -12,58 +12,39 @@ database "PostgreSQL\nDatenbank" as db
 user -> browser: Öffnet Startseite
 activate browser
 
-browser -> router: GET /api/startpage\n?sortBy=updatedAt&sortOrder=desc
+browser -> router: GET /api/homeview\n?sortBy=updatedAt&sortOrder=desc
 activate router
 
 router -> router: Validierung\nQuery-Parameter
-note right: express-validator\nprüft Parameter
+note right: express-validator\nprüft search, status, sortBy etc.
 
 == Service Layer ==
 
 router -> service: getStartPageData(filters)
 activate service
 
-service -> service: getOrCreateWorkspace()\nworkspaceId optional
-
-alt workspaceId vorhanden
-    service -> db: findUnique(LocalWorkspace)
-    activate db
-    db --> service: workspace
-    deactivate db
-else kein workspaceId
-    service -> db: findFirst(LocalWorkspace)
-    activate db
-    alt workspace gefunden
-        db --> service: workspace
-    else kein workspace
-        service -> db: create(LocalWorkspace)\n{name: "Default Workspace"}
-        db --> service: new workspace
-    end
-    deactivate db
-end
-
 == Daten laden ==
 
-service -> db: project.findMany()\ninclude: projectPlan, businessUnderstanding\norderBy: updatedAt desc
+service -> db: project.findMany()\ninclude: projectPlan, businessUnderstanding,\nProjectCategory\norderBy: updatedAt desc
 activate db
-note right: WHERE workspaceId = workspace.id\nOptional: Filter nach status/search
+note right: WHERE-Klausel filtert dynamisch\nnach Suchbegriff und Status
 db --> service: projects[]
 deactivate db
 
 == Daten aufbereiten ==
 
-
-service -> service: Statistiken berechnen\n- totalProjects\n- planning, inProgress, etc.
+service -> service: projects.map()\n- wizardProgress & taskProgress berechnen\n- category-Objekt extrahieren
+service -> service: Statistiken aggregieren\n- totalProjects, planning,\n  inProgress, etc.
 
 == Response zurückgeben ==
 
-service --> router: {\n  workspace,\n  projects[],\n  statistics,\n  totalCount\n}
+service --> router: {\n  projects[],\n  statistics,\n  totalCount\n}
 deactivate service
 
-router --> browser: HTTP 200 OK\n{\n  "success": true,\n  "data": {...}\n}
+router --> browser: HTTP 200 OK\nJSON Data (ohne Wrapper)
 deactivate router
 
-browser -> browser: Projekte rendern\n- Liste anzeigen\n- Statistiken darstellen\n- Filter/Sortierung
+browser -> browser: Projekte rendern\n- Liste inkl. Status & Kategorien anzeigen\n- Filter/Sortierung anwenden
 
 browser --> user: Startseite mit\nProjektübersicht
 deactivate browser

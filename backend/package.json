@@ -8,12 +8,22 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "start": "node --loader ts-node/esm src/index.ts",
-    "test:db:up": "docker-compose -f docker-compose.test.yml up -d --wait",
-    "test:db:down": "docker-compose -f docker-compose.test.yml down",
-    "test:setup": "npm run test:db:up && dotenv -e .env.test -- npx prisma migrate deploy && dotenv -e .env.test -- npx prisma db seed",
-    "test:e2e": "npm run test:setup && dotenv -e .env.test -- vitest run",
+
+    "test:db:up": "docker-compose -f test-docker-compose.test.yml up -d --wait",
+    "test:db:down": "docker-compose -f test-docker-compose.test.yml down -v",
+
+    "test:setup": "npm run test:db:up && dotenv -e .env.test -- npx prisma migrate deploy",
+
+    "pretest:e2e": "npm run test:setup",
+    "test:e2e": "dotenv -e .env.test -- vitest run",
+    "posttest:e2e": "npm run test:cleanup",
+
     "test:cleanup": "npm run test:db:down",
-    "test:coverage": "npm run test:setup && dotenv -e .env.test -- vitest run --coverage"
+
+    "test:coverage": "npm run test:setup && dotenv -e .env.test -- vitest run --coverage && npm run test:cleanup",
+
+    "test": "vitest",
+    "test:watch": "vitest watch"
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
@@ -26,6 +36,7 @@
     "@types/supertest": "^6.0.3",
     "@vitest/coverage-v8": "^4.0.13",
     "dotenv-cli": "^11.0.0",
+    "jest-mock-extended": "^4.0.0",
     "prisma": "^6.18.0",
     "supertest": "^7.1.4",
     "ts-node": "^10.9.2",
